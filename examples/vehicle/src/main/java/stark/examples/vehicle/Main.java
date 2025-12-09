@@ -20,30 +20,20 @@
  * limitations under the License.
  */
 
-package it.unicam.quasylab.jspear.examples.vehicle;
+package stark.examples.vehicle;
 
-import it.unicam.quasylab.jspear.ControlledSystem;
-import it.unicam.quasylab.jspear.DefaultRandomGenerator;
-import it.unicam.quasylab.jspear.EvolutionSequence;
-import it.unicam.quasylab.jspear.Util;
 import it.unicam.quasylab.jspear.controller.Controller;
 import it.unicam.quasylab.jspear.controller.ControllerRegistry;
 import it.unicam.quasylab.jspear.controller.ParallelController;
 import it.unicam.quasylab.jspear.distance.AtomicDistanceExpressionLeq;
 import it.unicam.quasylab.jspear.distance.DistanceExpression;
 import it.unicam.quasylab.jspear.distance.MaxIntervalDistanceExpression;
-import it.unicam.quasylab.jspear.ds.DataState;
-import it.unicam.quasylab.jspear.ds.DataStateUpdate;
-import it.unicam.quasylab.jspear.ds.RelationOperator;
 import org.apache.commons.math3.random.RandomGenerator;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-public class test_figure_2_bottom_center {
+public class Main {
 
     public final static String[] VARIABLES =
             new String[]{"p_speed_V1", "s_speed_V1", "p_distance_V1", "s_distance_V1", "accel_V1", "timer_V1",
@@ -60,7 +50,7 @@ public class test_figure_2_bottom_center {
     public final static int TIMER_INIT = 5;
     public final static int DANGER = 1;
     public final static int OK = 0;
-    public static double MAX_SPEED_OFFSET = 0.2;
+    public final static double MAX_SPEED_OFFSET = 0.3;
     public final static double INIT_SPEED_V1 = 25.0;
     public final static double INIT_SPEED_V2 = 25.0;
     public final static double MAX_SPEED = 40.0;
@@ -68,7 +58,11 @@ public class test_figure_2_bottom_center {
     public final static double INIT_DISTANCE_V1_V2 = 5000.0;
     private static final double SAFETY_DISTANCE = 200.0;
     private static final double ETA_comb = 0.1;
+    private static final double ETA_fast = 0.05;
+    private static final double ETA_slow = 0.1;
     private static final int H = 450;
+    private static final double MAX_DISTANCE_OFFSET = 1.0;
+    private static final double ETA_CRASH_SPEED = 0.05;
 
     private static final int p_speed_V1 = 0;//variableRegistry.getVariable("p_speed");
     private static final int s_speed_V1 = 1;//variableRegistry.getVariable("s_speed");
@@ -111,88 +105,136 @@ public class test_figure_2_bottom_center {
             DataState state = getInitialState();
             ControlledSystem system = new ControlledSystem(new ParallelController(controller_V1, controller_V2), (rg, ds) -> ds.apply(getEnvironmentUpdates(rg, ds)), state);
             EvolutionSequence sequence = new EvolutionSequence(rand, rg -> system, 1);
+            EvolutionSequence sequence2 = sequence.apply(getIteratedCombinedPerturbation(),0, 60);
 
-            DistanceExpression crash_probability = new AtomicDistanceExpressionLeq(test_figure_2_bottom_center::rho_crash_probability);
+            DistanceExpression crash_probability = new AtomicDistanceExpressionLeq(Main::rho_crash_probability);
 
             DistanceExpression crash_dist = new MaxIntervalDistanceExpression(crash_probability, 350, 450);
 
-            RobustnessFormula Phi_comb = new AlwaysRobustnessFormula(
-                    new AtomicRobustnessFormula(getIteratedCombinedPerturbation(),
+            DistanceExpression crash_speed = new AtomicDistanceExpressionLeq(Main::rho_crash_speed);
+
+            double[][] testLeft_50 = new double[100][1];
+            double[][] testRight_50 = new double[100][1];
+            double[] testDistance = new double[100];
+
+            System.out.println("Starting test on bootstrap");
+
+            for(int i=0; i<100; i++) {
+                double[] res_50 = crash_dist.evalCI(rand,i,sequence,sequence2,50,1.96);
+                testLeft_50[i][0] = res_50[1];
+                testRight_50[i][0] = res_50[2];
+                testDistance[i] = res_50[0];
+                System.out.println("Distance at step "+i+" is "+testDistance[i]);
+                System.out.println("Confidence interval at step "+i+ " CI=["+testLeft_50[i][0]+","+testRight_50[i][0]+"]");
+            }
+            Util.writeToCSV("./testBootL_04.csv",testLeft_50);
+            Util.writeToCSV("./testBootR_04.csv",testRight_50);
+
+
+
+            RobustnessFormula Phi_fast = new AlwaysRobustnessFormula(
+                    new AtomicRobustnessFormula(getIteratedFasterPerturbation(),
                             crash_dist,
                             RelationOperator.LESS_OR_EQUAL_THAN,
-                            ETA_comb),
+                            ETA_fast),
+                    0,
+                    H);
+
+            RobustnessFormula Phi_slow = new AlwaysRobustnessFormula(
+                    new AtomicRobustnessFormula(getIteratedSlowerPerturbation(),
+                            crash_dist,
+                            RelationOperator.LESS_OR_EQUAL_THAN,
+                            ETA_slow),
+                    0,
+                    H);
+
+            RobustnessFormula Phi_comb = new AlwaysRobustnessFormula(
+                    new AtomicRobustnessFormula(getIteratedCombinedPerturbation(),
+                        crash_dist,
+                        RelationOperator.LESS_OR_EQUAL_THAN,
+                        ETA_comb),
+                    0,
+                    H);
+
+            RobustnessFormula Phi_crash = new ImplicationRobustnessFormula(new ConjunctionRobustnessFormula(Phi_fast, Phi_slow), Phi_comb);
+
+            RobustnessFormula Phi_crash_speed = new AlwaysRobustnessFormula(
+                    new AtomicRobustnessFormula(getIteratedDistanceSensorsPerturbation(),
+                            new MaxIntervalDistanceExpression(crash_speed, 10, 400),
+                            RelationOperator.LESS_OR_EQUAL_THAN,
+                            ETA_CRASH_SPEED),
                     0,
                     H);
 
             // Tests on the three-valued evaluation of formulae
 
-            double[][] val_comb = new double[10][1];
+            double[][] val_slow = new double[10][1];
+            double[][] val_crash = new double[10][1];
 
             for(int i = 0; i<10; i++) {
                 int step = i*30;
+                TruthValues value1 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_slow).eval(60, step, sequence);
+                System.out.println("Phi_slow evaluation at step "+step+": " + value1);
+                if (value1 == TruthValues.TRUE) {
+                    val_slow[i][0] = 1;
+                } else {
+                    if (value1 == TruthValues.UNKNOWN) {
+                        val_slow[i][0] = 0;
+                    } else {
+                        val_slow[i][0] = -1;
+                    }
+                }
                 TruthValues value2 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_comb).eval(60, step, sequence);
-                System.out.println("Phi_comb evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value2);
+                System.out.println("Phi_comb evaluation at step "+step+": " + value2);
                 if (value2 == TruthValues.TRUE) {
-                    val_comb[i][0] = 1;
+                    val_crash[i][0] = 1;
                 } else {
                     if (value2 == TruthValues.UNKNOWN) {
-                        val_comb[i][0] = 0;
+                        val_crash[i][0] = 0;
                     } else {
-                        val_comb[i][0] = -1;
+                        val_crash[i][0] = -1;
                     }
                 }
             }
 
-            Util.writeToCSV("./phi_comb_test_02x30.csv",val_comb);
+            Util.writeToCSV("./slow_novel_03.csv",val_slow);
+            Util.writeToCSV("./comb_novel_03.csv",val_crash);
 
-            MAX_SPEED_OFFSET = 0.3;
-
+            double[][] val_crash_speed = new double[10][1];
             for(int i = 0; i<10; i++) {
-                int step = i*30;
-                TruthValues value2 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_comb).eval(60, step, sequence);
-                System.out.println("Phi_comb evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value2);
-                if (value2 == TruthValues.TRUE) {
-                    val_comb[i][0] = 1;
+                int step = i*50;
+                TruthValues value = new ThreeValuedSemanticsVisitor(rand,40,1.96).eval(Phi_crash_speed).eval(60, step, sequence);
+                System.out.println("Phi_crash_speed evaluation at step "+step+": " + value);
+                if (value == TruthValues.TRUE) {
+                    val_crash_speed[i][0] = 1;
                 } else {
-                    if (value2 == TruthValues.UNKNOWN) {
-                        val_comb[i][0] = 0;
+                    if (value == TruthValues.UNKNOWN) {
+                        val_crash_speed[i][0] = 0;
                     } else {
-                        val_comb[i][0] = -1;
+                        val_crash_speed[i][0] = -1;
                     }
                 }
             }
 
-            Util.writeToCSV("./phi_comb_test_03x30.csv",val_comb);
-
-            MAX_SPEED_OFFSET = 0.4;
-
-            for(int i = 0; i<10; i++) {
-                int step = i*30;
-                TruthValues value2 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_comb).eval(60, step, sequence);
-                System.out.println("Phi_comb evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value2);
-                if (value2 == TruthValues.TRUE) {
-                    val_comb[i][0] = 1;
-                } else {
-                    if (value2 == TruthValues.UNKNOWN) {
-                        val_comb[i][0] = 0;
-                    } else {
-                        val_comb[i][0] = -1;
-                    }
-                }
-            }
-
-            Util.writeToCSV("./phi_comb_test_04x30.csv",val_comb);
-
-
+            Util.writeToCSV("./crash50_0003.csv",val_crash_speed);
 
         } catch (RuntimeException e) {
             e.printStackTrace();
         }
     }
 
+    // PENALTY FUNCTIONS
 
+    public static double rho_crash(DataState state) {
+        double value = Math.min(SAFETY_DISTANCE,state.get(p_distance_V1_V2))/SAFETY_DISTANCE;
+        if (value > 0){
+            return 0.0;
+        }
+        else{
+            return Math.abs(Math.min(SAFETY_DISTANCE,state.get(p_distance_V1_V2))/SAFETY_DISTANCE);
+        }
+    }
 
-    // PENALTY FUNCTION
     public static double rho_crash_probability(DataState state) {
         if (state.get(p_distance_V1_V2) > 0){
             return 0.0;
@@ -202,10 +244,18 @@ public class test_figure_2_bottom_center {
         }
     }
 
+    public static double rho_crash_speed(DataState state) {
+        if (state.get(crashed_V2) == 0 && (state.get(p_distance_V2) <=0 || state.get(p_distance_V1_V2) <=0)){
+            return state.get(p_speed_V2)/MAX_SPEED;
+        }
+        else{
+            return 0.0;
+        }
+    }
+
     // CONTROLLER OF VEHICLE 1
 
     public static Controller getController_V1() {
-
 
         ControllerRegistry registry = new ControllerRegistry();
 
@@ -213,16 +263,16 @@ public class test_figure_2_bottom_center {
                 Controller.ifThenElse(
                         DataState.greaterThan(s_speed_V1, 0),
                         Controller.ifThenElse(
-                                DataState.greaterThan(safety_gap_V1, 0 ),
-                                Controller.doAction(
-                                        (rg, ds) -> List.of(new DataStateUpdate(accel_V1, ACCELERATION), new DataStateUpdate(timer_V1, TIMER_INIT),
-                                                new DataStateUpdate(brake_light_V1, 0)),
-                                        registry.reference("Accelerate_V1")
-                                ),
-                                Controller.doAction(
-                                        (rg, ds) -> List.of( new DataStateUpdate(accel_V1, - BRAKE), new DataStateUpdate(timer_V1, TIMER_INIT),
-                                                new DataStateUpdate(brake_light_V1, 1)),
-                                        registry.reference("Decelerate_V1"))
+                                   DataState.greaterThan(safety_gap_V1, 0 ),
+                                   Controller.doAction(
+                                           (rg, ds) -> List.of(new DataStateUpdate(accel_V1, ACCELERATION), new DataStateUpdate(timer_V1, TIMER_INIT),
+                                                   new DataStateUpdate(brake_light_V1, 0)),
+                                           registry.reference("Accelerate_V1")
+                                   ),
+                                   Controller.doAction(
+                                           (rg, ds) -> List.of( new DataStateUpdate(accel_V1, - BRAKE), new DataStateUpdate(timer_V1, TIMER_INIT),
+                                                         new DataStateUpdate(brake_light_V1, 1)),
+                                           registry.reference("Decelerate_V1"))
                         ),
                         Controller.doAction(
                                 (rg,ds)-> List.of(new DataStateUpdate(accel_V1,NEUTRAL), new DataStateUpdate(timer_V1,TIMER_INIT)),
@@ -274,6 +324,7 @@ public class test_figure_2_bottom_center {
                         Controller.doAction(DataStateUpdate.set(warning_V1, OK),registry.reference("IDS_V1"))
                 )
         );
+
         return new ParallelController(registry.reference("Ctrl_V1"), registry.reference("IDS_V1"));
 
     }
@@ -348,10 +399,11 @@ public class test_figure_2_bottom_center {
                         Controller.doAction(DataStateUpdate.set(warning_V2, OK),registry.reference("IDS_V2"))
                 )
         );
+
         return new ParallelController(registry.reference("Ctrl_V2"), registry.reference("IDS_V2"));
     }
 
-    // ENVIRONMENT EVOLUTION
+    // ENVIRONMENT FUNCTION
 
     public static List<DataStateUpdate> getEnvironmentUpdates(RandomGenerator rg, DataState state) {
         List<DataStateUpdate> updates = new LinkedList<>();
@@ -405,20 +457,26 @@ public class test_figure_2_bottom_center {
         return updates;
     }
 
-
-
     // PERTURBATIONS
 
     private static  Perturbation getFasterPerturbation() {
-        return new IterativePerturbation(3, new AtomicPerturbation(TIMER_INIT - 1, test_figure_2_bottom_center::fasterPerturbation));
+        return new IterativePerturbation(3, new AtomicPerturbation(TIMER_INIT - 1, Main::fasterPerturbation));
     }
 
     private static  Perturbation getSlowerPerturbation() {
-        return new IterativePerturbation(3, new AtomicPerturbation(TIMER_INIT - 1, test_figure_2_bottom_center::slowerPerturbation));
+        return new IterativePerturbation(3, new AtomicPerturbation(TIMER_INIT - 1, Main::slowerPerturbation));
+    }
+
+    private static  Perturbation getIteratedFasterPerturbation() {
+        return new AfterPerturbation(1, new IterativePerturbation(100, new AtomicPerturbation(TIMER_INIT - 1, Main::fasterPerturbation)));
+    }
+
+    private static  Perturbation getIteratedSlowerPerturbation() {
+        return new AfterPerturbation(1, new IterativePerturbation(100, new AtomicPerturbation(TIMER_INIT - 1, Main::slowerPerturbation)));
     }
 
     private static  Perturbation getIteratedCombinedPerturbation() {
-        return new AfterPerturbation(1, new IterativePerturbation(50, new SequentialPerturbation(getFasterPerturbation(),getSlowerPerturbation())));
+        return new AfterPerturbation(1, new IterativePerturbation(20, new SequentialPerturbation(getFasterPerturbation(),getSlowerPerturbation())));
     }
 
     private static DataState fasterPerturbation(RandomGenerator rg, DataState state) {
@@ -449,7 +507,34 @@ public class test_figure_2_bottom_center {
         return state.apply(updates);
     }
 
-    // INITIALISATION OF DATA STATE
+    private static  Perturbation getIteratedDistanceSensorsPerturbation() {
+        return new AfterPerturbation(1, new IterativePerturbation(100, new AtomicPerturbation(TIMER_INIT - 1, Main::distanceSensorsPerturbation)));
+    }
+
+    private static DataState distanceSensorsPerturbation(RandomGenerator rg, DataState state) {
+        List<DataStateUpdate> updates = new LinkedList<>();
+        //double travel_V1 = state.get(accel_V1)/2 + state.get(p_speed_V1);
+        //double travel_V2 = state.get(accel_V2)/2 + state.get(p_speed_V2);
+        //double new_p_distance_V1_V2 = state.get(p_distance_V1_V2) - travel_V2 + travel_V1;
+        //double new_p_distance_V2 = state.get(p_distance_V2) - travel_V2;
+        double offset = rg.nextDouble() * MAX_DISTANCE_OFFSET;
+        //double offset_V1_V2 = new_p_distance_V1_V2 * offset;
+        //double offset_V2 = new_p_distance_V2 * offset;
+        double noisy_distance_V1_V2 = state.get(p_distance_V1_V2) * (1 + offset);
+        double noisy_distance_V2 = state.get(p_distance_V1) * (1 + offset);
+        //double new_p_speed_V2 = Math.min(MAX_SPEED,Math.max(0,state.get(p_speed_V2) + state.get(accel_V2)));
+        //double new_bd_V2 = (state.get(p_speed_V2) * state.get(p_speed_V2) + (ACCELERATION + BRAKE) * (ACCELERATION * TIMER_INIT * TIMER_INIT + 2 * state.get(p_speed_V2) * TIMER_INIT)) / (2 * BRAKE);
+        //double new_rd_V2 = new_bd_V2 + SAFETY_DISTANCE;
+        double new_sg_V1_V2 = noisy_distance_V1_V2 - state.get(required_distance_V2);
+        double new_sg_V2 = noisy_distance_V2 - state.get(required_distance_V2);
+        updates.add(new DataStateUpdate(safety_gap_V1_V2, new_sg_V1_V2));
+        updates.add(new DataStateUpdate(safety_gap_V2, new_sg_V2));
+        updates.add(new DataStateUpdate(s_distance_V1_V2,noisy_distance_V1_V2));
+        updates.add(new DataStateUpdate(s_distance_V2,noisy_distance_V2));
+        return state.apply(updates);
+    }
+
+   // INITIALISATION OF DATA STATE
 
     public static DataState getInitialState( ) {
         Map<Integer, Double> values = new HashMap<>();
@@ -496,4 +581,3 @@ public class test_figure_2_bottom_center {
     }
 
 }
-

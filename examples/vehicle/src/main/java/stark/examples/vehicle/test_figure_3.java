@@ -20,12 +20,8 @@
  * limitations under the License.
  */
 
-package it.unicam.quasylab.jspear.examples.vehicle;
+package stark.examples.vehicle;
 
-import it.unicam.quasylab.jspear.ControlledSystem;
-import it.unicam.quasylab.jspear.DefaultRandomGenerator;
-import it.unicam.quasylab.jspear.EvolutionSequence;
-import it.unicam.quasylab.jspear.Util;
 import it.unicam.quasylab.jspear.controller.Controller;
 import it.unicam.quasylab.jspear.controller.ControllerRegistry;
 import it.unicam.quasylab.jspear.controller.ParallelController;
@@ -33,21 +29,15 @@ import it.unicam.quasylab.jspear.distance.AtomicDistanceExpressionLeq;
 import it.unicam.quasylab.jspear.distance.DistanceExpression;
 import it.unicam.quasylab.jspear.distance.MaxIntervalDistanceExpression;
 import it.unicam.quasylab.jspear.ds.DataState;
+import it.unicam.quasylab.jspear.ds.DataStateExpression;
 import it.unicam.quasylab.jspear.ds.DataStateUpdate;
 import it.unicam.quasylab.jspear.ds.RelationOperator;
-import it.unicam.quasylab.jspear.perturbation.AfterPerturbation;
-import it.unicam.quasylab.jspear.perturbation.AtomicPerturbation;
-import it.unicam.quasylab.jspear.perturbation.IterativePerturbation;
-import it.unicam.quasylab.jspear.perturbation.Perturbation;
 import org.apache.commons.math3.random.RandomGenerator;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-public class test_figure_3_left {
+public class test_figure_3 {
 
     public final static String[] VARIABLES =
             new String[]{"p_speed_V1", "s_speed_V1", "p_distance_V1", "s_distance_V1", "accel_V1", "timer_V1",
@@ -76,6 +66,8 @@ public class test_figure_3_left {
     private static double ETA_CRASH_SPEED = 0.05;
     private static double ETA_CRASH_SPEED_BIS = 0.1;
     private static double ETA_CRASH_SPEED_TER = 0.15;
+
+
     private static final int p_speed_V1 = 0;//variableRegistry.getVariable("p_speed");
     private static final int s_speed_V1 = 1;//variableRegistry.getVariable("s_speed");
     private static final int p_distance_V1 = 2;// variableRegistry.getVariable("p_distance");
@@ -118,11 +110,11 @@ public class test_figure_3_left {
             ControlledSystem system = new ControlledSystem(new ParallelController(controller_V1, controller_V2), (rg, ds) -> ds.apply(getEnvironmentUpdates(rg, ds)), state);
             EvolutionSequence sequence = new EvolutionSequence(rand, rg -> system, 1);
 
-            DistanceExpression crash_speed = new AtomicDistanceExpressionLeq(test_figure_3_left::rho_crash_speed);
+            DistanceExpression crash_speed = new AtomicDistanceExpressionLeq(test_figure_3::rho_crash_speed);
 
             RobustnessFormula Phi_crash_speed = new AlwaysRobustnessFormula(
                     new AtomicRobustnessFormula(getIteratedDistanceSensorsPerturbation(),
-                            new MaxIntervalDistanceExpression(crash_speed, 10, 400),
+                            new MaxIntervalDistanceExpression(crash_speed, 250, 500),
                             RelationOperator.LESS_OR_EQUAL_THAN,
                             ETA_CRASH_SPEED),
                     0,
@@ -130,7 +122,7 @@ public class test_figure_3_left {
 
             RobustnessFormula Phi_crash_speed_bis = new AlwaysRobustnessFormula(
                     new AtomicRobustnessFormula(getIteratedDistanceSensorsPerturbation(),
-                            new MaxIntervalDistanceExpression(crash_speed, 10, 400),
+                            new MaxIntervalDistanceExpression(crash_speed, 250, 500),
                             RelationOperator.LESS_OR_EQUAL_THAN,
                             ETA_CRASH_SPEED_BIS),
                     0,
@@ -138,12 +130,11 @@ public class test_figure_3_left {
 
             RobustnessFormula Phi_crash_speed_ter = new AlwaysRobustnessFormula(
                     new AtomicRobustnessFormula(getIteratedDistanceSensorsPerturbation(),
-                            new MaxIntervalDistanceExpression(crash_speed, 10, 400),
+                            new MaxIntervalDistanceExpression(crash_speed, 250, 500),
                             RelationOperator.LESS_OR_EQUAL_THAN,
                             ETA_CRASH_SPEED_TER),
                     0,
                     H);
-
 
             // Tests on the three-valued evaluation of formulae
 
@@ -152,7 +143,7 @@ public class test_figure_3_left {
             for(int i = 0; i<10; i++) {
                 int step = i*10;
                 TruthValues value = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_crash_speed).eval(60, step, sequence);
-                System.out.println("Phi_crash_speed evaluation at step "+step+" with threshold "+ETA_CRASH_SPEED+": " + value);
+                System.out.println("Phi_crash_speed evaluation at step "+step+"with threshold "+ETA_CRASH_SPEED+": " + value);
                 if (value == TruthValues.TRUE) {
                     val_crash_speed[i][0] = 1;
                 } else {
@@ -167,9 +158,45 @@ public class test_figure_3_left {
             Util.writeToCSV("./phi_crash_speed_test_005x10.csv",val_crash_speed);
 
             for(int i = 0; i<10; i++) {
+                int step = i*30;
+                TruthValues value = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_crash_speed).eval(60, step, sequence);
+                System.out.println("Phi_crash_speed evaluation at step "+step+"with threshold "+ETA_CRASH_SPEED+": " + value);
+                if (value == TruthValues.TRUE) {
+                    val_crash_speed[i][0] = 1;
+                } else {
+                    if (value == TruthValues.UNKNOWN) {
+                        val_crash_speed[i][0] = 0;
+                    } else {
+                        val_crash_speed[i][0] = -1;
+                    }
+                }
+            }
+
+            Util.writeToCSV("./phi_crash_speed_test_005x30.csv",val_crash_speed);
+
+            for(int i = 0; i<10; i++) {
+                int step = i*50;
+                TruthValues value = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_crash_speed).eval(60, step, sequence);
+                System.out.println("Phi_crash_speed evaluation at step "+step+"with threshold "+ETA_CRASH_SPEED+": " + value);
+                if (value == TruthValues.TRUE) {
+                    val_crash_speed[i][0] = 1;
+                } else {
+                    if (value == TruthValues.UNKNOWN) {
+                        val_crash_speed[i][0] = 0;
+                    } else {
+                        val_crash_speed[i][0] = -1;
+                    }
+                }
+            }
+
+            Util.writeToCSV("./phi_crash_speed_test_005x50.csv",val_crash_speed);
+
+            ETA_CRASH_SPEED = 0.1;
+
+            for(int i = 0; i<10; i++) {
                 int step = i*10;
-                TruthValues value = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_crash_speed_bis).eval(60, step, sequence);
-                System.out.println("Phi_crash_speed evaluation at step "+step+" with threshold "+ETA_CRASH_SPEED_BIS+": " + value);
+                TruthValues value = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_crash_speed).eval(60, step, sequence);
+                System.out.println("Phi_crash_speed evaluation at step "+step+"with threshold "+ETA_CRASH_SPEED+": " + value);
                 if (value == TruthValues.TRUE) {
                     val_crash_speed[i][0] = 1;
                 } else {
@@ -184,9 +211,45 @@ public class test_figure_3_left {
             Util.writeToCSV("./phi_crash_speed_test_01x10.csv",val_crash_speed);
 
             for(int i = 0; i<10; i++) {
+                int step = i*30;
+                TruthValues value = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_crash_speed).eval(60, step, sequence);
+                System.out.println("Phi_crash_speed evaluation at step "+step+"with threshold "+ETA_CRASH_SPEED+": " + value);
+                if (value == TruthValues.TRUE) {
+                    val_crash_speed[i][0] = 1;
+                } else {
+                    if (value == TruthValues.UNKNOWN) {
+                        val_crash_speed[i][0] = 0;
+                    } else {
+                        val_crash_speed[i][0] = -1;
+                    }
+                }
+            }
+
+            Util.writeToCSV("./phi_crash_speed_test_01x30.csv",val_crash_speed);
+
+            for(int i = 0; i<10; i++) {
+                int step = i*50;
+                TruthValues value = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_crash_speed).eval(60, step, sequence);
+                System.out.println("Phi_crash_speed evaluation at step "+step+"with threshold "+ETA_CRASH_SPEED+": " + value);
+                if (value == TruthValues.TRUE) {
+                    val_crash_speed[i][0] = 1;
+                } else {
+                    if (value == TruthValues.UNKNOWN) {
+                        val_crash_speed[i][0] = 0;
+                    } else {
+                        val_crash_speed[i][0] = -1;
+                    }
+                }
+            }
+
+            Util.writeToCSV("./phi_crash_speed_test_01x50.csv",val_crash_speed);
+
+            ETA_CRASH_SPEED = 0.15;
+
+            for(int i = 0; i<10; i++) {
                 int step = i*10;
-                TruthValues value = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_crash_speed_ter).eval(60, step, sequence);
-                System.out.println("Phi_crash_speed evaluation at step "+step+" with threshold "+ETA_CRASH_SPEED_TER+": " + value);
+                TruthValues value = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_crash_speed).eval(60, step, sequence);
+                System.out.println("Phi_crash_speed evaluation at step "+step+"with threshold "+ETA_CRASH_SPEED+": " + value);
                 if (value == TruthValues.TRUE) {
                     val_crash_speed[i][0] = 1;
                 } else {
@@ -199,6 +262,40 @@ public class test_figure_3_left {
             }
 
             Util.writeToCSV("./phi_crash_speed_test_015x10.csv",val_crash_speed);
+
+            for(int i = 0; i<10; i++) {
+                int step = i*30;
+                TruthValues value = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_crash_speed).eval(60, step, sequence);
+                System.out.println("Phi_crash_speed evaluation at step "+step+"with threshold "+ETA_CRASH_SPEED+": " + value);
+                if (value == TruthValues.TRUE) {
+                    val_crash_speed[i][0] = 1;
+                } else {
+                    if (value == TruthValues.UNKNOWN) {
+                        val_crash_speed[i][0] = 0;
+                    } else {
+                        val_crash_speed[i][0] = -1;
+                    }
+                }
+            }
+
+            Util.writeToCSV("./phi_crash_speed_test_015x30.csv",val_crash_speed);
+
+            for(int i = 0; i<10; i++) {
+                int step = i*50;
+                TruthValues value = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_crash_speed).eval(60, step, sequence);
+                System.out.println("Phi_crash_speed evaluation at step "+step+"with threshold "+ETA_CRASH_SPEED+": " + value);
+                if (value == TruthValues.TRUE) {
+                    val_crash_speed[i][0] = 1;
+                } else {
+                    if (value == TruthValues.UNKNOWN) {
+                        val_crash_speed[i][0] = 0;
+                    } else {
+                        val_crash_speed[i][0] = -1;
+                    }
+                }
+            }
+
+            Util.writeToCSV("./phi_crash_speed_test_015x50.csv",val_crash_speed);
 
         } catch (RuntimeException e) {
             e.printStackTrace();
@@ -426,7 +523,7 @@ public class test_figure_3_left {
     // PERTURBATIONS
 
     private static  Perturbation getIteratedDistanceSensorsPerturbation() {
-        return new AfterPerturbation(1, new IterativePerturbation(300, new AtomicPerturbation(TIMER_INIT - 1, test_figure_3_left::distanceSensorsPerturbation)));
+        return new AfterPerturbation(1, new IterativePerturbation(300, new AtomicPerturbation(TIMER_INIT - 1, test_figure_3::distanceSensorsPerturbation)));
     }
 
     private static DataState distanceSensorsPerturbation(RandomGenerator rg, DataState state) {

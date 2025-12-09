@@ -20,20 +20,30 @@
  * limitations under the License.
  */
 
-package it.unicam.quasylab.jspear.examples.vehicle;
+package stark.examples.vehicle;
 
+import it.unicam.quasylab.jspear.ControlledSystem;
+import it.unicam.quasylab.jspear.DefaultRandomGenerator;
+import it.unicam.quasylab.jspear.EvolutionSequence;
+import it.unicam.quasylab.jspear.Util;
 import it.unicam.quasylab.jspear.controller.Controller;
 import it.unicam.quasylab.jspear.controller.ControllerRegistry;
 import it.unicam.quasylab.jspear.controller.ParallelController;
 import it.unicam.quasylab.jspear.distance.AtomicDistanceExpressionLeq;
 import it.unicam.quasylab.jspear.distance.DistanceExpression;
 import it.unicam.quasylab.jspear.distance.MaxIntervalDistanceExpression;
+import it.unicam.quasylab.jspear.ds.DataState;
+import it.unicam.quasylab.jspear.ds.DataStateUpdate;
+import it.unicam.quasylab.jspear.ds.RelationOperator;
 import org.apache.commons.math3.random.RandomGenerator;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
-public class test_figure_2 {
+public class test_figure_2_top_left {
 
     public final static String[] VARIABLES =
             new String[]{"p_speed_V1", "s_speed_V1", "p_distance_V1", "s_distance_V1", "accel_V1", "timer_V1",
@@ -59,7 +69,6 @@ public class test_figure_2 {
     public final static double INIT_DISTANCE_OBS_V1 = 10000.0;
     public final static double INIT_DISTANCE_V1_V2 = 5000.0;
     private static final double SAFETY_DISTANCE = 200.0;
-    private static final double ETA_comb = 0.1;
     private static final double ETA_slow = 0.1;
     private static final int H = 450;
 
@@ -105,7 +114,7 @@ public class test_figure_2 {
             ControlledSystem system = new ControlledSystem(new ParallelController(controller_V1, controller_V2), (rg, ds) -> ds.apply(getEnvironmentUpdates(rg, ds)), state);
             EvolutionSequence sequence = new EvolutionSequence(rand, rg -> system, 1);
 
-            DistanceExpression crash_probability = new AtomicDistanceExpressionLeq(test_figure_2::rho_crash_probability);
+            DistanceExpression crash_probability = new AtomicDistanceExpressionLeq(test_figure_2_top_left::rho_crash_probability);
 
             DistanceExpression crash_dist = new MaxIntervalDistanceExpression(crash_probability, 350, 450);
 
@@ -117,27 +126,11 @@ public class test_figure_2 {
                     0,
                     H);
 
-            RobustnessFormula Phi_comb = new AlwaysRobustnessFormula(
-                    new AtomicRobustnessFormula(getIteratedCombinedPerturbation(),
-                            crash_dist,
-                            RelationOperator.LESS_OR_EQUAL_THAN,
-                            ETA_comb),
-                    0,
-                    H);
-
             RobustnessFormula Phi_slow_bis = new AlwaysRobustnessFormula(
                     new AtomicRobustnessFormula(getIteratedSlowerPerturbation_bis(),
                             crash_dist,
                             RelationOperator.LESS_OR_EQUAL_THAN,
                             ETA_slow),
-                    0,
-                    H);
-
-            RobustnessFormula Phi_comb_bis = new AlwaysRobustnessFormula(
-                    new AtomicRobustnessFormula(getIteratedCombinedPerturbation_bis(),
-                            crash_dist,
-                            RelationOperator.LESS_OR_EQUAL_THAN,
-                            ETA_comb),
                     0,
                     H);
 
@@ -149,18 +142,10 @@ public class test_figure_2 {
                     0,
                     H);
 
-            RobustnessFormula Phi_comb_ter = new AlwaysRobustnessFormula(
-                    new AtomicRobustnessFormula(getIteratedCombinedPerturbation_ter(),
-                            crash_dist,
-                            RelationOperator.LESS_OR_EQUAL_THAN,
-                            ETA_comb),
-                    0,
-                    H);
 
             // Tests on the three-valued evaluation of formulae
 
             double[][] val_slow = new double[10][1];
-            double[][] val_comb = new double[10][1];
 
             for(int i = 0; i<10; i++) {
                 int step = i*10;
@@ -175,79 +160,9 @@ public class test_figure_2 {
                         val_slow[i][0] = -1;
                     }
                 }
-                TruthValues value2 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_comb).eval(60, step, sequence);
-                System.out.println("Phi_comb evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value2);
-                if (value2 == TruthValues.TRUE) {
-                    val_comb[i][0] = 1;
-                } else {
-                    if (value2 == TruthValues.UNKNOWN) {
-                        val_comb[i][0] = 0;
-                    } else {
-                        val_comb[i][0] = -1;
-                    }
-                }
             }
 
             Util.writeToCSV("./phi_slow_test_02x10.csv",val_slow);
-            Util.writeToCSV("./phi_comb_test_02x10.csv",val_comb);
-
-            for(int i = 0; i<10; i++) {
-                int step = i*30;
-                TruthValues value1 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_slow).eval(60, step, sequence);
-                System.out.println("Phi_slow evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value1);
-                if (value1 == TruthValues.TRUE) {
-                    val_slow[i][0] = 1;
-                } else {
-                    if (value1 == TruthValues.UNKNOWN) {
-                        val_slow[i][0] = 0;
-                    } else {
-                        val_slow[i][0] = -1;
-                    }
-                }
-                TruthValues value2 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_comb).eval(60, step, sequence);
-                System.out.println("Phi_comb evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value2);
-                if (value2 == TruthValues.TRUE) {
-                    val_comb[i][0] = 1;
-                } else {
-                    if (value2 == TruthValues.UNKNOWN) {
-                        val_comb[i][0] = 0;
-                    } else {
-                        val_comb[i][0] = -1;
-                    }
-                }
-            }
-
-            Util.writeToCSV("./phi_slow_test_02x30.csv",val_slow);
-            Util.writeToCSV("./phi_comb_test_02x30.csv",val_comb);
-
-            for(int i = 0; i<10; i++) {
-                int step = i*50;
-                TruthValues value1 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_slow).eval(60, step, sequence);
-                System.out.println("Phi_slow evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value1);
-                if (value1 == TruthValues.TRUE) {
-                    val_slow[i][0] = 1;
-                } else {
-                    if (value1 == TruthValues.UNKNOWN) {
-                        val_slow[i][0] = 0;
-                    } else {
-                        val_slow[i][0] = -1;
-                    }
-                }
-                TruthValues value2 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_comb).eval(60, step, sequence);
-                System.out.println("Phi_comb evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value2);
-                if (value2 == TruthValues.TRUE) {
-                    val_comb[i][0] = 1;
-                } else {
-                    if (value2 == TruthValues.UNKNOWN) {
-                        val_comb[i][0] = 0;
-                    } else {
-                        val_comb[i][0] = -1;
-                    }
-                }
-            }
-
-            Util.writeToCSV("./phi_slow_test_02x50.csv",val_slow);
-            Util.writeToCSV("./phi_comb_test_02x50.csv",val_comb);
 
             MAX_SPEED_OFFSET = 0.3;
 
@@ -264,79 +179,9 @@ public class test_figure_2 {
                         val_slow[i][0] = -1;
                     }
                 }
-                TruthValues value2 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_comb).eval(60, step, sequence);
-                System.out.println("Phi_comb evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value2);
-                if (value2 == TruthValues.TRUE) {
-                    val_comb[i][0] = 1;
-                } else {
-                    if (value2 == TruthValues.UNKNOWN) {
-                        val_comb[i][0] = 0;
-                    } else {
-                        val_comb[i][0] = -1;
-                    }
-                }
             }
 
             Util.writeToCSV("./phi_slow_test_03x10.csv",val_slow);
-            Util.writeToCSV("./phi_comb_test_03x10.csv",val_comb);
-
-            for(int i = 0; i<10; i++) {
-                int step = i*30;
-                TruthValues value1 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_slow).eval(60, step, sequence);
-                System.out.println("Phi_slow evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value1);
-                if (value1 == TruthValues.TRUE) {
-                    val_slow[i][0] = 1;
-                } else {
-                    if (value1 == TruthValues.UNKNOWN) {
-                        val_slow[i][0] = 0;
-                    } else {
-                        val_slow[i][0] = -1;
-                    }
-                }
-                TruthValues value2 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_comb).eval(60, step, sequence);
-                System.out.println("Phi_comb evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value2);
-                if (value2 == TruthValues.TRUE) {
-                    val_comb[i][0] = 1;
-                } else {
-                    if (value2 == TruthValues.UNKNOWN) {
-                        val_comb[i][0] = 0;
-                    } else {
-                        val_comb[i][0] = -1;
-                    }
-                }
-            }
-
-            Util.writeToCSV("./phi_slow_test_03x30.csv",val_slow);
-            Util.writeToCSV("./phi_comb_test_03x30.csv",val_comb);
-
-            for(int i = 0; i<10; i++) {
-                int step = i*50;
-                TruthValues value1 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_slow).eval(60, step, sequence);
-                System.out.println("Phi_slow evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value1);
-                if (value1 == TruthValues.TRUE) {
-                    val_slow[i][0] = 1;
-                } else {
-                    if (value1 == TruthValues.UNKNOWN) {
-                        val_slow[i][0] = 0;
-                    } else {
-                        val_slow[i][0] = -1;
-                    }
-                }
-                TruthValues value2 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_comb).eval(60, step, sequence);
-                System.out.println("Phi_comb evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value2);
-                if (value2 == TruthValues.TRUE) {
-                    val_comb[i][0] = 1;
-                } else {
-                    if (value2 == TruthValues.UNKNOWN) {
-                        val_comb[i][0] = 0;
-                    } else {
-                        val_comb[i][0] = -1;
-                    }
-                }
-            }
-
-            Util.writeToCSV("./phi_slow_test_03x50.csv",val_slow);
-            Util.writeToCSV("./phi_comb_test_03x50.csv",val_comb);
 
             MAX_SPEED_OFFSET = 0.4;
 
@@ -353,80 +198,9 @@ public class test_figure_2 {
                         val_slow[i][0] = -1;
                     }
                 }
-                TruthValues value2 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_comb).eval(60, step, sequence);
-                System.out.println("Phi_comb evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value2);
-                if (value2 == TruthValues.TRUE) {
-                    val_comb[i][0] = 1;
-                } else {
-                    if (value2 == TruthValues.UNKNOWN) {
-                        val_comb[i][0] = 0;
-                    } else {
-                        val_comb[i][0] = -1;
-                    }
-                }
             }
 
             Util.writeToCSV("./phi_slow_test_04x10.csv",val_slow);
-            Util.writeToCSV("./phi_comb_test_04x10.csv",val_comb);
-
-            for(int i = 0; i<10; i++) {
-                int step = i*30;
-                TruthValues value1 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_slow).eval(60, step, sequence);
-                System.out.println("Phi_slow evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value1);
-                if (value1 == TruthValues.TRUE) {
-                    val_slow[i][0] = 1;
-                } else {
-                    if (value1 == TruthValues.UNKNOWN) {
-                        val_slow[i][0] = 0;
-                    } else {
-                        val_slow[i][0] = -1;
-                    }
-                }
-                TruthValues value2 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_comb).eval(60, step, sequence);
-                System.out.println("Phi_comb evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value2);
-                if (value2 == TruthValues.TRUE) {
-                    val_comb[i][0] = 1;
-                } else {
-                    if (value2 == TruthValues.UNKNOWN) {
-                        val_comb[i][0] = 0;
-                    } else {
-                        val_comb[i][0] = -1;
-                    }
-                }
-            }
-
-            Util.writeToCSV("./phi_slow_test_04x30.csv",val_slow);
-            Util.writeToCSV("./phi_comb_test_04x30.csv",val_comb);
-
-            for(int i = 0; i<10; i++) {
-                int step = i*50;
-                TruthValues value1 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_slow).eval(60, step, sequence);
-                System.out.println("Phi_slow evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value1);
-                if (value1 == TruthValues.TRUE) {
-                    val_slow[i][0] = 1;
-                } else {
-                    if (value1 == TruthValues.UNKNOWN) {
-                        val_slow[i][0] = 0;
-                    } else {
-                        val_slow[i][0] = -1;
-                    }
-                }
-                TruthValues value2 = new ThreeValuedSemanticsVisitor(rand,50,1.96).eval(Phi_comb).eval(60, step, sequence);
-                System.out.println("Phi_comb evaluation at step "+step+" with offset "+MAX_SPEED_OFFSET+": " + value2);
-                if (value2 == TruthValues.TRUE) {
-                    val_comb[i][0] = 1;
-                } else {
-                    if (value2 == TruthValues.UNKNOWN) {
-                        val_comb[i][0] = 0;
-                    } else {
-                        val_comb[i][0] = -1;
-                    }
-                }
-            }
-
-            Util.writeToCSV("./phi_slow_test_04x50.csv",val_slow);
-            Util.writeToCSV("./phi_comb_test_04x50.csv",val_comb);
-
 
 
         } catch (RuntimeException e) {
@@ -653,34 +427,9 @@ public class test_figure_2 {
 
     // PERTURBATIONS
 
-    private static  Perturbation getFasterPerturbation() {
-        return new IterativePerturbation(3, new AtomicPerturbation(TIMER_INIT - 1, test_figure_2::fasterPerturbation));
-    }
-
-    private static  Perturbation getSlowerPerturbation() {
-        return new IterativePerturbation(3, new AtomicPerturbation(TIMER_INIT - 1, test_figure_2::slowerPerturbation));
-    }
 
     private static  Perturbation getIteratedSlowerPerturbation() {
-        return new AfterPerturbation(1, new IterativePerturbation(150, new AtomicPerturbation(TIMER_INIT - 1, test_figure_2::slowerPerturbation)));
-    }
-
-    private static  Perturbation getIteratedCombinedPerturbation() {
-        return new AfterPerturbation(1, new IterativePerturbation(50, new SequentialPerturbation(getFasterPerturbation(),getSlowerPerturbation())));
-    }
-
-    private static DataState fasterPerturbation(RandomGenerator rg, DataState state) {
-        List<DataStateUpdate> updates = new LinkedList<>();
-        double offset = state.get(p_speed_V1) * rg.nextDouble() * MAX_SPEED_OFFSET;
-        double fake_speed = Math.min(MAX_SPEED,state.get(p_speed_V1) + offset);
-        double fake_bd = (fake_speed * fake_speed + (ACCELERATION + BRAKE) * (ACCELERATION * TIMER_INIT * TIMER_INIT +
-                2 * fake_speed * TIMER_INIT)) / (2 * BRAKE);
-        double fake_rd = fake_bd + SAFETY_DISTANCE;
-        double fake_sg = state.get(p_distance_V1) - fake_rd;
-        updates.add(new DataStateUpdate(s_speed_V1, fake_speed));
-        updates.add(new DataStateUpdate(required_distance_V1, fake_rd));
-        updates.add(new DataStateUpdate(safety_gap_V1, fake_sg));
-        return state.apply(updates);
+        return new AfterPerturbation(1, new IterativePerturbation(150, new AtomicPerturbation(TIMER_INIT - 1, test_figure_2_top_left::slowerPerturbation)));
     }
 
     private static DataState slowerPerturbation(RandomGenerator rg, DataState state) {
@@ -697,34 +446,8 @@ public class test_figure_2 {
         return state.apply(updates);
     }
 
-    private static  Perturbation getFasterPerturbation_bis() {
-        return new IterativePerturbation(3, new AtomicPerturbation(TIMER_INIT - 1, test_figure_2::fasterPerturbation_bis));
-    }
-
-    private static  Perturbation getSlowerPerturbation_bis() {
-        return new IterativePerturbation(3, new AtomicPerturbation(TIMER_INIT - 1, test_figure_2::slowerPerturbation_bis));
-    }
-
     private static  Perturbation getIteratedSlowerPerturbation_bis() {
-        return new AfterPerturbation(1, new IterativePerturbation(150, new AtomicPerturbation(TIMER_INIT - 1, test_figure_2::slowerPerturbation_bis)));
-    }
-
-    private static  Perturbation getIteratedCombinedPerturbation_bis() {
-        return new AfterPerturbation(1, new IterativePerturbation(50, new SequentialPerturbation(getFasterPerturbation_bis(),getSlowerPerturbation_bis())));
-    }
-
-    private static DataState fasterPerturbation_bis(RandomGenerator rg, DataState state) {
-        List<DataStateUpdate> updates = new LinkedList<>();
-        double offset = state.get(p_speed_V1) * rg.nextDouble() * MAX_SPEED_OFFSET_BIS;
-        double fake_speed = Math.min(MAX_SPEED,state.get(p_speed_V1) + offset);
-        double fake_bd = (fake_speed * fake_speed + (ACCELERATION + BRAKE) * (ACCELERATION * TIMER_INIT * TIMER_INIT +
-                2 * fake_speed * TIMER_INIT)) / (2 * BRAKE);
-        double fake_rd = fake_bd + SAFETY_DISTANCE;
-        double fake_sg = state.get(p_distance_V1) - fake_rd;
-        updates.add(new DataStateUpdate(s_speed_V1, fake_speed));
-        updates.add(new DataStateUpdate(required_distance_V1, fake_rd));
-        updates.add(new DataStateUpdate(safety_gap_V1, fake_sg));
-        return state.apply(updates);
+        return new AfterPerturbation(1, new IterativePerturbation(150, new AtomicPerturbation(TIMER_INIT - 1, test_figure_2_top_left::slowerPerturbation_bis)));
     }
 
     private static DataState slowerPerturbation_bis(RandomGenerator rg, DataState state) {
@@ -741,34 +464,8 @@ public class test_figure_2 {
         return state.apply(updates);
     }
 
-    private static  Perturbation getFasterPerturbation_ter() {
-        return new IterativePerturbation(3, new AtomicPerturbation(TIMER_INIT - 1, test_figure_2::fasterPerturbation_ter));
-    }
-
-    private static  Perturbation getSlowerPerturbation_ter() {
-        return new IterativePerturbation(3, new AtomicPerturbation(TIMER_INIT - 1, test_figure_2::slowerPerturbation_ter));
-    }
-
     private static  Perturbation getIteratedSlowerPerturbation_ter() {
-        return new AfterPerturbation(1, new IterativePerturbation(150, new AtomicPerturbation(TIMER_INIT - 1, test_figure_2::slowerPerturbation_ter)));
-    }
-
-    private static  Perturbation getIteratedCombinedPerturbation_ter() {
-        return new AfterPerturbation(1, new IterativePerturbation(50, new SequentialPerturbation(getFasterPerturbation_ter(),getSlowerPerturbation_ter())));
-    }
-
-    private static DataState fasterPerturbation_ter(RandomGenerator rg, DataState state) {
-        List<DataStateUpdate> updates = new LinkedList<>();
-        double offset = state.get(p_speed_V1) * rg.nextDouble() * MAX_SPEED_OFFSET_TER;
-        double fake_speed = Math.min(MAX_SPEED,state.get(p_speed_V1) + offset);
-        double fake_bd = (fake_speed * fake_speed + (ACCELERATION + BRAKE) * (ACCELERATION * TIMER_INIT * TIMER_INIT +
-                2 * fake_speed * TIMER_INIT)) / (2 * BRAKE);
-        double fake_rd = fake_bd + SAFETY_DISTANCE;
-        double fake_sg = state.get(p_distance_V1) - fake_rd;
-        updates.add(new DataStateUpdate(s_speed_V1, fake_speed));
-        updates.add(new DataStateUpdate(required_distance_V1, fake_rd));
-        updates.add(new DataStateUpdate(safety_gap_V1, fake_sg));
-        return state.apply(updates);
+        return new AfterPerturbation(1, new IterativePerturbation(150, new AtomicPerturbation(TIMER_INIT - 1, test_figure_2_top_left::slowerPerturbation_ter)));
     }
 
     private static DataState slowerPerturbation_ter(RandomGenerator rg, DataState state) {
@@ -784,8 +481,6 @@ public class test_figure_2 {
         updates.add(new DataStateUpdate(safety_gap_V1_V2, fake_sg));
         return state.apply(updates);
     }
-
-
 
     // INITIALISATION OF DATA STATE
 

@@ -20,7 +20,7 @@
  * limitations under the License.
  */
 
-package it.unicam.quasylab.jspear.examples.vehicle;
+package stark.examples.vehicle;
 
 import it.unicam.quasylab.jspear.ControlledSystem;
 import it.unicam.quasylab.jspear.DefaultRandomGenerator;
