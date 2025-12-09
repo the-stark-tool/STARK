@@ -21,9 +21,7 @@ Hence, STARK also includes a classical algorithm for the evaluation of confidenc
 
 The [lib](./lib) folder contains all the [Java classes](./lib/src/main/java/it/unicam/quasylab/jspear/) that are necessary to implement all the procedures, mechanisms, and functions described above.
 
-In the [examples/engine](./examples/engine) folder you can find the script [Main.java](./examples/engine/src/main/java/it/unicam/quasylab/jspear/examples/engine/Main.java), that contains various tests, that we used to showcase different features of JSPEAR over the case study of a refrigerated engine system subject to cyber-physical attacks aimed at inflicting overstress of equipment. 
-
-We have used the Python script [plots.py](./plots.py) to draw plots from the CSV files obtained from the JAVA script.
+In the [examples](./examples/) folder you can find several case studies that showcase different features of STARK.
 
 ## Download 
 
