@@ -22,7 +22,7 @@
 
 package nl.tue.ABZ2025.AI;
 
-import it.unicam.quasylab.jspear.ds.DataState;
+import stark.ds.DataState;
 import org.json.JSONArray;
 import org.json.JSONObject;
 

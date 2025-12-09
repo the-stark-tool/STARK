@@ -8,7 +8,7 @@
  * This project uses @Incubating APIs which are subject to change.
  */
 
-rootProject.name = 'it.unicam.quasylab.jspear'
+rootProject.name = 'stark'
 include('lib')
 include('examples')
 include('examples:engine')

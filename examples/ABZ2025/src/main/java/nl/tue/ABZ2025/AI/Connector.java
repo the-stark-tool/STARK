@@ -31,7 +31,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
-import it.unicam.quasylab.jspear.ds.DataState;
+import stark.ds.DataState;
 import org.json.JSONObject;
 
 public class Connector {

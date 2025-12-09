@@ -22,27 +22,23 @@
 
 package Scenarios;
 
-import it.unicam.quasylab.jspear.*;
-import it.unicam.quasylab.jspear.controller.ControllerRegistry;
-import it.unicam.quasylab.jspear.controller.ExecController;
-import it.unicam.quasylab.jspear.controller.Controller;
-import it.unicam.quasylab.jspear.distance.*;
-import it.unicam.quasylab.jspear.distance.AtomicDistanceExpression;
-import it.unicam.quasylab.jspear.distance.DistanceExpression;
-import it.unicam.quasylab.jspear.ds.DataState;
-import it.unicam.quasylab.jspear.ds.DataStateExpression;
-import it.unicam.quasylab.jspear.ds.DataStateUpdate;
+import stark.*;
+import stark.controller.ControllerRegistry;
+import stark.controller.ExecController;
+import stark.controller.Controller;
+import stark.distance.AtomicDistanceExpression;
+import stark.distance.DistanceExpression;
+import stark.distance.MaxIntervalDistanceExpression;
+import stark.ds.DataState;
+import stark.ds.DataStateExpression;
+import stark.ds.DataStateUpdate;
 
-import it.unicam.quasylab.jspear.ds.RelationOperator;
-import it.unicam.quasylab.jspear.perturbation.AfterPerturbation;
-import it.unicam.quasylab.jspear.perturbation.AtomicPerturbation;
-import it.unicam.quasylab.jspear.perturbation.IterativePerturbation;
-import it.unicam.quasylab.jspear.perturbation.Perturbation;
-import it.unicam.quasylab.jspear.robtl.*;
-import it.unicam.quasylab.jspear.robtl.AlwaysRobustnessFormula;
-import it.unicam.quasylab.jspear.robtl.AtomicRobustnessFormula;
-import it.unicam.quasylab.jspear.robtl.RobustnessFormula;
-import it.unicam.quasylab.jspear.robtl.ThreeValuedSemanticsVisitor;
+import stark.ds.RelationOperator;
+import stark.perturbation.AfterPerturbation;
+import stark.perturbation.AtomicPerturbation;
+import stark.perturbation.IterativePerturbation;
+import stark.perturbation.Perturbation;
+import stark.robtl.*;
 import org.apache.commons.math3.random.RandomGenerator;
 
 import java.io.IOException;
