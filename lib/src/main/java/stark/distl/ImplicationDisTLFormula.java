@@ -23,7 +23,7 @@
 package stark.distl;
 
 import stark.udistl.UDisTLFormula;
-import nl.tue.Monitoring.MonitorBuildingVisitor;
+import stark.MonitorBuildingVisitor;
 
 import java.util.OptionalInt;
 

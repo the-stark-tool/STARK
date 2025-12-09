@@ -26,8 +26,8 @@ import stark.SampleSet;
 import stark.SystemState;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateFunction;
-import it.unicam.quasylab.jspear.penalty.*;
-import nl.tue.Monitoring.MonitorBuildingVisitor;
+import stark.penalty.*;
+import stark.MonitorBuildingVisitor;
 import stark.penalty.NonePenalty;
 import stark.penalty.Penalty;
 

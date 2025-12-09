@@ -25,7 +25,7 @@ package stark.distl;
 import stark.DefaultRandomGenerator;
 import stark.SampleSet;
 import stark.SystemState;
-import it.unicam.quasylab.jspear.penalty.*;
+import stark.penalty.*;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateFunction;
 import org.apache.commons.math3.random.AbstractRandomGenerator;

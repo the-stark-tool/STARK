@@ -24,9 +24,9 @@ package stark.distl;
 
 import stark.SampleSet;
 import stark.SystemState;
-import it.unicam.quasylab.jspear.ds.*;
-import it.unicam.quasylab.jspear.penalty.*;
-import nl.tue.Monitoring.MonitorBuildingVisitor;
+import stark.ds.*;
+import stark.penalty.*;
+import stark.MonitorBuildingVisitor;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateFunction;
 import stark.penalty.NonePenalty;

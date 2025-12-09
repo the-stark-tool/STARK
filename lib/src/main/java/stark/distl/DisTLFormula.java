@@ -22,7 +22,6 @@
 
 package stark.distl;
 
-import it.unicam.quasylab.jspear.robtl.*;
 import stark.udistl.UDisTLFormula;
 
 public sealed interface DisTLFormula extends UDisTLFormula permits

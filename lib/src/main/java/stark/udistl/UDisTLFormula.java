@@ -24,7 +24,7 @@ package stark.udistl;
 
 import stark.distl.DisTLFormulaVisitor;
 import stark.distl.DisTLFunction;
-import nl.tue.Monitoring.MonitorBuildingVisitor;
+import stark.MonitorBuildingVisitor;
 
 import java.util.OptionalInt;
 
