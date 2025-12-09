@@ -22,19 +22,18 @@
 
 package stark.examples.Lotka;
 
-import it.unicam.quasylab.jspear.*;
 import stark.*;
 import stark.controller.Controller;
 import stark.controller.NilController;
-import it.unicam.quasylab.jspear.distance.*;
+import stark.distance.*;
 import stark.distance.AtomicDistanceExpression;
 import stark.ds.DataState;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateUpdate;
 import stark.perturbation.AtomicPerturbation;
 import stark.perturbation.Perturbation;
-import it.unicam.quasylab.jspear.perturbation.*;
-import it.unicam.quasylab.jspear.robtl.*;
+import stark.perturbation.*;
+import stark.robtl.*;
 import org.apache.commons.math3.random.RandomGenerator;
 
 import java.io.IOException;

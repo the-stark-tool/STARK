@@ -22,14 +22,13 @@
 
 package stark.distl;
 
-import it.unicam.quasylab.jspear.*;
 import stark.*;
 import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
 import stark.ds.DataState;
 import stark.ds.DataStateFunction;
 import stark.ds.DataStateUpdate;
-import nl.tue.Monitoring.PerceivedSystemState;
+import stark.PerceivedSystemState;
 import org.apache.commons.math3.random.RandomGenerator;
 import org.junit.jupiter.api.Test;
 

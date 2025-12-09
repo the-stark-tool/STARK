@@ -8,7 +8,7 @@
  */
 
 plugins {
-    id 'jspear.java-application-conventions'
+    id 'stark.java-application-conventions'
 
     id 'antlr'
 
@@ -29,6 +29,6 @@ generateGrammarSource {
 }
 
 application {
-    mainClass = "it.unicam.quasylab.jspear.cli.StarkShell"
+    mainClass = "stark.cli.StarkShell"
     applicationName = "stark"
 }

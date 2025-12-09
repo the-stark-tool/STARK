@@ -25,8 +25,8 @@ package stark.speclang.parsing;
 import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
 import stark.controller.ParallelController;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageBaseVisitor;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageParser;
+import stark.speclang.JSpearSpecificationLanguageBaseVisitor;
+import stark.speclang.JSpearSpecificationLanguageParser;
 
 public class JSpearControllerGenerator extends JSpearSpecificationLanguageBaseVisitor<Controller> {
 

@@ -22,7 +22,6 @@
 
 package stark.examples.envzompr;
 
-import it.unicam.quasylab.jspear.*;
 import stark.*;
 import stark.controller.Controller;
 import stark.controller.NilController;
@@ -35,7 +34,7 @@ import stark.ds.DataStateUpdate;
 import stark.ds.RelationOperator;
 import stark.perturbation.AtomicPerturbation;
 import stark.perturbation.Perturbation;
-import it.unicam.quasylab.jspear.robtl.*;
+import stark.robtl.*;
 import org.apache.commons.math3.random.RandomGenerator;
 import stark.robtl.AlwaysRobustnessFormula;
 import stark.robtl.AtomicRobustnessFormula;

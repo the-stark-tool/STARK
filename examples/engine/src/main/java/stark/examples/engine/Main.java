@@ -22,9 +22,9 @@
 
 package stark.examples.engine;
 
-import it.unicam.quasylab.jspear.controller.Controller;
-import it.unicam.quasylab.jspear.controller.ControllerRegistry;
-import it.unicam.quasylab.jspear.controller.ParallelController;
+import stark.controller.Controller;
+import stark.controller.ControllerRegistry;
+import stark.controller.ParallelController;
 import org.apache.commons.math3.random.RandomGenerator;
 
 import java.io.IOException;

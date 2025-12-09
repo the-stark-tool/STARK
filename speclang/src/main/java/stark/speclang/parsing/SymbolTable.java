@@ -22,7 +22,7 @@
 
 package stark.speclang.parsing;
 
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageParser;
+import stark.speclang.JSpearSpecificationLanguageParser;
 import stark.speclang.types.JSpearCustomType;
 import stark.speclang.types.JSpearType;
 import org.antlr.v4.runtime.ParserRuleContext;

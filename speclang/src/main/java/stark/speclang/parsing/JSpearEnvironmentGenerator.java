@@ -23,12 +23,10 @@
 package stark.speclang.parsing;
 
 import stark.ds.DataStateUpdate;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageBaseVisitor;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageParser;
-import it.unicam.quasylab.jspear.speclang.semantics.*;
+import stark.speclang.JSpearSpecificationLanguageBaseVisitor;
+import stark.speclang.JSpearSpecificationLanguageParser;
 import stark.speclang.semantics.*;
 import stark.speclang.values.JSpearValue;
-import it.unicam.quasylab.jspear.speclang.variables.*;
 import org.apache.commons.math3.random.RandomGenerator;
 import stark.speclang.variables.*;
 

@@ -22,7 +22,7 @@
 
 package stark.penalty;
 
-import it.unicam.quasylab.jspear.ds.*;
+
 import stark.ds.DataStateExpression;
 
 /**

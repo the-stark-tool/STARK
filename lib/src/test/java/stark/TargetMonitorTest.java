@@ -22,7 +22,6 @@
 
 package stark;
 
-import stark.*;
 import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
 import stark.distl.DisTLFormula;
@@ -32,8 +31,8 @@ import stark.ds.DataState;
 import stark.ds.DataStateFunction;
 import stark.ds.DataStateUpdate;
 import stark.udistl.UDisTLFormula;
-import nl.tue.Monitoring.Default.DefaultMonitorBuilder;
-import nl.tue.Monitoring.Default.DefaultUDisTLMonitor;
+import stark.monitors.DefaultMonitorBuilder;
+import stark.monitors.DefaultUDisTLMonitor;
 import org.apache.commons.math3.random.RandomGenerator;
 import org.junit.jupiter.api.Test;
 

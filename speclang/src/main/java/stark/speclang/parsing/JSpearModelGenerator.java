@@ -22,26 +22,23 @@
 
 package stark.speclang.parsing;
 
-import it.unicam.quasylab.jspear.*;
 import stark.ControlledSystem;
 import stark.SystemSpecification;
 import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
 import stark.controller.ParallelController;
 import stark.distance.DistanceExpression;
-import it.unicam.quasylab.jspear.ds.*;
 import stark.ds.*;
 import stark.perturbation.Perturbation;
 import stark.robtl.RobustnessFormula;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageBaseVisitor;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageParser;
+import stark.speclang.JSpearSpecificationLanguageBaseVisitor;
+import stark.speclang.JSpearSpecificationLanguageParser;
 import stark.speclang.controller.JSpearControllerFunction;
 import stark.speclang.semantics.JSpearExpressionEvaluationFunction;
 import stark.speclang.semantics.JSpearExpressionEvaluator;
 import stark.speclang.types.JSpearCustomType;
 import stark.speclang.types.JSpearType;
 import stark.speclang.values.JSpearValue;
-import it.unicam.quasylab.jspear.speclang.variables.*;
 import org.antlr.v4.runtime.Token;
 import org.apache.commons.math3.random.RandomGenerator;
 import stark.speclang.variables.*;

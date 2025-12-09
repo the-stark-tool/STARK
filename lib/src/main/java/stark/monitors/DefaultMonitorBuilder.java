@@ -22,7 +22,7 @@
 
 package stark.monitors;
 
-import nl.tue.Monitoring.MonitorBuildingVisitor;
+import stark.MonitorBuildingVisitor;
 import stark.distl.*;
 import stark.udistl.UDisTLFormula;
 import stark.udistl.UnboundedUntiluDisTLFormula;

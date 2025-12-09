@@ -22,17 +22,16 @@
 
 package stark.examples.agriculturalDT;
 
-import it.unicam.quasylab.jspear.*;
 import stark.ControlledSystem;
 import stark.DefaultRandomGenerator;
 import stark.EvolutionSequence;
 import stark.SystemState;
 import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
-import it.unicam.quasylab.jspear.distance.*;
-import it.unicam.quasylab.jspear.ds.*;
-import it.unicam.quasylab.jspear.perturbation.*;
-import it.unicam.quasylab.jspear.robtl.*;
+import stark.distance.*;
+import stark.ds.*;
+import stark.perturbation.*;
+import stark.robtl.*;
 import org.apache.commons.math3.random.RandomGenerator;
 import stark.ds.DataState;
 import stark.ds.DataStateExpression;

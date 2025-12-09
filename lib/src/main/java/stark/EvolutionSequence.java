@@ -27,7 +27,7 @@ import stark.ds.DataStateExpression;
 import stark.ds.DataStateFunction;
 import stark.ds.DataStateBooleanExpression;
 import stark.perturbation.Perturbation;
-import nl.tue.Monitoring.PerceivedSystemState;
+import stark.PerceivedSystemState;
 import org.apache.commons.math3.random.RandomGenerator;
 
 import java.util.ArrayList;

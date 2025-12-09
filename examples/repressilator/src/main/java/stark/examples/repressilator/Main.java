@@ -22,13 +22,10 @@
 
 package stark.examples.repressilator;
 
-
-
-import it.unicam.quasylab.jspear.*;
 import stark.*;
 import stark.controller.Controller;
 import stark.controller.NilController;
-import it.unicam.quasylab.jspear.distance.*;
+import stark.distance.*;
 import stark.distance.AtomicDistanceExpression;
 import stark.distance.DistanceExpression;
 import stark.distance.MaxDistanceExpression;
@@ -41,7 +38,7 @@ import stark.perturbation.AtomicPerturbation;
 import stark.perturbation.IterativePerturbation;
 import stark.perturbation.Perturbation;
 import stark.perturbation.SequentialPerturbation;
-import it.unicam.quasylab.jspear.robtl.*;
+import stark.robtl.*;
 import org.apache.commons.math3.random.RandomGenerator;
 import stark.robtl.AtomicRobustnessFormula;
 import stark.robtl.RobustnessFormula;

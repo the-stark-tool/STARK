@@ -25,7 +25,7 @@ package stark;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateFunction;
 import org.apache.commons.math3.random.RandomGenerator;
-import it.unicam.quasylab.jspear.penalty.*;
+import stark.penalty.*;
 import stark.penalty.Penalty;
 
 import java.util.LinkedList;

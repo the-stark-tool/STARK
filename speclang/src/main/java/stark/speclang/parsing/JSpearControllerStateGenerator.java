@@ -26,15 +26,14 @@ import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
 import stark.controller.EffectStep;
 import stark.ds.DataStateUpdate;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageBaseVisitor;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageParser;
+import stark.speclang.JSpearSpecificationLanguageBaseVisitor;
+import stark.speclang.JSpearSpecificationLanguageParser;
 import stark.speclang.controller.JSpearControllerFunction;
 import stark.speclang.semantics.JSpearExpressionEvaluationFunction;
 import stark.speclang.semantics.JSpearExpressionEvaluator;
 import stark.speclang.values.JSpearValue;
-import it.unicam.quasylab.jspear.speclang.variables.*;
-import org.apache.commons.math3.random.RandomGenerator;
 import stark.speclang.variables.*;
+import org.apache.commons.math3.random.RandomGenerator;
 
 import java.util.List;
 import java.util.Map;

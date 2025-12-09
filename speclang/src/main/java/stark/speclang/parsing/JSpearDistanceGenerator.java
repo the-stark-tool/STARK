@@ -22,12 +22,11 @@
 
 package stark.speclang.parsing;
 
-import it.unicam.quasylab.jspear.distance.*;
 import stark.distance.*;
 import stark.ds.DataStateExpression;
 import stark.ds.RelationOperator;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageBaseVisitor;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageParser;
+import stark.speclang.JSpearSpecificationLanguageBaseVisitor;
+import stark.speclang.JSpearSpecificationLanguageParser;
 import stark.speclang.semantics.JSpearExpressionEvaluator;
 import stark.speclang.values.JSpearValue;
 import stark.speclang.variables.JSpearExpressionEvaluationContext;

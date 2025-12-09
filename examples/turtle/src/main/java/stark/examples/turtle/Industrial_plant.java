@@ -22,16 +22,15 @@
 
 package stark.examples.turtle;
 
-import it.unicam.quasylab.jspear.*;
 import stark.*;
 import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
 import stark.distance.AtomicDistanceExpression;
 import stark.distance.DistanceExpression;
 import stark.distance.MaxIntervalDistanceExpression;
-import it.unicam.quasylab.jspear.ds.*;
-import it.unicam.quasylab.jspear.perturbation.*;
-import it.unicam.quasylab.jspear.feedback.*;
+import stark.ds.*;
+import stark.perturbation.*;
+import stark.feedback.*;
 import stark.ds.DataState;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateUpdate;

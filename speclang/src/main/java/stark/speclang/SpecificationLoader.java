@@ -22,7 +22,6 @@
 package stark.speclang;
 
 import stark.SystemSpecification;
-import it.unicam.quasylab.jspear.speclang.parsing.*;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;

@@ -15,9 +15,9 @@ import stark.ds.DataStateFunction;
 import stark.ds.DataStateUpdate;
 import stark.udistl.UDisTLFormula;
 import stark.udistl.UnboundedUntiluDisTLFormula;
-import nl.tue.Monitoring.Default.DefaultMonitorBuilder;
-import nl.tue.Monitoring.PerceivedSystemState;
-import nl.tue.Monitoring.Default.DefaultUDisTLMonitor;
+import stark.monitors.DefaultMonitorBuilder;
+import stark.PerceivedSystemState;
+import stark.monitors.DefaultUDisTLMonitor;
 import org.apache.commons.math3.random.RandomGenerator;
 
 import java.util.List;

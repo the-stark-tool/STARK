@@ -1,5 +1,5 @@
 plugins {
-    id 'jspear.java-application-conventions'
+    id 'stark.java-application-conventions'
 }
 
 dependencies {
@@ -8,5 +8,5 @@ dependencies {
 
 application {
     // Define the main class for the application.
-    mainClass = 'it.unicam.quasylab.jspear.examples.Lotka.Main'
+    mainClass = 'stark.examples.Lotka.Main'
 }

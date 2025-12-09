@@ -22,7 +22,6 @@
 
 package stark.speclang;
 
-import it.unicam.quasylab.jspear.*;
 import stark.*;
 import stark.ds.DataStateExpression;
 import stark.perturbation.Perturbation;

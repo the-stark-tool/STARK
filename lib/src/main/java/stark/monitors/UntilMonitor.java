@@ -22,7 +22,7 @@
 
 package stark.monitors;
 
-import nl.tue.Monitoring.PerceivedSystemState;
+import stark.PerceivedSystemState;
 import stark.SampleSet;
 import stark.distl.UntilDisTLFormula;
 

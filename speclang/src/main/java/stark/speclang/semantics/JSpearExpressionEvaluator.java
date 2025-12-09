@@ -23,10 +23,8 @@
 package stark.speclang.semantics;
 
 import stark.ds.DataStateExpression;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageBaseVisitor;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageParser;
-import it.unicam.quasylab.jspear.speclang.variables.*;
-import it.unicam.quasylab.jspear.speclang.values.*;
+import stark.speclang.JSpearSpecificationLanguageBaseVisitor;
+import stark.speclang.JSpearSpecificationLanguageParser;
 import stark.speclang.values.JSPearInteger;
 import stark.speclang.values.JSpearBoolean;
 import stark.speclang.values.JSpearReal;

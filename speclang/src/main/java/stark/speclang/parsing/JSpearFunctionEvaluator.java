@@ -22,8 +22,8 @@
 
 package stark.speclang.parsing;
 
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageBaseVisitor;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageParser;
+import stark.speclang.JSpearSpecificationLanguageBaseVisitor;
+import stark.speclang.JSpearSpecificationLanguageParser;
 import stark.speclang.semantics.JSpearExpressionEvaluationFunction;
 import stark.speclang.semantics.JSpearExpressionEvaluator;
 import stark.speclang.values.JSpearValue;

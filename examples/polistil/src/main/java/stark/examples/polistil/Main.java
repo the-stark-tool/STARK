@@ -22,7 +22,6 @@
 
 package stark.examples.polistil;
 
-import it.unicam.quasylab.jspear.*;
 import stark.ControlledSystem;
 import stark.DefaultRandomGenerator;
 import stark.EvolutionSequence;
@@ -31,8 +30,8 @@ import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
 import stark.controller.GenerativeChoiceController;
 import stark.controller.ParallelController;
-import it.unicam.quasylab.jspear.distl.*;
-import it.unicam.quasylab.jspear.ds.*;
+import stark.distl.*;
+import stark.ds.*;
 import stark.distl.*;
 import stark.ds.DataState;
 import stark.ds.DataStateExpression;

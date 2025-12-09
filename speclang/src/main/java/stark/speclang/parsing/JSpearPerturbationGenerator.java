@@ -28,12 +28,11 @@ import stark.perturbation.Perturbation;
 import stark.perturbation.SequentialPerturbation;
 import stark.ds.DataStateFunction;
 import stark.ds.DataStateUpdate;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageBaseVisitor;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageParser;
+import stark.speclang.JSpearSpecificationLanguageBaseVisitor;
+import stark.speclang.JSpearSpecificationLanguageParser;
 import stark.speclang.semantics.JSpearExpressionEvaluationFunction;
 import stark.speclang.semantics.JSpearExpressionEvaluator;
 import stark.speclang.values.JSpearValue;
-import it.unicam.quasylab.jspear.speclang.variables.*;
 import org.apache.commons.math3.random.RandomGenerator;
 import stark.speclang.variables.*;
 

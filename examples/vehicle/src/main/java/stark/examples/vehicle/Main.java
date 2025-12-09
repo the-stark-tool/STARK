@@ -22,12 +22,12 @@
 
 package stark.examples.vehicle;
 
-import it.unicam.quasylab.jspear.controller.Controller;
-import it.unicam.quasylab.jspear.controller.ControllerRegistry;
-import it.unicam.quasylab.jspear.controller.ParallelController;
-import it.unicam.quasylab.jspear.distance.AtomicDistanceExpressionLeq;
-import it.unicam.quasylab.jspear.distance.DistanceExpression;
-import it.unicam.quasylab.jspear.distance.MaxIntervalDistanceExpression;
+import stark.controller.Controller;
+import stark.controller.ControllerRegistry;
+import stark.controller.ParallelController;
+import stark.distance.AtomicDistanceExpressionLeq;
+import stark.distance.DistanceExpression;
+import stark.distance.MaxIntervalDistanceExpression;
 import org.apache.commons.math3.random.RandomGenerator;
 
 import java.io.IOException;

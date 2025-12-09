@@ -22,14 +22,8 @@
 
 package stark.speclang.parsing;
 
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageBaseVisitor;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageParser;
-import it.unicam.quasylab.jspear.speclang.types.*;
-import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.Token;
-
-import java.util.*;
-import java.util.stream.Collectors;
+import stark.speclang.JSpearSpecificationLanguageBaseVisitor;
+import stark.speclang.JSpearSpecificationLanguageParser;
 
 public class SpecificationLanguageValidator extends JSpearSpecificationLanguageBaseVisitor<Boolean> {
 //    private final ParseErrorCollector errors;

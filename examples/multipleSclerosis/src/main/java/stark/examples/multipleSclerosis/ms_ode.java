@@ -22,9 +22,8 @@
 
 package stark.examples.multipleSclerosis;
 
-import it.unicam.quasylab.jspear.*;
-import it.unicam.quasylab.jspear.controller.*;
-import it.unicam.quasylab.jspear.distance.*;
+import stark.controller.*;
+import stark.distance.*;
 import stark.DefaultRandomGenerator;
 import stark.SystemState;
 import stark.TimedSystem;
@@ -35,7 +34,7 @@ import stark.controller.NilController;
 import stark.ds.DataState;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateUpdate;
-import it.unicam.quasylab.jspear.robtl.*;
+import stark.robtl.*;
 import org.apache.commons.math3.random.RandomGenerator;
 
 import java.io.IOException;

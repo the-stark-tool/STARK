@@ -22,8 +22,8 @@
 
 package stark.speclang.parsing;
 
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageBaseVisitor;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageParser;
+import stark.speclang.JSpearSpecificationLanguageBaseVisitor;
+import stark.speclang.JSpearSpecificationLanguageParser;
 import stark.speclang.variables.JSpearVariableRegistry;
 import org.antlr.v4.runtime.Token;
 

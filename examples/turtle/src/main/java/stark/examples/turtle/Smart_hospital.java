@@ -22,32 +22,18 @@
 
 package stark.examples.turtle;
 
-import it.unicam.quasylab.jspear.*;
 import stark.*;
 import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
-import it.unicam.quasylab.jspear.distance.*;
-import it.unicam.quasylab.jspear.ds.*;
-import it.unicam.quasylab.jspear.perturbation.*;
-import it.unicam.quasylab.jspear.feedback.*;
-import it.unicam.quasylab.jspear.robtl.*;
-import org.apache.commons.math3.random.RandomGenerator;
 import stark.distance.*;
-import stark.ds.DataState;
-import stark.ds.DataStateExpression;
-import stark.ds.DataStateUpdate;
-import stark.ds.RelationOperator;
-import stark.feedback.AtomicFeedback;
-import stark.feedback.Feedback;
-import stark.feedback.PersistentFeedback;
-import stark.perturbation.AtomicPerturbation;
-import stark.perturbation.NonePerturbation;
-import stark.perturbation.PersistentPerturbation;
-import stark.perturbation.Perturbation;
-import stark.robtl.AlwaysRobustnessFormula;
-import stark.robtl.AtomicRobustnessFormula;
-import stark.robtl.BooleanSemanticsVisitor;
-import stark.robtl.RobustnessFormula;
+import stark.ds.*;
+import stark.perturbation.*;
+import stark.feedback.*;
+import stark.robtl.*;
+import stark.distance.*;
+
+import org.apache.commons.math3.random.RandomGenerator;
+
 
 import java.io.IOException;
 import java.util.*;

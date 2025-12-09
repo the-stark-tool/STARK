@@ -8,7 +8,7 @@
  */
 
 plugins {
-    id 'jspear.java-library-conventions'
+    id 'stark.java-library-conventions'
 }
 
 dependencies {

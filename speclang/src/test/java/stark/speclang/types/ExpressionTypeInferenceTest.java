@@ -22,7 +22,8 @@
 
 package stark.speclang.types;
 
-import it.unicam.quasylab.jspear.speclang.*;
+import stark.speclang.JSpearSpecificationLanguageLexer;
+import stark.speclang.JSpearSpecificationLanguageParser;
 import stark.speclang.parsing.ParseErrorCollector;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;

@@ -22,11 +22,10 @@
 
 package stark.examples.multiScler;
 
-import it.unicam.quasylab.jspear.*;
-import it.unicam.quasylab.jspear.controller.*;
-import it.unicam.quasylab.jspear.distance.*;
-import it.unicam.quasylab.jspear.distl.*;
-import it.unicam.quasylab.jspear.ds.*;
+import stark.controller.*;
+import stark.distance.*;
+import stark.distl.*;
+import stark.ds.*;
 import stark.*;
 import stark.controller.Controller;
 import stark.controller.NilController;
@@ -34,10 +33,10 @@ import stark.distl.*;
 import stark.ds.DataState;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateUpdate;
-import it.unicam.quasylab.jspear.robtl.*;
-import nl.tue.Monitoring.Default.DefaultMonitorBuilder;
-import nl.tue.Monitoring.Default.DefaultUDisTLMonitor;
-import nl.tue.Monitoring.PerceivedSystemState;
+import stark.robtl.*;
+import stark.monitors.DefaultMonitorBuilder;
+import stark.monitors.DefaultUDisTLMonitor;
+import stark.PerceivedSystemState;
 import org.apache.commons.math3.random.RandomGenerator;
 
 import java.io.IOException;

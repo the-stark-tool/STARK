@@ -28,7 +28,6 @@ import stark.speclang.types.ExpressionTypeInference;
 import stark.speclang.types.JSpearRandomType;
 import stark.speclang.types.JSpearType;
 import stark.speclang.types.LocalTypeContext;
-import it.unicam.quasylab.jspear.speclang.values.*;
 import stark.speclang.values.JSPearInteger;
 import stark.speclang.values.JSpearBoolean;
 import stark.speclang.values.JSpearReal;

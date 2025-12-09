@@ -22,11 +22,8 @@
 
 package stark.speclang.semantics;
 
-import it.unicam.quasylab.jspear.controller.*;
 import stark.controller.Controller;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageBaseVisitor;
-import it.unicam.quasylab.jspear.speclang.JSpearSpecificationLanguageParser;
-import it.unicam.quasylab.jspear.speclang.variables.*;
+import stark.speclang.JSpearSpecificationLanguageBaseVisitor;
 
 public class JSpearControllerBehaviourGenerator extends JSpearSpecificationLanguageBaseVisitor<Controller> {
 
