@@ -19,7 +19,7 @@ Hence, STARK includes:
 Since the procedures outlined above are based on statistical inference, we need to take into account the statistical error when checking the satisfaction of formulae.
 Hence, STARK also includes a classical algorithm for the evaluation of confidence intervals in the evaluation of distances, and a three-valued semantics for RobTL specifications, in which the truth value *unknown* is added to true and false.
 
-The [lib](./lib) folder contains all the [JAVA classes](./lib/src/main/java/it/unicam/quasylab/jspear/) that are necessary to implement all the procedures, mechanisms, and functions described above.
+The [lib](./lib) folder contains all the [Java classes](./lib/src/main/java/it/unicam/quasylab/jspear/) that are necessary to implement all the procedures, mechanisms, and functions described above.
 
 In the [examples/engine](./examples/engine) folder you can find the script [Main.java](./examples/engine/src/main/java/it/unicam/quasylab/jspear/examples/engine/Main.java), that contains various tests, that we used to showcase different features of JSPEAR over the case study of a refrigerated engine system subject to cyber-physical attacks aimed at inflicting overstress of equipment. 
 
@@ -35,7 +35,45 @@ git clone https://github.com/quasylab/jspear.git
 
 Run this command in the folder where you want to download the tool.
 
-## How to run experiments
+## Building STARK
+
+To build STARK you have to execute the following commands from the shell:
+
+```
+./gradlew build
+
+./gradlew install
+```
+
+## Execute Command Line Interpreter
+
+To run che STARK CLI you have to execute:
+
+```
+cd ./cli/build/install/stark 
+
+./bin/stark
+```
+
+An example, based on the single vehicle scenario, is available in the folder ```examples\single_vehicle```. 
+The ```single_vehicle.jspear``` model can be loaded by using the following command:
+
+```
+cd "examples/single_vehicle"
+
+load "single_vehicle.jspec"
+```
+
+After that, the command ```formulas``` can be used to view the list of formulas defined in the model. 
+Their satisfaction of a formula at a given time step can be checked as follows:
+
+```
+check boolean phi_slow_04 at 300
+
+check threevalued always_slow_05 at 0
+```
+
+## How to run experiments with Java
 
 You will need
 * A text editor or IDE (we used [IntelliJ IDEA](https://www.jetbrains.com/idea/))
