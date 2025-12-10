@@ -27,10 +27,10 @@ import java.util.Map;
 
 public class GlobalTypeContext implements TypeEvaluationContext {
 
-    private final Map<String, JSpearType> symbolType;
-    private final Map<String, JSpearType[]> functionArgumentTypes;
+    private final Map<String, StarkType> symbolType;
+    private final Map<String, StarkType[]> functionArgumentTypes;
 
-    private final Map<String, JSpearType> functionReturnTypes;
+    private final Map<String, StarkType> functionReturnTypes;
 
     public GlobalTypeContext() {
         symbolType = new HashMap<>();
@@ -49,7 +49,7 @@ public class GlobalTypeContext implements TypeEvaluationContext {
     }
 
     @Override
-    public JSpearType getTypeOf(String name) {
+    public StarkType getTypeOf(String name) {
         return symbolType.get(name);
     }
 
@@ -59,16 +59,16 @@ public class GlobalTypeContext implements TypeEvaluationContext {
     }
 
     @Override
-    public JSpearType[] getArgumentsType(String functionName) {
+    public StarkType[] getArgumentsType(String functionName) {
         return functionArgumentTypes.get(functionName);
     }
 
     @Override
-    public JSpearType getReturnType(String functionName) {
+    public StarkType getReturnType(String functionName) {
         return functionReturnTypes.get(functionName);
     }
 
-    public boolean add(String name, JSpearType type) {
+    public boolean add(String name, StarkType type) {
         if (isDefined(name)) {
             return false;
         }
@@ -76,7 +76,7 @@ public class GlobalTypeContext implements TypeEvaluationContext {
         return true;
     }
 
-    public boolean add(String name, JSpearType[] args, JSpearType returnType) {
+    public boolean add(String name, StarkType[] args, StarkType returnType) {
         if (isDefined(name)) {
             return false;
         }

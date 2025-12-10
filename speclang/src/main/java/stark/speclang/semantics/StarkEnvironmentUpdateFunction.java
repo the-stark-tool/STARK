@@ -20,27 +20,23 @@
  * limitations under the License.
  */
 
-package stark.speclang.types;
+package stark.speclang.semantics;
 
-import org.antlr.v4.runtime.Token;
+import stark.ds.DataState;
+import stark.ds.DataStateFunction;
+import stark.ds.DataStateUpdate;
+import stark.speclang.variables.StarkStore;
+import stark.speclang.variables.StarkVariableAllocation;
+import org.apache.commons.math3.random.RandomGenerator;
 
-public interface TypeEvaluationContext {
+import java.util.List;
+import java.util.function.BiFunction;
 
-    boolean isDefined(String name);
+public interface StarkEnvironmentUpdateFunction extends BiFunction<RandomGenerator, StarkStore, List<DataStateUpdate>>, DataStateFunction {
 
-    boolean isAReference(String name);
+    StarkVariableAllocation getVariableAllocation();
 
-    StarkType getTypeOf(String name);
-
-    boolean isAFunction(String functionName);
-
-    StarkType[] getArgumentsType(String functionName);
-
-    StarkType getReturnType(String functionName);
-
-
-    static TypeEvaluationContext letContext(TypeEvaluationContext outerContext, Token name, StarkType type) {
-        return new LetTypeEvaluationContext(outerContext, name.getText(), type);
+    default DataState apply(RandomGenerator rg, DataState ds) {
+        return ds.apply(this.apply(rg, StarkStore.storeOf(getVariableAllocation(), ds)));
     }
-
 }

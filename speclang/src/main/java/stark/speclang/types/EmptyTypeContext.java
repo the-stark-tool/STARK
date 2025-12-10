@@ -34,7 +34,7 @@ public class EmptyTypeContext implements TypeEvaluationContext {
     }
 
     @Override
-    public JSpearType getTypeOf(String name) {
+    public StarkType getTypeOf(String name) {
         return null;
     }
 
@@ -44,12 +44,12 @@ public class EmptyTypeContext implements TypeEvaluationContext {
     }
 
     @Override
-    public JSpearType[] getArgumentsType(String functionName) {
+    public StarkType[] getArgumentsType(String functionName) {
         return null;
     }
 
     @Override
-    public JSpearType getReturnType(String functionName) {
+    public StarkType getReturnType(String functionName) {
         return null;
     }
 }

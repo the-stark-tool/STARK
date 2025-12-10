@@ -20,11 +20,19 @@
  * limitations under the License.
  */
 
-package stark.speclang.types;
+package stark.speclang;
 
-import stark.speclang.StarkSpecificationLanguageLexer;
-import stark.speclang.StarkSpecificationLanguageParser;
 import stark.speclang.parsing.ParseErrorCollector;
+import stark.speclang.semantics.StarkExpressionEvaluator;
+import stark.speclang.types.ExpressionTypeInference;
+import stark.speclang.types.StarkRandomType;
+import stark.speclang.types.StarkType;
+import stark.speclang.types.LocalTypeContext;
+import stark.speclang.values.StarkInteger;
+import stark.speclang.values.StarkBoolean;
+import stark.speclang.values.StarkReal;
+import stark.speclang.values.StarkValue;
+import stark.speclang.variables.StarkExpressionEvaluationContext;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -34,73 +42,62 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class ExpressionTypeInferenceTest {
+class StarkExpressionEvaluatorTest {
 
-    private final static Map<String, StarkType> typeTests = new HashMap<>();
+    private  static Map<String, StarkValue> valuesTests = new HashMap<>();
 
 
     @BeforeAll
     public static void initTypeTests() {
-        typeTests.put("2", StarkType.INTEGER_TYPE);
-        typeTests.put("2.", StarkType.REAL_TYPE);
-        typeTests.put("true", StarkType.BOOLEAN_TYPE);
-        typeTests.put("false", StarkType.BOOLEAN_TYPE);
-        typeTests.put("2+3", StarkType.INTEGER_TYPE);
-        typeTests.put("2.+3", StarkType.REAL_TYPE);
-        typeTests.put("2+3.", StarkType.REAL_TYPE);
-        typeTests.put("2.+3.", StarkType.REAL_TYPE);
-        typeTests.put("true & true", StarkType.BOOLEAN_TYPE);
-        typeTests.put("true | true", StarkType.BOOLEAN_TYPE);
-        typeTests.put("2 ^ 3", StarkType.REAL_TYPE);
-        typeTests.put("2 * 3", StarkType.INTEGER_TYPE);
-        typeTests.put("2. * 3", StarkType.REAL_TYPE);
-        typeTests.put("2 * 3.", StarkType.REAL_TYPE);
-        typeTests.put("2. * 3.", StarkType.REAL_TYPE);
-        typeTests.put("2 + 3", StarkType.INTEGER_TYPE);
-        typeTests.put("2. + 3", StarkType.REAL_TYPE);
-        typeTests.put("2 + 3.", StarkType.REAL_TYPE);
-        typeTests.put("2. + 3.", StarkType.REAL_TYPE);
-        typeTests.put("2. < 3", StarkType.BOOLEAN_TYPE);
-        typeTests.put("!true", StarkType.BOOLEAN_TYPE);
-        typeTests.put("(2<3?1.0:2.0)", StarkType.REAL_TYPE);
-        typeTests.put("(2<3?1.0:2)", StarkType.REAL_TYPE);
-        typeTests.put("(2<3?1:2.0)", StarkType.REAL_TYPE);
-        typeTests.put("(2<3?1:2)", StarkType.INTEGER_TYPE);
-        typeTests.put("abs(1)", StarkType.REAL_TYPE);
-        typeTests.put("acos(1)", StarkType.REAL_TYPE);
-        typeTests.put("asin(1)", StarkType.REAL_TYPE);
-        typeTests.put("atan(1)", StarkType.REAL_TYPE);
-        typeTests.put("cbrt(1)", StarkType.REAL_TYPE);
-        typeTests.put("ceil(1)", StarkType.REAL_TYPE);
-        typeTests.put("cos(1)", StarkType.REAL_TYPE);
-        typeTests.put("cosh(1)", StarkType.REAL_TYPE);
-        typeTests.put("exp(1)", StarkType.REAL_TYPE);
-        typeTests.put("expm1(1)", StarkType.REAL_TYPE);
-        typeTests.put("floor(1)", StarkType.REAL_TYPE);
-        typeTests.put("log(1)", StarkType.REAL_TYPE);
-        typeTests.put("log10(1)", StarkType.REAL_TYPE);
-        typeTests.put("log1p(1)", StarkType.REAL_TYPE);
-        typeTests.put("signum(1)", StarkType.REAL_TYPE);
-        typeTests.put("sin(1)", StarkType.REAL_TYPE);
-        typeTests.put("sinh(1)", StarkType.REAL_TYPE);
-        typeTests.put("sqrt(1)", StarkType.REAL_TYPE);
-        typeTests.put("tan(1)", StarkType.REAL_TYPE);
-        typeTests.put("atan2(1,2)", StarkType.REAL_TYPE);
-        typeTests.put("hypot(1,2)", StarkType.REAL_TYPE);
-        typeTests.put("max(1,2)", StarkType.REAL_TYPE);
-        typeTests.put("min(1,2)", StarkType.REAL_TYPE);
-        typeTests.put("pow(1,2)", StarkType.REAL_TYPE);
-        typeTests.put("N[0.,1.]", new StarkRandomType(StarkType.REAL_TYPE));
-        typeTests.put("N[0,1]", new StarkRandomType(StarkType.REAL_TYPE));
-        typeTests.put("U[true,false]", new StarkRandomType(StarkType.BOOLEAN_TYPE));
-        typeTests.put("U[1,2,3]", new StarkRandomType(StarkType.INTEGER_TYPE));
-        typeTests.put("U[1.0,2,3]", new StarkRandomType(StarkType.REAL_TYPE));
-        typeTests.put("R", new StarkRandomType(StarkType.REAL_TYPE));
-        typeTests.put("R[1, 10]", new StarkRandomType(StarkType.REAL_TYPE));
-        typeTests.put("(R<R)", new StarkRandomType(StarkType.BOOLEAN_TYPE));
-        typeTests.put("(R<R?1:2)", new StarkRandomType(StarkType.INTEGER_TYPE));
+        valuesTests.put("2", new StarkInteger(2));
+        valuesTests.put("2.", new StarkReal(2.0));
+        valuesTests.put("true", StarkBoolean.TRUE);
+        valuesTests.put("false", StarkBoolean.FALSE);
+        valuesTests.put("2+3", new StarkInteger(5));
+        valuesTests.put("2.+3", new StarkReal(5.0));
+        valuesTests.put("2+3.", new StarkReal(5.0));
+        valuesTests.put("2.+3.", new StarkReal(5.0));
+        valuesTests.put("true & true", StarkBoolean.TRUE);
+        valuesTests.put("true | true", StarkBoolean.TRUE);
+        valuesTests.put("2 ^ 3", new StarkReal(Math.pow(2, 3)));
+        valuesTests.put("2 * 3", new StarkInteger(6));
+        valuesTests.put("2. * 3", new StarkReal(6.0));
+        valuesTests.put("2 * 3.", new StarkReal(6.0));
+        valuesTests.put("2. * 3.", new StarkReal(6.0));
+        valuesTests.put("2 < 3", StarkBoolean.TRUE);
+        valuesTests.put("2. <= 3", StarkBoolean.TRUE);
+        valuesTests.put("2 == 3.", StarkBoolean.FALSE);
+        valuesTests.put("2. > 3.", StarkBoolean.FALSE);
+        valuesTests.put("2. >= 3", StarkBoolean.FALSE);
+        valuesTests.put("!true", StarkBoolean.FALSE);
+        valuesTests.put("(2<3?1.0:2.0)", new StarkReal(1.0));
+        valuesTests.put("(2>3?1.0:2)", new StarkInteger(2));
+        valuesTests.put("abs(1)", new StarkReal(Math.abs(1)));
+        valuesTests.put("acos(1)", new StarkReal(Math.acos(1)));
+        valuesTests.put("asin(1)", new StarkReal(Math.asin(1)));
+        valuesTests.put("atan(1)", new StarkReal(Math.atan(1)));
+        valuesTests.put("cbrt(1)", new StarkReal(Math.cbrt(1)));
+        valuesTests.put("ceil(1)", new StarkReal(Math.ceil(1)));
+        valuesTests.put("cos(1)", new StarkReal(Math.cos(1)));
+        valuesTests.put("cosh(1)", new StarkReal(Math.cosh(1)));
+        valuesTests.put("exp(1)", new StarkReal(Math.exp(1)));
+        valuesTests.put("expm1(1)", new StarkReal(Math.expm1(1)));
+        valuesTests.put("floor(1)", new StarkReal(Math.floor(1)));
+        valuesTests.put("log(2)", new StarkReal(Math.log(2)));
+        valuesTests.put("log10(2)", new StarkReal(Math.log10(2)));
+        valuesTests.put("log1p(2)", new StarkReal(Math.log1p(2)));
+        valuesTests.put("signum(1)", new StarkReal(Math.signum(1)));
+        valuesTests.put("sin(1)", new StarkReal(Math.sin(1)));
+        valuesTests.put("sinh(1)", new StarkReal(Math.sinh(1)));
+        valuesTests.put("sqrt(1)", new StarkReal(Math.sqrt(1)));
+        valuesTests.put("tan(1)", new StarkReal(Math.tan(1)));
+        valuesTests.put("atan2(1,2)", new StarkReal(Math.atan2(1,2)));
+        valuesTests.put("hypot(1,2)", new StarkReal(Math.hypot(1,2)));
+        valuesTests.put("max(1,2)", new StarkReal(Math.max(1,2)));
+        valuesTests.put("min(1,2)", new StarkReal(Math.min(1,2)));
+        valuesTests.put("pow(2,3)", new StarkReal(Math.pow(2,3)));
 
     }
 
@@ -187,10 +184,14 @@ class ExpressionTypeInferenceTest {
     }
 
 
+    private StarkValue evalExpression(ParseTree expression, Map<String, StarkValue> args) {
+        return expression.accept(new StarkExpressionEvaluator(new StarkExpressionEvaluationContext(args), null)).eval();
+    }
+
     @Test
     public void testExpressions() {
-        for (Map.Entry<String, StarkType> test: typeTests.entrySet()) {
-            assertEquals(test.getValue(), inferTypeOf(true, getParseTree(test.getKey())), test.getKey());
+        for (Map.Entry<String, StarkValue> test: valuesTests.entrySet()) {
+            assertEquals(test.getValue(), evalExpression(getParseTree(test.getKey()), new HashMap<>()), test.getKey());
         }
     }
 

@@ -1,7 +1,7 @@
 /*
  * STARK: Software Tool for the Analysis of Robustness in the unKnown environment
  *
- *              Copyright (C) 2023.
+ *                Copyright (C) 2023.
  *
  * See the NOTICE file distributed with this work for additional information
  * regarding copyright ownership.
@@ -20,27 +20,20 @@
  * limitations under the License.
  */
 
-package stark.speclang.types;
+package stark.speclang.semantics;
 
-import org.antlr.v4.runtime.Token;
+import stark.speclang.variables.StarkVariableAllocation;
 
-public interface TypeEvaluationContext {
+public abstract class StarkAbstractEnvironmentFunction implements StarkEnvironmentUpdateFunction {
+    protected final StarkVariableAllocation allocation;
 
-    boolean isDefined(String name);
-
-    boolean isAReference(String name);
-
-    StarkType getTypeOf(String name);
-
-    boolean isAFunction(String functionName);
-
-    StarkType[] getArgumentsType(String functionName);
-
-    StarkType getReturnType(String functionName);
-
-
-    static TypeEvaluationContext letContext(TypeEvaluationContext outerContext, Token name, StarkType type) {
-        return new LetTypeEvaluationContext(outerContext, name.getText(), type);
+    public StarkAbstractEnvironmentFunction(StarkVariableAllocation allocation) {
+        this.allocation = allocation;
     }
 
+
+    @Override
+    public StarkVariableAllocation getVariableAllocation() {
+        return allocation;
+    }
 }

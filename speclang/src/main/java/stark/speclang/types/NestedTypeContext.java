@@ -46,7 +46,7 @@ public class NestedTypeContext implements TypeEvaluationContext {
     }
 
     @Override
-    public JSpearType getTypeOf(String name) {
+    public StarkType getTypeOf(String name) {
         if (this.innerContext.isDefined(name)) {
             return this.innerContext.getTypeOf(name);
         } else {
@@ -64,7 +64,7 @@ public class NestedTypeContext implements TypeEvaluationContext {
     }
 
     @Override
-    public JSpearType[] getArgumentsType(String functionName) {
+    public StarkType[] getArgumentsType(String functionName) {
         if (this.innerContext.isDefined(functionName)) {
             return this.innerContext.getArgumentsType(functionName);
         } else {
@@ -73,7 +73,7 @@ public class NestedTypeContext implements TypeEvaluationContext {
     }
 
     @Override
-    public JSpearType getReturnType(String functionName) {
+    public StarkType getReturnType(String functionName) {
         if (this.innerContext.isDefined(functionName)) {
             return this.innerContext.getReturnType(functionName);
         } else {

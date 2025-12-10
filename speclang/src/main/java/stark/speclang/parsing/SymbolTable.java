@@ -22,9 +22,9 @@
 
 package stark.speclang.parsing;
 
-import stark.speclang.JSpearSpecificationLanguageParser;
-import stark.speclang.types.JSpearCustomType;
-import stark.speclang.types.JSpearType;
+import stark.speclang.StarkSpecificationLanguageParser;
+import stark.speclang.types.StarkCustomType;
+import stark.speclang.types.StarkType;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 import java.util.HashMap;
@@ -36,21 +36,21 @@ import java.util.stream.Stream;
 public class SymbolTable {
 
     private final Map<String, ParserRuleContext> symbols = new HashMap<>();
-    private final Map<String, JSpearSpecificationLanguageParser.DeclarationFunctionContext> functions = new HashMap<>();
+    private final Map<String, StarkSpecificationLanguageParser.DeclarationFunctionContext> functions = new HashMap<>();
 
-    private final Map<String, JSpearSpecificationLanguageParser.VariableDeclarationContext> variables = new HashMap<>();
+    private final Map<String, StarkSpecificationLanguageParser.VariableDeclarationContext> variables = new HashMap<>();
 
-    private final Map<String, JSpearSpecificationLanguageParser.DeclarationConstantContext> constants = new HashMap<>();
+    private final Map<String, StarkSpecificationLanguageParser.DeclarationConstantContext> constants = new HashMap<>();
 
-    private final Map<String, JSpearSpecificationLanguageParser.DeclarationPenaltyContext> penalties = new HashMap<>();
+    private final Map<String, StarkSpecificationLanguageParser.DeclarationPenaltyContext> penalties = new HashMap<>();
 
-    private final Map<String, JSpearSpecificationLanguageParser.DeclarationComponentContext> components = new HashMap<>();
+    private final Map<String, StarkSpecificationLanguageParser.DeclarationComponentContext> components = new HashMap<>();
 
 
-    private final Map<String, JSpearType> typesOfRefereneableElements = new HashMap<>();
-    private final Map<String, JSpearType[]> functionArguments = new HashMap<>();
-    private final Map<String, JSpearType> functionReturnTypes = new HashMap<>();
-    private final Map<String, JSpearType> custumTypes = new HashMap<>();
+    private final Map<String, StarkType> typesOfRefereneableElements = new HashMap<>();
+    private final Map<String, StarkType[]> functionArguments = new HashMap<>();
+    private final Map<String, StarkType> functionReturnTypes = new HashMap<>();
+    private final Map<String, StarkType> custumTypes = new HashMap<>();
 
     private final Set<String> elementsOfDeclaredTypes = new HashSet<>();
 
@@ -58,7 +58,7 @@ public class SymbolTable {
         return symbols.get(name);
     }
 
-    public void recordFunction(String name, JSpearType[] arguments, JSpearType returnType, JSpearSpecificationLanguageParser.DeclarationFunctionContext ctx) {
+    public void recordFunction(String name, StarkType[] arguments, StarkType returnType, StarkSpecificationLanguageParser.DeclarationFunctionContext ctx) {
         if (symbols.containsKey(name)) {
             throw new IllegalArgumentException();
         }
@@ -68,7 +68,7 @@ public class SymbolTable {
         this.functionReturnTypes.put(name, returnType);
     }
 
-    public JSpearSpecificationLanguageParser.DeclarationFunctionContext getFunctionDeclaration(String name) {
+    public StarkSpecificationLanguageParser.DeclarationFunctionContext getFunctionDeclaration(String name) {
         return this.functions.get(name);
     }
 
@@ -90,7 +90,7 @@ public class SymbolTable {
         return this.functions.containsKey(functionName);
     }
 
-    public void recordConstant(String name, JSpearType type, JSpearSpecificationLanguageParser.DeclarationConstantContext ctx) {
+    public void recordConstant(String name, StarkType type, StarkSpecificationLanguageParser.DeclarationConstantContext ctx) {
         if (symbols.containsKey(name)) {
             throw new IllegalArgumentException();
         }
@@ -99,7 +99,7 @@ public class SymbolTable {
         this.typesOfRefereneableElements.put(name, type);
     }
 
-    public void recordVariable(String name, JSpearType type, JSpearSpecificationLanguageParser.VariableDeclarationContext ctx) {
+    public void recordVariable(String name, StarkType type, StarkSpecificationLanguageParser.VariableDeclarationContext ctx) {
         if (symbols.containsKey(name)) {
             throw new IllegalArgumentException();
         }
@@ -108,7 +108,7 @@ public class SymbolTable {
         this.typesOfRefereneableElements.put(name, type);
     }
 
-    public void recordPenaltyFunction(String name, JSpearSpecificationLanguageParser.DeclarationPenaltyContext ctx) {
+    public void recordPenaltyFunction(String name, StarkSpecificationLanguageParser.DeclarationPenaltyContext ctx) {
         if (symbols.containsKey(name)) {
             throw new IllegalArgumentException();
         }
@@ -116,7 +116,7 @@ public class SymbolTable {
         this.penalties.put(name, ctx);
     }
 
-    public void recordComponent(String name, JSpearSpecificationLanguageParser.DeclarationComponentContext ctx) {
+    public void recordComponent(String name, StarkSpecificationLanguageParser.DeclarationComponentContext ctx) {
         if (symbols.containsKey(name)) {
             throw new IllegalArgumentException();
         }
@@ -129,7 +129,7 @@ public class SymbolTable {
     }
 
 
-    public void recordCustomType(JSpearSpecificationLanguageParser.DeclarationTypeContext ctx) {
+    public void recordCustomType(StarkSpecificationLanguageParser.DeclarationTypeContext ctx) {
         String customTypeName = ctx.name.getText();
         String[] customTypeElements = ctx.elements.stream().map(e -> e.name.getText()).toArray(String[]::new);
         if (isDefined(customTypeName)|| Stream.of(customTypeElements).anyMatch(this::isDefined)) {
@@ -137,7 +137,7 @@ public class SymbolTable {
         }
         this.symbols.put(customTypeName, ctx);
         ctx.elements.forEach(e -> this.symbols.put(e.name.getText(), e));
-        JSpearType customType = new JSpearCustomType(customTypeName, customTypeElements);
+        StarkType customType = new StarkCustomType(customTypeName, customTypeElements);
         this.custumTypes.put(customTypeName, customType);
         Stream.of(customTypeElements).forEach(e -> {
             this.typesOfRefereneableElements.put(e, customType);
@@ -149,7 +149,7 @@ public class SymbolTable {
         return this.custumTypes.containsKey(typeName);
     }
 
-    public JSpearType getCustomType(String typeName) {
+    public StarkType getCustomType(String typeName) {
         return this.custumTypes.get(typeName);
     }
 

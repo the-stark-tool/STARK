@@ -20,27 +20,20 @@
  * limitations under the License.
  */
 
-package stark.speclang.types;
+package stark.speclang.values;
 
-import org.antlr.v4.runtime.Token;
+import stark.speclang.types.StarkType;
 
-public interface TypeEvaluationContext {
+public final class StarkErrorValue implements StarkValue {
 
-    boolean isDefined(String name);
+    @Override
+    public StarkType getJSpearType() {
+        return StarkType.ERROR_TYPE;
+    }
 
-    boolean isAReference(String name);
-
-    StarkType getTypeOf(String name);
-
-    boolean isAFunction(String functionName);
-
-    StarkType[] getArgumentsType(String functionName);
-
-    StarkType getReturnType(String functionName);
-
-
-    static TypeEvaluationContext letContext(TypeEvaluationContext outerContext, Token name, StarkType type) {
-        return new LetTypeEvaluationContext(outerContext, name.getText(), type);
+    @Override
+    public double toDouble() {
+        return Double.NaN;
     }
 
 }

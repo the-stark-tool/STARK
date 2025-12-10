@@ -20,27 +20,14 @@
  * limitations under the License.
  */
 
-package stark.speclang.types;
+package stark.speclang.semantics;
 
-import org.antlr.v4.runtime.Token;
+import stark.speclang.values.StarkValue;
+import org.apache.commons.math3.random.RandomGenerator;
 
-public interface TypeEvaluationContext {
+@FunctionalInterface
+public interface StarkFunction {
 
-    boolean isDefined(String name);
-
-    boolean isAReference(String name);
-
-    StarkType getTypeOf(String name);
-
-    boolean isAFunction(String functionName);
-
-    StarkType[] getArgumentsType(String functionName);
-
-    StarkType getReturnType(String functionName);
-
-
-    static TypeEvaluationContext letContext(TypeEvaluationContext outerContext, Token name, StarkType type) {
-        return new LetTypeEvaluationContext(outerContext, name.getText(), type);
-    }
+    StarkValue apply(RandomGenerator rg, StarkValue[] args);
 
 }

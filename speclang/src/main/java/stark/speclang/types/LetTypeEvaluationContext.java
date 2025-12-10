@@ -26,9 +26,9 @@ package stark.speclang.types;
 public class LetTypeEvaluationContext implements TypeEvaluationContext {
     private final TypeEvaluationContext outerContext;
     private final String name;
-    private final JSpearType type;
+    private final StarkType type;
 
-    public LetTypeEvaluationContext(TypeEvaluationContext outerContext, String name, JSpearType type) {
+    public LetTypeEvaluationContext(TypeEvaluationContext outerContext, String name, StarkType type) {
         this.outerContext = outerContext;
         this.name = name;
         this.type = type;
@@ -46,7 +46,7 @@ public class LetTypeEvaluationContext implements TypeEvaluationContext {
     }
 
     @Override
-    public JSpearType getTypeOf(String name) {
+    public StarkType getTypeOf(String name) {
         return (this.name.equals(name)?this.type:outerContext.getTypeOf(name));
     }
 
@@ -56,7 +56,7 @@ public class LetTypeEvaluationContext implements TypeEvaluationContext {
     }
 
     @Override
-    public JSpearType[] getArgumentsType(String functionName) {
+    public StarkType[] getArgumentsType(String functionName) {
         if (this.name.equals(functionName)) {
             return null;
         }
@@ -64,7 +64,7 @@ public class LetTypeEvaluationContext implements TypeEvaluationContext {
     }
 
     @Override
-    public JSpearType getReturnType(String functionName) {
+    public StarkType getReturnType(String functionName) {
         if (this.name.equals(functionName)) {
             return null;
         }

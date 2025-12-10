@@ -22,8 +22,8 @@
 
 package stark.speclang.types;
 
-import stark.speclang.JSpearSpecificationLanguageBaseVisitor;
-import stark.speclang.JSpearSpecificationLanguageParser;
+import stark.speclang.StarkSpecificationLanguageBaseVisitor;
+import stark.speclang.StarkSpecificationLanguageParser;
 import stark.speclang.parsing.ParseErrorCollector;
 import stark.speclang.parsing.ParseUtil;
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -31,7 +31,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
 /**
  * This visitor is used to infer types of expressions.
  */
-public class ExpressionTypeInference extends JSpearSpecificationLanguageBaseVisitor<JSpearType> {
+public class ExpressionTypeInference extends StarkSpecificationLanguageBaseVisitor<StarkType> {
     private final TypeEvaluationContext context;
     private final ParseErrorCollector errors;
     private final boolean randomExpressionAllowed;
@@ -52,153 +52,153 @@ public class ExpressionTypeInference extends JSpearSpecificationLanguageBaseVisi
         this(context, errors, false);
     }
 
-    public static JSpearType infer(TypeEvaluationContext context, ParseErrorCollector errors, JSpearSpecificationLanguageParser.ExpressionContext value) {
+    public static StarkType infer(TypeEvaluationContext context, ParseErrorCollector errors, StarkSpecificationLanguageParser.ExpressionContext value) {
         return value.accept(new ExpressionTypeInference(context, errors, true));
     }
 
-    public static JSpearType infer(TypeEvaluationContext context, ParseErrorCollector errors, boolean randomExpressionAllowed, JSpearSpecificationLanguageParser.ExpressionContext value) {
+    public static StarkType infer(TypeEvaluationContext context, ParseErrorCollector errors, boolean randomExpressionAllowed, StarkSpecificationLanguageParser.ExpressionContext value) {
         return value.accept(new ExpressionTypeInference(context, errors, randomExpressionAllowed));
     }
 
 
-    public JSpearType inferAndCheck(JSpearType expectedType, ParserRuleContext ctx) {
-        JSpearType actualType = ctx.accept(this);
+    public StarkType inferAndCheck(StarkType expectedType, ParserRuleContext ctx) {
+        StarkType actualType = ctx.accept(this);
         if (!expectedType.isCompatibleWith(actualType)) {
             errors.record(ParseUtil.typeError(expectedType, actualType, ctx.start));
-            return JSpearType.ERROR_TYPE;
+            return StarkType.ERROR_TYPE;
         }
         return actualType;
     }
 
-    public boolean checkType(JSpearType expectedType, ParserRuleContext ctx) {
+    public boolean checkType(StarkType expectedType, ParserRuleContext ctx) {
         return !inferAndCheck(expectedType, ctx).isError();
     }
 
     @Override
-    public JSpearType visitNegationExpression(JSpearSpecificationLanguageParser.NegationExpressionContext ctx) {
-        if (checkType(JSpearType.BOOLEAN_TYPE, ctx.arg)) {
-            return JSpearType.BOOLEAN_TYPE;
+    public StarkType visitNegationExpression(StarkSpecificationLanguageParser.NegationExpressionContext ctx) {
+        if (checkType(StarkType.BOOLEAN_TYPE, ctx.arg)) {
+            return StarkType.BOOLEAN_TYPE;
         }
-        return JSpearType.ERROR_TYPE;
+        return StarkType.ERROR_TYPE;
     }
 
     @Override
-    public JSpearType visitExponentExpression(JSpearSpecificationLanguageParser.ExponentExpressionContext ctx) {
+    public StarkType visitExponentExpression(StarkSpecificationLanguageParser.ExponentExpressionContext ctx) {
         return combineToRealType(ctx.left, ctx.right);
     }
 
-    private JSpearType combineToRealType(ParserRuleContext left, ParserRuleContext right) {
-        JSpearType leftType = checkNumerical(left);
-        JSpearType rightType = checkNumerical(right);
-        return (leftType.isRandom()||rightType.isRandom()?new JSpearRandomType(JSpearType.REAL_TYPE): JSpearType.REAL_TYPE);
+    private StarkType combineToRealType(ParserRuleContext left, ParserRuleContext right) {
+        StarkType leftType = checkNumerical(left);
+        StarkType rightType = checkNumerical(right);
+        return (leftType.isRandom()||rightType.isRandom()?new StarkRandomType(StarkType.REAL_TYPE): StarkType.REAL_TYPE);
     }
 
-    private JSpearType checkNumerical(ParserRuleContext ctx) {
-        JSpearType type = ctx.accept(this);
+    private StarkType checkNumerical(ParserRuleContext ctx) {
+        StarkType type = ctx.accept(this);
         if (!type.isNumerical()) {
             errors.record(ParseUtil.expectedNumericalType(type, ctx.start));
-            return JSpearType.ERROR_TYPE;
+            return StarkType.ERROR_TYPE;
         }
         return type;
     }
 
     @Override
-    public JSpearType visitBinaryMathCallExpression(JSpearSpecificationLanguageParser.BinaryMathCallExpressionContext ctx) {
+    public StarkType visitBinaryMathCallExpression(StarkSpecificationLanguageParser.BinaryMathCallExpressionContext ctx) {
         return combineToRealType(ctx.left, ctx.right);
     }
 
 
     @Override
-    public JSpearType visitReferenceExpression(JSpearSpecificationLanguageParser.ReferenceExpressionContext ctx) {
+    public StarkType visitReferenceExpression(StarkSpecificationLanguageParser.ReferenceExpressionContext ctx) {
         String name = ctx.name.getText();
         if (!context.isDefined(name)) {
             errors.record(ParseUtil.unknownSymbol(ctx.name));
-            return JSpearType.ERROR_TYPE;
+            return StarkType.ERROR_TYPE;
         }
         if (!context.isAReference(name)) {
             errors.record(ParseUtil.illegalUseOfName(ctx.name));
-            return JSpearType.ERROR_TYPE;
+            return StarkType.ERROR_TYPE;
         }
         return context.getTypeOf(name);
     }
 
     @Override
-    public JSpearType visitIntValue(JSpearSpecificationLanguageParser.IntValueContext ctx) {
-        return JSpearType.INTEGER_TYPE;
+    public StarkType visitIntValue(StarkSpecificationLanguageParser.IntValueContext ctx) {
+        return StarkType.INTEGER_TYPE;
     }
 
     @Override
-    public JSpearType visitTrueValue(JSpearSpecificationLanguageParser.TrueValueContext ctx) {
-        return JSpearType.BOOLEAN_TYPE;
+    public StarkType visitTrueValue(StarkSpecificationLanguageParser.TrueValueContext ctx) {
+        return StarkType.BOOLEAN_TYPE;
     }
 
     @Override
-    public JSpearType visitRelationExpression(JSpearSpecificationLanguageParser.RelationExpressionContext ctx) {
-        JSpearType leftType = ctx.left.accept(this);
-        JSpearType rightType = ctx.right.accept(this);
+    public StarkType visitRelationExpression(StarkSpecificationLanguageParser.RelationExpressionContext ctx) {
+        StarkType leftType = ctx.left.accept(this);
+        StarkType rightType = ctx.right.accept(this);
         if (!leftType.canBeMergedWith(rightType)) {
             this.errors.record(ParseUtil.typeError(leftType,rightType, ctx.right.start));
         }
-        return (leftType.isRandom()||rightType.isRandom()?new JSpearRandomType(JSpearType.BOOLEAN_TYPE):JSpearType.BOOLEAN_TYPE);
+        return (leftType.isRandom()||rightType.isRandom()?new StarkRandomType(StarkType.BOOLEAN_TYPE): StarkType.BOOLEAN_TYPE);
     }
 
     @Override
-    public JSpearType visitBracketExpression(JSpearSpecificationLanguageParser.BracketExpressionContext ctx) {
+    public StarkType visitBracketExpression(StarkSpecificationLanguageParser.BracketExpressionContext ctx) {
         return ctx.expression().accept(this);
     }
 
     @Override
-    public JSpearType visitOrExpression(JSpearSpecificationLanguageParser.OrExpressionContext ctx) {
-        boolean isRandom = checkType(JSpearType.BOOLEAN_TYPE, ctx.left);
-        checkType(JSpearType.BOOLEAN_TYPE, ctx.right);
-        return JSpearType.BOOLEAN_TYPE;
+    public StarkType visitOrExpression(StarkSpecificationLanguageParser.OrExpressionContext ctx) {
+        boolean isRandom = checkType(StarkType.BOOLEAN_TYPE, ctx.left);
+        checkType(StarkType.BOOLEAN_TYPE, ctx.right);
+        return StarkType.BOOLEAN_TYPE;
     }
 
     @Override
-    public JSpearType visitIfThenElseExpression(JSpearSpecificationLanguageParser.IfThenElseExpressionContext ctx) {
-        JSpearType guardType = inferAndCheck(JSpearType.BOOLEAN_TYPE, ctx.guard);
-        JSpearType thenType = ctx.thenBranch.accept(this);
-        JSpearType elseType = ctx.elseBranch.accept(this);
+    public StarkType visitIfThenElseExpression(StarkSpecificationLanguageParser.IfThenElseExpressionContext ctx) {
+        StarkType guardType = inferAndCheck(StarkType.BOOLEAN_TYPE, ctx.guard);
+        StarkType thenType = ctx.thenBranch.accept(this);
+        StarkType elseType = ctx.elseBranch.accept(this);
         if (!thenType.canBeMergedWith(elseType)) {
             errors.record(ParseUtil.typeError(thenType, elseType, ctx.elseBranch.start));
-            return JSpearType.ERROR_TYPE;
+            return StarkType.ERROR_TYPE;
         }
-        JSpearType result = JSpearType.merge(thenType, elseType);
+        StarkType result = StarkType.merge(thenType, elseType);
         if (!result.isError()&&guardType.isRandom()) {
-            return new JSpearRandomType(result);
+            return new StarkRandomType(result);
         } else {
             return result;
         }
     }
 
     @Override
-    public JSpearType visitFalseValue(JSpearSpecificationLanguageParser.FalseValueContext ctx) {
-        return JSpearType.BOOLEAN_TYPE;
+    public StarkType visitFalseValue(StarkSpecificationLanguageParser.FalseValueContext ctx) {
+        return StarkType.BOOLEAN_TYPE;
     }
 
     @Override
-    public JSpearType visitRealValue(JSpearSpecificationLanguageParser.RealValueContext ctx) {
-        return JSpearType.REAL_TYPE;
+    public StarkType visitRealValue(StarkSpecificationLanguageParser.RealValueContext ctx) {
+        return StarkType.REAL_TYPE;
     }
 
     @Override
-    public JSpearType visitAndExpression(JSpearSpecificationLanguageParser.AndExpressionContext ctx) {
-        checkType(JSpearType.BOOLEAN_TYPE, ctx.left);
-        checkType(JSpearType.BOOLEAN_TYPE, ctx.right);
-        return JSpearType.BOOLEAN_TYPE;
+    public StarkType visitAndExpression(StarkSpecificationLanguageParser.AndExpressionContext ctx) {
+        checkType(StarkType.BOOLEAN_TYPE, ctx.left);
+        checkType(StarkType.BOOLEAN_TYPE, ctx.right);
+        return StarkType.BOOLEAN_TYPE;
     }
 
     @Override
-    public JSpearType visitCallExpression(JSpearSpecificationLanguageParser.CallExpressionContext ctx) {
+    public StarkType visitCallExpression(StarkSpecificationLanguageParser.CallExpressionContext ctx) {
         String functionName = ctx.name.getText();
         if (!context.isAFunction(functionName)) {
             errors.record(ParseUtil.isNotAFunction(ctx.name));
-            return JSpearType.ERROR_TYPE;
+            return StarkType.ERROR_TYPE;
         }
-        JSpearType[] expectedArguments = context.getArgumentsType(functionName);
+        StarkType[] expectedArguments = context.getArgumentsType(functionName);
         if (ctx.callArguments.size() != expectedArguments.length) {
             errors.record(ParseUtil.illegalNumberOfArguments(ctx.name, expectedArguments.length, ctx.callArguments.size()));
-            return JSpearType.ERROR_TYPE;
+            return StarkType.ERROR_TYPE;
         }
         for(int i=0; i<expectedArguments.length; i++) {
             checkType(expectedArguments[i], ctx.callArguments.get(i));
@@ -207,84 +207,84 @@ public class ExpressionTypeInference extends JSpearSpecificationLanguageBaseVisi
     }
 
     @Override
-    public JSpearType visitMulDivExpression(JSpearSpecificationLanguageParser.MulDivExpressionContext ctx) {
-        JSpearType leftType = checkNumerical(ctx.left);
-        JSpearType rightType = checkNumerical(ctx.right);
-        return JSpearType.merge(leftType, rightType);
+    public StarkType visitMulDivExpression(StarkSpecificationLanguageParser.MulDivExpressionContext ctx) {
+        StarkType leftType = checkNumerical(ctx.left);
+        StarkType rightType = checkNumerical(ctx.right);
+        return StarkType.merge(leftType, rightType);
     }
 
     @Override
-    public JSpearType visitAddSubExpression(JSpearSpecificationLanguageParser.AddSubExpressionContext ctx) {
-        JSpearType leftType = checkNumerical(ctx.left);
-        JSpearType rightType = checkNumerical(ctx.right);
-        return JSpearType.merge(leftType, rightType);
+    public StarkType visitAddSubExpression(StarkSpecificationLanguageParser.AddSubExpressionContext ctx) {
+        StarkType leftType = checkNumerical(ctx.left);
+        StarkType rightType = checkNumerical(ctx.right);
+        return StarkType.merge(leftType, rightType);
     }
 
     @Override
-    public JSpearType visitUnaryMathCallExpression(JSpearSpecificationLanguageParser.UnaryMathCallExpressionContext ctx) {
+    public StarkType visitUnaryMathCallExpression(StarkSpecificationLanguageParser.UnaryMathCallExpressionContext ctx) {
         checkNumerical(ctx.argument);
-        return JSpearType.REAL_TYPE;
+        return StarkType.REAL_TYPE;
     }
 
     @Override
-    public JSpearType visitUnaryExpression(JSpearSpecificationLanguageParser.UnaryExpressionContext ctx) {
+    public StarkType visitUnaryExpression(StarkSpecificationLanguageParser.UnaryExpressionContext ctx) {
         return checkNumerical(ctx.arg);
     }
 
 
     @Override
-    public JSpearType visitNormalExpression(JSpearSpecificationLanguageParser.NormalExpressionContext ctx) {
+    public StarkType visitNormalExpression(StarkSpecificationLanguageParser.NormalExpressionContext ctx) {
         if (!randomExpressionAllowed) {
             this.errors.record(ParseUtil.illegalUseOfRandomExpression(ctx.start));
-            return JSpearType.ERROR_TYPE;
+            return StarkType.ERROR_TYPE;
         } else {
-            if (checkType(JSpearType.REAL_TYPE, ctx.mean)&checkType(JSpearType.REAL_TYPE, ctx.variance)) {
-                return new JSpearRandomType( JSpearType.REAL_TYPE );
+            if (checkType(StarkType.REAL_TYPE, ctx.mean)&checkType(StarkType.REAL_TYPE, ctx.variance)) {
+                return new StarkRandomType( StarkType.REAL_TYPE );
             }
         }
-        return JSpearType.ERROR_TYPE;
+        return StarkType.ERROR_TYPE;
     }
 
     @Override
-    public JSpearType visitUniformExpression(JSpearSpecificationLanguageParser.UniformExpressionContext ctx) {
+    public StarkType visitUniformExpression(StarkSpecificationLanguageParser.UniformExpressionContext ctx) {
         if (!randomExpressionAllowed) {
             this.errors.record(ParseUtil.illegalUseOfRandomExpression(ctx.start));
-            return JSpearType.ERROR_TYPE;
+            return StarkType.ERROR_TYPE;
         }
-        JSpearType type = null;
-        for (JSpearSpecificationLanguageParser.ExpressionContext v: ctx.values) {
-            JSpearType current = v.accept(this);
+        StarkType type = null;
+        for (StarkSpecificationLanguageParser.ExpressionContext v: ctx.values) {
+            StarkType current = v.accept(this);
             if (type == null) {
                 type = current;
             } else {
                 if (type.canBeMergedWith(current)) {
-                    type = JSpearType.merge(type, current);
+                    type = StarkType.merge(type, current);
                 } else {
                     this.errors.record(ParseUtil.typeError(type, current, v.start));
-                    return JSpearType.ERROR_TYPE;
+                    return StarkType.ERROR_TYPE;
                 }
             }
         }
         if (type == null) {
-            return JSpearType.ERROR_TYPE;
+            return StarkType.ERROR_TYPE;
         }
-        return new JSpearRandomType( type );
+        return new StarkRandomType( type );
     }
 
     @Override
-    public JSpearType visitRandomExpression(JSpearSpecificationLanguageParser.RandomExpressionContext ctx) {
+    public StarkType visitRandomExpression(StarkSpecificationLanguageParser.RandomExpressionContext ctx) {
         if (!randomExpressionAllowed) {
             this.errors.record(ParseUtil.illegalUseOfRandomExpression(ctx.start));
-            return JSpearType.ERROR_TYPE;
+            return StarkType.ERROR_TYPE;
         }
         if (ctx.from != null) {
-            if (checkType(JSpearType.REAL_TYPE, ctx.from)&checkType(JSpearType.REAL_TYPE, ctx.to)) {
-                return new JSpearRandomType( JSpearType.REAL_TYPE );
+            if (checkType(StarkType.REAL_TYPE, ctx.from)&checkType(StarkType.REAL_TYPE, ctx.to)) {
+                return new StarkRandomType( StarkType.REAL_TYPE );
             } else {
-                return JSpearType.ERROR_TYPE;
+                return StarkType.ERROR_TYPE;
             }
         } else {
-            return new JSpearRandomType( JSpearType.REAL_TYPE );
+            return new StarkRandomType( StarkType.REAL_TYPE );
         }
     }
 

@@ -24,9 +24,9 @@ package stark.speclang.types;
 
 public class LocalVariableTypeContext implements TypeEvaluationContext {
     private final String name;
-    private final JSpearType type;
+    private final StarkType type;
 
-    public LocalVariableTypeContext(String name, JSpearType type) {
+    public LocalVariableTypeContext(String name, StarkType type) {
         this.name = name;
         this.type = type;
     }
@@ -42,7 +42,7 @@ public class LocalVariableTypeContext implements TypeEvaluationContext {
     }
 
     @Override
-    public JSpearType getTypeOf(String name) {
+    public StarkType getTypeOf(String name) {
         return (this.name.equals(name)?this.type:null);
     }
 
@@ -52,12 +52,12 @@ public class LocalVariableTypeContext implements TypeEvaluationContext {
     }
 
     @Override
-    public JSpearType[] getArgumentsType(String functionName) {
+    public StarkType[] getArgumentsType(String functionName) {
         return null;
     }
 
     @Override
-    public JSpearType getReturnType(String functionName) {
+    public StarkType getReturnType(String functionName) {
         return null;
     }
 }

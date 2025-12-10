@@ -22,7 +22,7 @@
 
 package stark.speclang.parsing;
 
-import stark.speclang.types.JSpearType;
+import stark.speclang.types.StarkType;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 
@@ -74,19 +74,19 @@ public class ParseUtil {
         return String.format(DUPLICATED_SYMBOL_MESSAGE, name, firstLine, firstCharPositionInLine, otherLine, otherCharPositionInLine);
     }
 
-    public static ParseError typeError(JSpearType expected, JSpearType actual, Token expressionToken) {
+    public static ParseError typeError(StarkType expected, StarkType actual, Token expressionToken) {
         return new ParseError(getTypeErrorMessage(expected, actual, expressionToken), expressionToken.getLine(), expressionToken.getCharPositionInLine());
     }
 
-    private static String getTypeErrorMessage(JSpearType expected, JSpearType actual, Token expressionToken) {
+    private static String getTypeErrorMessage(StarkType expected, StarkType actual, Token expressionToken) {
         return String.format(TYPE_ERROR_MESSAGE, expressionToken.getLine(), expressionToken.getCharPositionInLine(), expected, actual);
     }
 
-    public static ParseError expectedNumericalType(JSpearType actual, Token start) {
+    public static ParseError expectedNumericalType(StarkType actual, Token start) {
         return new ParseError(getExpectedNumericalTypeMessage(actual, start), start.getLine(), start.getCharPositionInLine());
     }
 
-    private static String getExpectedNumericalTypeMessage(JSpearType actual, Token start) {
+    private static String getExpectedNumericalTypeMessage(StarkType actual, Token start) {
         return String.format(EXPECTED_NUMERICAL_TYPE_MESSAGE, start.getLine(), start.getCharPositionInLine(), actual);
     }
 

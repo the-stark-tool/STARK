@@ -26,7 +26,7 @@ import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
-import stark.speclang.parsing.JSpearModelGenerator;
+import stark.speclang.parsing.StarkModelGenerator;
 import stark.speclang.parsing.ParseErrorCollector;
 import stark.speclang.parsing.ParseErrorListener;
 
@@ -49,12 +49,12 @@ public class SpecificationLoader {
 
 
     private ParseTree getParseTree(CharStream source) {
-        JSpearSpecificationLanguageLexer lexer = new JSpearSpecificationLanguageLexer(source);
+        StarkSpecificationLanguageLexer lexer = new StarkSpecificationLanguageLexer(source);
         CommonTokenStream tokens =  new CommonTokenStream(lexer);
-        JSpearSpecificationLanguageParser parser = new JSpearSpecificationLanguageParser(tokens);
+        StarkSpecificationLanguageParser parser = new StarkSpecificationLanguageParser(tokens);
         ParseErrorListener errorListener = new ParseErrorListener(errors);
         parser.addErrorListener(errorListener);
-        JSpearSpecificationLanguageParser.JSpearSpecificationModelContext parseTree = parser.jSpearSpecificationModel();
+        StarkSpecificationLanguageParser.StarkSpecificationModelContext parseTree = parser.starkSpecificationModel();
         if (errors.withErrors()) {
             return null;
         } else {
@@ -84,7 +84,7 @@ public class SpecificationLoader {
     }
 
     private SystemSpecification load(ParseTree model) {
-        JSpearModelGenerator generator = new JSpearModelGenerator(errors);
+        StarkModelGenerator generator = new StarkModelGenerator(errors);
         model.accept(generator);
         if (errors.withErrors()) {
             return null;

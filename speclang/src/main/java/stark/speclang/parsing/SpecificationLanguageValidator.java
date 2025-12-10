@@ -22,10 +22,10 @@
 
 package stark.speclang.parsing;
 
-import stark.speclang.JSpearSpecificationLanguageBaseVisitor;
-import stark.speclang.JSpearSpecificationLanguageParser;
+import stark.speclang.StarkSpecificationLanguageBaseVisitor;
+import stark.speclang.StarkSpecificationLanguageParser;
 
-public class SpecificationLanguageValidator extends JSpearSpecificationLanguageBaseVisitor<Boolean> {
+public class SpecificationLanguageValidator extends StarkSpecificationLanguageBaseVisitor<Boolean> {
 //    private final ParseErrorCollector errors;
 //    private final SymbolTable symbols = new SymbolTable();
 //
@@ -38,7 +38,7 @@ public class SpecificationLanguageValidator extends JSpearSpecificationLanguageB
 //    }
 //
 //    @Override
-//    public Boolean visitJSpearSpecificationModel(JSpearSpecificationLanguageParser.JSpearSpecificationModelContext ctx) {
+//    public Boolean visitStarkSpecificationModel(JSpearSpecificationLanguageParser.JSpearSpecificationModelContext ctx) {
 //        boolean flag = true;
 //        for (JSpearSpecificationLanguageParser.ElementContext element: ctx.element()) {
 //            flag &= element.accept(this);
@@ -59,11 +59,11 @@ public class SpecificationLanguageValidator extends JSpearSpecificationLanguageB
 //    @Override
 //    public Boolean visitDeclarationFunction(JSpearSpecificationLanguageParser.DeclarationFunctionContext ctx) {
 //        if (checkIfNotDuplicated(ctx.name.getText(), ctx)) {
-//            JSpearType[] argumentType = ctx.arguments.stream().map(a -> typeOf(a.type())).toArray(JSpearType[]::new);
+//            StarkType[] argumentType = ctx.arguments.stream().map(a -> typeOf(a.type())).toArray(StarkType[]::new);
 //            TypeEvaluationContext context = new NestedTypeContext(
 //                    new LocalTypeContext(getLocalDeclarations(ctx.arguments)),
 //                    this.globalTypeContext);
-//            JSpearType returnType = ctx.accept(new JSpearFunctionStatementTypeInference(context, this.errors));
+//            StarkType returnType = ctx.accept(new StarkFunctionStatementTypeInference(context, this.errors));
 //            if (!returnType.isError()) {
 //                this.symbols.recordFunction(ctx.name.getText(), argumentType, returnType, ctx);
 //                return true;
@@ -73,29 +73,29 @@ public class SpecificationLanguageValidator extends JSpearSpecificationLanguageB
 //    }
 //
 //
-//    private Map<String, JSpearType> getLocalDeclarations(List<JSpearSpecificationLanguageParser.FunctionArgumentContext> arguments) {
+//    private Map<String, StarkType> getLocalDeclarations(List<JSpearSpecificationLanguageParser.FunctionArgumentContext> arguments) {
 //        return arguments.stream().collect(Collectors.toMap(a -> a.name.getText(), a -> typeOf(a.type())));
 //    }
 //
-//    private JSpearType typeOf(JSpearSpecificationLanguageParser.TypeContext type) {
+//    private StarkType typeOf(JSpearSpecificationLanguageParser.TypeContext type) {
 //        if (type instanceof JSpearSpecificationLanguageParser.BooleanTypeContext) {
-//            return JSpearType.BOOLEAN_TYPE;
+//            return StarkType.BOOLEAN_TYPE;
 //        }
 //        if (type instanceof JSpearSpecificationLanguageParser.IntegerTypeContext) {
-//            return JSpearType.INTEGER_TYPE;
+//            return StarkType.INTEGER_TYPE;
 //        }
 //        if (type instanceof JSpearSpecificationLanguageParser.RealTypeContext) {
-//            return JSpearType.REAL_TYPE;
+//            return StarkType.REAL_TYPE;
 //        }
 //        if (type instanceof JSpearSpecificationLanguageParser.CustomTypeContext) {
 //            String typeName = ((JSpearSpecificationLanguageParser.CustomTypeContext) type).name.getText();
 //            if (!symbols.isACustomType(typeName)) {
 //                this.errors.record(ParseUtil.unknownType(((JSpearSpecificationLanguageParser.CustomTypeContext) type).name));
-//                return JSpearType.ERROR_TYPE;
+//                return StarkType.ERROR_TYPE;
 //            }
 //            return this.symbols.getCustomType(typeName);
 //        }
-//        return JSpearType.ERROR_TYPE;
+//        return StarkType.ERROR_TYPE;
 //    }
 //
 //
@@ -111,15 +111,15 @@ public class SpecificationLanguageValidator extends JSpearSpecificationLanguageB
 //    }
 //
 //    private boolean checkEnvironmentVariableUpdate(ExpressionTypeInference inference, JSpearSpecificationLanguageParser.VariableAssignmentContext varAssignment) {
-//        boolean flag = (varAssignment.guard == null || inference.checkType(JSpearType.BOOLEAN_TYPE, varAssignment.guard));
-//        Optional<JSpearType> expectedType = retrieveAndCheckVariableExpression(inference, varAssignment.target);
+//        boolean flag = (varAssignment.guard == null || inference.checkType(StarkType.BOOLEAN_TYPE, varAssignment.guard));
+//        Optional<StarkType> expectedType = retrieveAndCheckVariableExpression(inference, varAssignment.target);
 //        return flag&expectedType.map(t -> inference.checkType(t, varAssignment.value)).orElse(false);
 //    }
 //
 //    @Override
 //    public Boolean visitDeclarationConstant(JSpearSpecificationLanguageParser.DeclarationConstantContext ctx) {
 //        if (checkIfNotDuplicated(ctx.name.getText(), ctx)) {
-//            JSpearType type = ctx.expression().accept(new ExpressionTypeInference(symbols, errors));
+//            StarkType type = ctx.expression().accept(new ExpressionTypeInference(symbols, errors));
 //            if (!type.isError()) {
 //                symbols.recordConstant(ctx.name.getText(), type, ctx);
 //                return true;

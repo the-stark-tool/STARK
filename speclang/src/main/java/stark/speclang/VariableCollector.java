@@ -22,9 +22,9 @@
 
 package stark.speclang;
 
-import stark.speclang.variables.JSpearVariableAllocation;
+import stark.speclang.variables.StarkVariableAllocation;
 
-public class VariableCollector extends JSpearSpecificationLanguageBaseVisitor<JSpearVariableAllocation> {
+public class VariableCollector extends StarkSpecificationLanguageBaseVisitor<StarkVariableAllocation> {
 //
 //    private final VariableAllocation variableNames = new VariableAllocation();
 //    private final Map<String, Double> constants;
@@ -40,7 +40,7 @@ public class VariableCollector extends JSpearSpecificationLanguageBaseVisitor<JS
 //    }
 //
 //    @Override
-//    public VariableAllocation visitJSpearSpecificationModel(JSpearSpecificationLanguageParser.JSpearSpecificationModelContext ctx) {
+//    public VariableAllocation visitStarkSpecificationModel(JSpearSpecificationLanguageParser.JSpearSpecificationModelContext ctx) {
 //        ctx.element().forEach(e -> e.accept(this));
 //        return variableNames;
 //    }

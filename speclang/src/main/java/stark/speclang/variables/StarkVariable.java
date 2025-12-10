@@ -20,46 +20,29 @@
  * limitations under the License.
  */
 
-package stark.speclang.types;
+package stark.speclang.variables;
 
-import java.util.Map;
+public record StarkVariable(String name, int index) {
 
-
-public class LocalTypeContext implements TypeEvaluationContext {
-    private final Map<String, StarkType> localDeclarations;
-
-    public LocalTypeContext(Map<String, StarkType> localDeclarations) {
-        this.localDeclarations = localDeclarations;
+    public static String getTargetVariableName(String name) {
+        return name.substring(0, name.length()-1);
     }
 
     @Override
-    public boolean isDefined(String name) {
-        return localDeclarations.containsKey(name);
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        StarkVariable variable = (StarkVariable) o;
+        return index == variable.index;
     }
 
     @Override
-    public boolean isAReference(String name) {
-        return isDefined(name);
+    public int hashCode() {
+        return index;
     }
 
     @Override
-    public StarkType getTypeOf(String name) {
-        return this.localDeclarations.get(name);
+    public String toString() {
+        return name;
     }
-
-    @Override
-    public boolean isAFunction(String functionName) {
-        return false;
-    }
-
-    @Override
-    public StarkType[] getArgumentsType(String functionName) {
-        return null;
-    }
-
-    @Override
-    public StarkType getReturnType(String functionName) {
-        return null;
-    }
-
 }
