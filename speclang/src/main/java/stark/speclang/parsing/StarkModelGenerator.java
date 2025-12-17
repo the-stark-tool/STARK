@@ -115,7 +115,6 @@ public class StarkModelGenerator extends StarkSpecificationLanguageBaseVisitor<B
             recordVariable(v);
         }
         for(StarkSpecificationLanguageParser.ControllerStateDeclarationContext state: ctx.states) {
-            //String stateName = getStateName(componentName, state.name.getText());
             String stateName = state.name.getText();
             StarkControllerFunction function = StarkControllerStateGenerator.generate(context, registry, allocation, controllerMap, controllerRegistry, state.body);
             controllerRegistry.set(stateName, StarkControllerFunction.toController(allocation, function));
@@ -128,10 +127,6 @@ public class StarkModelGenerator extends StarkSpecificationLanguageBaseVisitor<B
             controller = new ParallelController(controller, componentController);
         }
         return true;
-    }
-
-    public static String getStateName(String componentName, String stateName) {
-        return componentName+"."+stateName;
     }
 
     @Override
@@ -147,10 +142,6 @@ public class StarkModelGenerator extends StarkSpecificationLanguageBaseVisitor<B
         this.environmentFunction = ctx.block.accept(new StarkEnvironmentGenerator(this.allocation, this.context, this.registry));
         return this.environmentFunction != null;
     }
-
-
-
-
 
     @Override
     public Boolean visitDeclarationType(StarkSpecificationLanguageParser.DeclarationTypeContext ctx) {

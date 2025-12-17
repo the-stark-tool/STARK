@@ -26,6 +26,8 @@ declarationDistance: 'distance' name=ID '=' value=distanceExpression ';';
 
 declarationPerturbation: 'perturbation' name=ID '=' value=perturbationExpression ';';
 
+declarationPenalty: 'penalty' name=ID '=' value=expression;
+
 
 /**************************/
 /* FUNCTIONS DECLARATIONS */
@@ -132,13 +134,6 @@ systemDeclaration: 'system' name=ID '=' controllerName=ID '{'
 
 initialAssignment: name=ID '=' value=expression ';';
 */
-
-declarationPenalty: 'penalty' name=ID '=' value=expression;
-
-
-
-
-
 
 controllerLetAssignment: 'let' name=ID '=' value=expression 'in' body=controllerBlockBehaviour;
 
