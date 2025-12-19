@@ -145,7 +145,7 @@ public class AIMultipleLanes {
     }
 
     private void runSpeedPerturbationExperiments(double sensorPerturbationOffset, EvolutionSequence sequence, AtomicDistanceExpressionLeq crashPenalty, AtomicDistanceExpressionLeq sgViolationPenalty) {
-        // SPEED PERTURBATION
+        // MOVEMENT PERTURBATION
         double[] crashDistances = new double[STEPS_TO_SAMPLE];
         double[] sgDistances = new double[STEPS_TO_SAMPLE];
         Perturbation speedPerturbation = getSpeedPerturbation(TIMES_TO_APPLY, FREQUENCY);
@@ -163,7 +163,7 @@ public class AIMultipleLanes {
 
 
         try (OutputStream fileOutputStream = new FileOutputStream(resultsFolder + "summary_" + experimentName + ".txt", true)) {
-            printSummary(speedPerturbedSequence, STEPS_TO_SAMPLE, "SPEED PERTURBATION Offset: " + sensorPerturbationOffset, fileOutputStream);
+            printSummary(speedPerturbedSequence, STEPS_TO_SAMPLE, "MOVEMENT PERTURBATION Offset: " + sensorPerturbationOffset, fileOutputStream);
 
             printDistanceArray(fileOutputStream, "Crash distance for speed pert. offset " + sensorPerturbationOffset, crashDistances);
             printDistanceArray(fileOutputStream, "SG violation distance for speed pert. offset " + sensorPerturbationOffset, sgDistances);

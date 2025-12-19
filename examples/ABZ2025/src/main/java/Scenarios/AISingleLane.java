@@ -125,7 +125,7 @@ public class AISingleLane {
         }
 
         printSummary(sequence, STEPS_TO_SAMPLE, "UNPERTURBED", System.out);
-//        printSummary(speedPerturbedSequence, STEPS_TO_SAMPLE, "SPEED PERTURBATION", System.out);
+//        printSummary(speedPerturbedSequence, STEPS_TO_SAMPLE, "MOVEMENT PERTURBATION", System.out);
 //        printSummary(sensorPerturbedSequence, STEPS_TO_SAMPLE, "SENSOR PERTURBATION", System.out);
 //        printSummary(invisibilitySequence, STEPS_TO_SAMPLE, "INVISIBLE CAR", System.out);
 //
@@ -150,7 +150,7 @@ public class AISingleLane {
         try (OutputStream fileOutputStream = new FileOutputStream(experimentFolder+"summary_"+experimentName+".txt")) {
 //            printSummary(sensorPerturbedSequence, STEPS_TO_SAMPLE, "SENSOR PERTURBATION Offset: "+ sensorPerturbationOffset, fileOutputStream);
 //            printSummary(invisibilitySequence, STEPS_TO_SAMPLE, "INVISIBLE CAR Chance:"+ invisibleCarChance, fileOutputStream);
-//            printSummary(speedPerturbedSequence, STEPS_TO_SAMPLE, "SPEED PERTURBATION Offset: "+ sensorPerturbationOffset, fileOutputStream);
+//            printSummary(speedPerturbedSequence, STEPS_TO_SAMPLE, "MOVEMENT PERTURBATION Offset: "+ sensorPerturbationOffset, fileOutputStream);
             printSummary(sequence, STEPS_TO_SAMPLE, "UNPERTURBED", fileOutputStream);
 
             printAtomicDistances(fileOutputStream, "Crash distance for invisibility pert. offset "+sensorPerturbationOffset, atomicDistances[0]);
