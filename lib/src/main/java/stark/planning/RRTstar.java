@@ -8,11 +8,6 @@ import java.util.*;
 import java.util.List;
 
 public class RRTstar {
-    public static final int MAP_SIZE = 300;
-    public static final int OBSTACLES_SIZE = 70;
-    public static final int OBSTACLES_HEIGHT = 7;
-    public static final int NUM_OBSTACLES = 10;
-    public static final int MOVEMENT = 5;
 
     public static final List<Pos> treeNodes = new ArrayList<>();
     public static final List<Pos[]> treeEdges = new ArrayList<>();
@@ -21,74 +16,41 @@ public class RRTstar {
     public static Pos startP;
     public static Goal endP;
 
-    public static List<Obstacle> obstacles;
-
-
-    // Create 3 different environments with obstacles
-    @SuppressWarnings("unchecked")
-    public static List<Obstacle> generateObstacles(RandomGenerator rand) {
-        obstacles = new ArrayList<>();
-        while (obstacles.size() < NUM_OBSTACLES) {
-            Obstacle obs = new Obstacle(new Pos(rand.nextDouble()*(MAP_SIZE-OBSTACLES_SIZE), rand.nextDouble()*(MAP_SIZE-OBSTACLES_SIZE)), rand.nextDouble()*OBSTACLES_HEIGHT, rand.nextDouble()*OBSTACLES_SIZE);
-            if (isValidObstacle(obs.getPos(), obstacles)) {
-                    obstacles.add(obs);
-            }
-        }
-        return obstacles;
-    }
-
-    public static void runEnvironment(RandomGenerator rand, JPanel panel, Pos start, Goal goal, List<Obstacle> obstacleList, double dimension) {
+    public static void runEnvironment(RandomGenerator rand, JPanel panel, Pos start, Goal goal, DefaultMap map, double dimension, double max_move, double radius) {
         treeNodes.clear();
         treeEdges.clear();
         finalPath.clear();
         startP = start;
         endP = goal;
-        rrtSearch(rand, startP, endP, obstacleList, dimension);
+        rrtSearch(rand, startP, endP, map, dimension, max_move, radius);
         panel.repaint();
     }
 
-    // Ensure obstacle does not overlap with others
-    public static boolean isValidObstacle(Pos p, List<Obstacle> obstacleList) {
-        boolean in = true;
-        for (int i = 0; i < obstacleList.size(); i++) {
-            //Rectangle2D r = new Rectangle2D.Double(o.getX(), o.getY(), o.getW(), o.getW());
-            if (p.getX() >= obstacleList.get(i).getX()-obstacleList.get(i).getW() && p.getX() <= obstacleList.get(i).getX() + obstacleList.get(i).getW() &&
-                    p.getY() >= obstacleList.get(i).getY()-obstacleList.get(i).getW() && p.getY() <= obstacleList.get(i).getY() + obstacleList.get(i).getW()){
-                in = false;
-            }
-        }
-        return in;
-    }
-
     // Create a random free point not inside any obstacle
-    public static Pos generateFreePos(RandomGenerator rand, List<Obstacle> obstacleList, double dimension) {
+    public static Pos generateFreePos(RandomGenerator rand, DefaultMap map, double dimension) {
         Pos p;
         do {
-            p = new Pos(rand.nextDouble()*MAP_SIZE, rand.nextDouble()*MAP_SIZE);
-        } while (!isFree(p,obstacleList, dimension));
+            p = new Pos(rand.nextDouble()*map.getMap_size(), rand.nextDouble()* map.getMap_size());
+        } while (!isFree(p, map.getObstacles(), dimension));
         return p;
     }
 
     // Check if a point is free (not inside obstacles)
     public static boolean isFree(Pos p, List<Obstacle> obstacleList, double dimension) {
         boolean free = true;
-        //for (Obstacle o : obstacles) {
-        //    Rectangle2D r = new Rectangle2D.Double(o.getX(), o.getY(), o.getW(), o.getW());
-        //    if (r.contains(p.getX(), p.getY())) {
-        //        free = false;
-        //    }
-        //}
         for (int i = 0; i < obstacleList.size(); i++) {
-            if (p.getX() >= obstacleList.get(i).getX()-obstacleList.get(i).getW() - dimension && p.getX() <= obstacleList.get(i).getX() + obstacleList.get(i).getW() + dimension &&
-                    p.getY() >= obstacleList.get(i).getY()-obstacleList.get(i).getW() - dimension && p.getY() <= obstacleList.get(i).getY() + obstacleList.get(i).getW() + dimension){
+            if (p.getX() >= obstacleList.get(i).getX()-obstacleList.get(i).getW() - dimension &&
+                    p.getX() <= obstacleList.get(i).getX() + obstacleList.get(i).getW() + dimension &&
+                    p.getY() >= obstacleList.get(i).getY()-obstacleList.get(i).getW() - dimension &&
+                    p.getY() <= obstacleList.get(i).getY() + obstacleList.get(i).getW() + dimension){
                 free = false;
             }
         }
         return free;
     }
 
-    // Main RRT algorithm: expands tree toward random samples until goal is reached
-    public static void rrtSearch(RandomGenerator rand, Pos start, Goal goal, List<Obstacle> obstacleList, double dimension) {
+
+    public static void rrtSearch(RandomGenerator rand, Pos start, Goal goal, DefaultMap map, double dimension, double max_move, double radius) {
         Map<Pos, Pos> parentMap = new HashMap<>();
         treeNodes.add(start);
 
@@ -97,21 +59,30 @@ public class RRTstar {
         while (!goalConnected) {
             Pos randPoint;
             Pos lastPoint = treeNodes.get(treeNodes.size()-1);
-            double weight = distance(lastPoint,goal.getPos());
             do {
-                randPoint = new Pos(rand.nextDouble()*MAP_SIZE, rand.nextDouble()*MAP_SIZE);
-            } while (!isFree(randPoint,obstacleList,dimension) || distance(randPoint,goal.getPos()) >= weight);
+                randPoint = new Pos(rand.nextDouble()*map.getMap_size(), rand.nextDouble()*map.getMap_size());
+            } while (!isFree(randPoint,map.getObstacles(),dimension)); //|| distance(randPoint,goal.getPos()) >= distance(lastPoint,goal.getPos()));
 
             Pos nearest = getNearest(randPoint);
-            Pos newPoint = simulateMovement(nearest, randPoint, obstacleList, dimension);
+            Pos newPoint = simulateMovement(nearest, randPoint, map.getObstacles(), dimension, max_move);
 
-            if (!newPoint.equals(nearest) && isCollisionFree(nearest, newPoint, obstacleList, dimension)) {
+            if (!newPoint.equals(nearest) && isCollisionFree(nearest, newPoint, map.getObstacles(), dimension)) {
+                List<Pos> possibleParents = near(newPoint,radius);
+                Pos parent = chooseParent(possibleParents,nearest,newPoint,map,dimension);
                 treeNodes.add(newPoint);
-                treeEdges.add(new Pos[]{nearest, newPoint});
-                parentMap.put(newPoint, nearest);
+                treeEdges.add(new Pos[]{parent, newPoint});
+                parentMap.put(newPoint, parent);
+                for (Pos p : possibleParents) {
+                    double weight = newPoint.getWeight() + distance(p,newPoint);
+                    if (weight < p.getWeight() && isCollisionFree(p,newPoint,map.getObstacles(),dimension)) {
+                        p.setWeight(weight);
+                        treeEdges.add(new Pos[]{newPoint,p});
+                        parentMap.put(p,newPoint);
+                    }
+                }
             }
             Pos closestToGoal = getNearest(goal.getPos());
-            if (distance(closestToGoal, goal.getPos()) < MOVEMENT && isCollisionFree(closestToGoal, goal.getPos(), obstacleList, dimension)) {
+            if (distance(closestToGoal, goal.getPos()) < max_move && isCollisionFree(closestToGoal, goal.getPos(), map.getObstacles(), dimension)) {
                 parentMap.put(goal.getPos(), closestToGoal);
                 treeEdges.add(new Pos[]{closestToGoal, goal.getPos()});
                 goalConnected = true;
@@ -124,6 +95,7 @@ public class RRTstar {
             }
         }
     }
+
 
     public static Pos getNearest(Pos target) {
         Pos best = null;
@@ -139,11 +111,11 @@ public class RRTstar {
     }
 
 
-    public static Pos simulateMovement(Pos from, Pos to, List<Obstacle> obstacleList, double dimension) {
+    public static Pos simulateMovement(Pos from, Pos to, List<Obstacle> obstacleList, double dimension, double max_move) {
         double angle = Math.atan2(to.getY() - from.getY(), to.getX() - from.getX());
-        double newX = from.getX() + MOVEMENT * Math.cos(angle);
-        double newY = from.getY() + MOVEMENT * Math.sin(angle);
-        Pos p = new Pos(newX, newY);
+        double newX = from.getX() + max_move * Math.cos(angle);
+        double newY = from.getY() + max_move * Math.sin(angle);
+        Pos p = new Pos(newX, newY, from.getWeight() + max_move);
         return isFree(p,obstacleList,dimension) ? p : from;
     }
 
@@ -161,6 +133,33 @@ public class RRTstar {
         }
         return free;
     }
+
+
+    public static List<Pos> near(Pos target, double radius){
+        List<Pos> candidates = new ArrayList<>();
+        for (Pos p: treeNodes){
+            if (distance(p,target) <= radius){
+                candidates.add(p);
+            }
+        }
+        return candidates;
+    }
+
+    public static Pos chooseParent(List<Pos> parents, Pos nearest, Pos newNode, DefaultMap map, double dimension){
+        Pos candidate = nearest;
+        double weight = nearest.getWeight() + distance(nearest,newNode);
+        double new_weight;
+        for (Pos p: parents){
+            new_weight = p.getWeight() + distance(p,newNode);
+            if (new_weight < weight && isCollisionFree(p,newNode,map.getObstacles(), dimension)) {
+                candidate = p;
+                weight = new_weight;
+            }
+        }
+        newNode.setWeight(weight);
+        return candidate;
+    }
+
 
     // Calculate Euclidean distance
     public static double distance(Pos a, Pos b) {
