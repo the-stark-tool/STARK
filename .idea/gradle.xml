@@ -25,6 +25,7 @@
             <option value="$PROJECT_DIR$/examples/mutliScler" />
             <option value="$PROJECT_DIR$/examples/polistil" />
             <option value="$PROJECT_DIR$/examples/repressilator" />
+            <option value="$PROJECT_DIR$/examples/repressilator-skorokhod" />
             <option value="$PROJECT_DIR$/examples/rover" />
             <option value="$PROJECT_DIR$/examples/tollbooth" />
             <option value="$PROJECT_DIR$/examples/turtle" />

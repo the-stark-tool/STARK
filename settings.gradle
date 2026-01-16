@@ -42,3 +42,5 @@ include 'examples:mutliScler'
 findProject(':examples:mutliScler')?.name = 'mutliScler'
 
 include 'examples:rover'
+include 'examples:repressilator-skorokhod'
+include 'examples:repressilator-skorokhod'
