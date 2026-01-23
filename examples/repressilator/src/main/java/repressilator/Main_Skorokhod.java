@@ -62,8 +62,8 @@ public class Main_Skorokhod {
 
     THE TWO STATE MODEL OF THE REPRESSILATOR
 
-    The "repressilator" network consists in 3 genes forming a directed cycle of "negative interactions".
-    As in "Herbach et al: ''Inferring gene regulatory networks from single-cell data: a mechanistic approach'',
+    The "repressilator" network consists in n genes forming a directed cycle of "negative interactions".
+    As in "Herbach et al: Inferring gene regulatory networks from single-cell data: a mechanistic approach,
     BMC Systems Biology (2017) 11:105", we proceed as follows:
     - we adopt the "two state model" of gene expression, where the gene promoter can be either active or inactive;
     - we consider both mRNA molecules, which can be transcribed only during the active period, and proteins, which
@@ -74,7 +74,7 @@ public class Main_Skorokhod {
     For i=1,2,3 we have the following variables that will allow us to model the status of such a kind of system:
     - Gi: models the inactive promoter, Gi is 1 if the promoter is inactive, otherwise Gi is 0.
     - AGi: models the active promoter, AGi is 1 if the promoter is active, otherwise AGi is 0.
-      Clearly, it always holds that: Gi + AGi = 1.
+      Clearly, it always holds that: Gi + AGi = 1 (Gi and AGi are conservative quantities)
     - Xi: amount of mRNA molecules.
     - Zi: amount of proteins.
     - koni: rate constant of gene i activation
@@ -93,7 +93,7 @@ public class Main_Skorokhod {
 
     SPECIFYING THE TWO STATE MODEL OF THE REPRESSILATOR WITH CHEMICAL REACTIONS
 
-    As in "Herbach et al: ''Inferring gene regulatory networks from single-cell data: a mechanistic approach'',
+    As in "Herbach et al: Inferring gene regulatory networks from single-cell data: a mechanistic approach,
     BMC Systems Biology (2017) 11:105", we use chemical reactions for specifying the repressilator in the two state
     model approach.
     In particular, reactions model the following dynamics:
@@ -244,8 +244,9 @@ public class Main_Skorokhod {
 
     Below a list of 30 variables, the idea being that the value of these 30 variables gives a data state, namely an
     instance of class <code>DataState</code> representing the status of all quantities of the system.
-    We have variables for active and inactive promoters, mRNA, proteins and reaction rates. Reaction rates can vary
-    since promoter parameters, i.e. the rates of promoter activation and deactivation, depend on the amount of proteins.
+    We have variables for active and inactive promoters, mRNA, proteins and reaction rates.
+    Reaction rates can vary since promoter parameters, i.e. the rates of promoter activation and deactivation,
+    depend on the amount of proteins.
     Each variable is associated with an index, from 0 to 29.
     */
     public static final int G1 = 0; // G1 is 1 if the promoter of gene 1 is inactive, o.w. G1 is 0
@@ -295,8 +296,8 @@ public class Main_Skorokhod {
     the amount of proteins Z1, Z2, Z3.
 
     The values are taken from
-    "Ulysse Herbach: ''Harissa: Stochastic Simulation and Inference of Gene Regulatory Networks Based on Transcriptional
-    Bursting''. Proc. CMSB 2023".
+    "Ulysse Herbach: Harissa: Stochastic Simulation and Inference of Gene Regulatory Networks Based on Transcriptional
+    Bursting. Proc. CMSB 2023".
      */
     public static final double K01 = 0.0; // minimal burst frequency
     public static double K11 = 2.0; // maximal burst frequency
@@ -365,7 +366,7 @@ public class Main_Skorokhod {
             - the data state <code>state</state> defined above,
             - a random function over data states, which implements interface <code>DataStateFunction</code> and maps a
             random generator <code>rg</code> and a data state <code>ds</code> to the data state obtained by updating
-            <code>ds</code> with the list of changes given by method <code>selectAndApplyReaction/code>. Essentially,
+            <code>ds</code> with the list of changes given by method <code>selectAndApplyReaction</code>. Essentially,
             this static method, defined later, selects the next reaction among the 18 available according to Gillespie
             algorithm and realises the changes on variables that are consequence of the firing of the selected reaction,
             i.e. reactants are removed from <code>ds</code> and products are added to <code>ds</code>. Moreover, since
@@ -463,9 +464,9 @@ public class Main_Skorokhod {
             <code>system</code>.
             The second evolution sequence is perturbed by applying the perturbation returned by the static method
             <code>itZ1TranslRate(x)</code> defined later. Essentially, the method returns a cyclic perturbation that
-            affects the translation rate  of gene 1:  for <code>replica</code> times, it has no effect for the first w1
+            affects the translation rate of gene 1:  for <code>replica</code> times, it has no effect for the first w1
             time points, i.e., the system behaves regularly, then in the subsequent <code>w2</code> time points, the
-            translation rare is decremented by x, which impacts directly on the evolution of <code>Z1</code> and,
+            translation rate is decremented by x, which impacts directly on the evolution of <code>Z1</code> and,
             through interactions, on <code>Z2</code> and <code>Z3</code>.
             This perturbation models protein translation deregulation.
 
@@ -547,17 +548,46 @@ public class Main_Skorokhod {
             int scale=5;
             EvolutionSequence sequence_p = sequence.apply(itZ1TranslRate(x, w1, w2, replica),0,scale);
 
+
             /*
             The following lines of code first defines three atomic distances between evolution sequences, named
             <code>atomicZi</code> for i=1,2,3. Then, these distances are evaluated, time-point by time-point, over
             evolution sequence <code>sequence</code> and its perturbed version <code>sequence_p</code> defined above.
             Finally, the time-point to time-point values of the distances are stored in .csv files.
             Technically, <code>distanceZi</code> is an atomic distance in the sense that it is an instance of
-            class <code>AtomicDistanceExpression</code>, which consists in a data state expression,
-            which maps a data state to a number, or rank, and a binary operator. As already discussed, in this case,
-            given two configurations, the data state expression allow us to get the normalised value of protein Zi,
-            which is a value in [0,1], from both configuration, and the binary operator gives us their difference, which,
-            intuitively, is the difference with respect to the level of Zi between the two configurations.
+            class <code>AtomicDistanceExpression</code>, which consists in:
+             - a data state expression, assigning a "rank" to a data state.
+             In this case the rank is the normalised value of protein Zi.
+             - a binary operator mapping the rank of two data states to their distance.
+             In this case the operator simply returns the absolute value of their difference.
+             This distance will be lifted to two sample sets of configurations, those obtained from <code>sequence</code> and
+             <code>sequence_p</code> at the same step.
+            */
+
+            AtomicDistanceExpression atomicZ1 = new AtomicDistanceExpression(ds->ds.get(Z1)/normalisationZ1,(v1, v2) -> Math.abs(v2-v1));
+
+            AtomicDistanceExpression atomicZ2 = new AtomicDistanceExpression(ds->ds.get(Z2)/normalisationZ2,(v1, v2) -> Math.abs(v2-v1));
+
+            AtomicDistanceExpression atomicZ3 = new AtomicDistanceExpression(ds->ds.get(Z3)/normalisationZ3,(v1, v2) -> Math.abs(v2-v1));
+
+
+            /*
+            The following lines of code first defines three Skorokhod distances between evolution sequences, named
+            <code>skorokhodZi</code> for i=1,2,3. Then, these distances are evaluated, time-point by time-point, over
+            evolution sequence <code>sequence</code> and its perturbed version <code>sequence_p</code> defined above.
+            Finally, the time-point to time-point values of the distances are stored in .csv files.
+            Technically, <code>skorokhodZi</code> is an Skorokhod distance in the sense that it is an instance of
+            class <code>SkorokhodDistanceExpression</code>, which consists in:
+             - a data state expression, assigning a "rank" to a data state.
+             In this case the rank is the normalised value of protein Zi.
+             - a binary operator mapping the rank of two data states to their distance.
+             In this case the operator simply returns the absolute value of their difference.
+             - a binary operator mapping
+             -
+             -
+             -
+             -
+             -
             This distance will be lifted to two sample sets of configurations, those obtained from <code>sequence</code> and
             <code>sequence_p</code> at the same step.
             */
@@ -596,11 +626,6 @@ public class Main_Skorokhod {
                     leftBound,
                     rightBound,false, offsetEvaluationCount, scanWidth);
 
-            AtomicDistanceExpression atomicZ1 = new AtomicDistanceExpression(ds->ds.get(Z1)/normalisationZ1,(v1, v2) -> Math.abs(v2-v1));
-
-            AtomicDistanceExpression atomicZ2 = new AtomicDistanceExpression(ds->ds.get(Z2)/normalisationZ2,(v1, v2) -> Math.abs(v2-v1));
-
-            AtomicDistanceExpression atomicZ3 = new AtomicDistanceExpression(ds->ds.get(Z3)/normalisationZ3,(v1, v2) -> Math.abs(v2-v1));
 
             double[][] direct_evaluation_skorokhod_Z1 = new double[rightBound][1];
             double[][] direct_evaluation_skorokhod_Z2 = new double[rightBound][1];
@@ -709,14 +734,15 @@ public class Main_Skorokhod {
             skorokhodZ2.Reset();
 
             DistanceExpression dMax = new MaxDistanceExpression(
+                    atomicZ1,
+                    new MaxDistanceExpression(atomicZ2, atomicZ3)
+            );
+
+            DistanceExpression dMaxSkor = new MaxDistanceExpression(
                     skorokhodZ1,
                     new MaxDistanceExpression(skorokhodZ2, skorokhodZ3)
             );
 
-            // DistanceExpression dMax = new MaxDistanceExpression(
-            //         atomicZ1,
-            //         new MaxDistanceExpression(atomicZ2, atomicZ3)
-            // );
 
             DistanceExpression intdMax = new MaxIntervalDistanceExpression(
                     dMax,
@@ -724,7 +750,17 @@ public class Main_Skorokhod {
                     rightRBound
             );
 
+            DistanceExpression intdMaxSkor = new MaxIntervalDistanceExpression(
+                    dMaxSkor,
+                    leftRBound,
+                    rightRBound
+            );
+
+
+
             double[][] robEvaluations = new double[20][2];
+            double[][] robEvaluationsSkor = new double[20][2];
+
             RobustnessFormula robustF;
             int index=0;
             double thresholdB = 1;
@@ -742,16 +778,23 @@ public class Main_Skorokhod {
                 // ThreeValuedSemanticsVisitor(rand,50,1.96).eval(robustF).eval(5, 0, sequence);
 
                 ThresholdDistanceExpression thresholdExpr = new ThresholdDistanceExpression(intdMax, RelationOperator.LESS_OR_EQUAL_THAN, threshold);
+                ThresholdDistanceExpression thresholdExprSkor = new ThresholdDistanceExpression(intdMaxSkor, RelationOperator.LESS_OR_EQUAL_THAN, threshold);
 
                 double value = thresholdExpr.compute(0, sequence, sequence_p);
+                double valueSkor = thresholdExprSkor.compute(0, sequence, sequence_p);
+
 
                 System.out.println(" ");
                 System.out.println("\n robustF evaluation at " + threshold + ": " + value);
+                System.out.println("\n robustFSkor evaluation at " + threshold + ": " + valueSkor);
                 robEvaluations[index][1]=value;
                 robEvaluations[index][0]=threshold;
+                robEvaluationsSkor[index][1]=valueSkor;
+                robEvaluationsSkor[index][0]=threshold;
                 index++;
             }
             Util.writeToCSV("./evalR.csv",robEvaluations);
+            Util.writeToCSV("./evalRSkor.csv",robEvaluationsSkor);
 
         } catch (RuntimeException e) {
             e.printStackTrace();
@@ -1187,8 +1230,8 @@ public class Main_Skorokhod {
 
     /*
     Method getInitialState assigns the initial value to all variables.
-    The values are taken from "Ulysse Herbach: ''Harissa: Stochastic Simulation and Inference of Gene Regulatory Networks Based on Transcriptional
-    Bursting''. Proc. CMSB 2023".
+    The values are taken from "Ulysse Herbach: Harissa: Stochastic Simulation and Inference of Gene Regulatory Networks
+    Based on Transcriptional Bursting. Proc. CMSB 2023".
 
      */
     public static DataState getInitialState(double gran, double Tstep, double Treal, double Tdelta) {
