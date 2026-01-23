@@ -43,7 +43,7 @@ import stark.perturbation.AtomicPerturbation;
 import stark.perturbation.IterativePerturbation;
 import stark.perturbation.Perturbation;
 import stark.perturbation.SequentialPerturbation;
-import stark.robtl.RobustnessFormula;
+import stark.robtl.*;
 
 import org.apache.commons.math3.random.RandomGenerator;
 
@@ -761,7 +761,6 @@ public class Main_Skorokhod {
             double[][] robEvaluations = new double[20][2];
             double[][] robEvaluationsSkor = new double[20][2];
 
-            RobustnessFormula robustF;
             int index=0;
             double thresholdB = 1;
             for(int i = 0; i < 20 ; i++){
@@ -795,6 +794,38 @@ public class Main_Skorokhod {
             }
             Util.writeToCSV("./evalR.csv",robEvaluations);
             Util.writeToCSV("./evalRSkor.csv",robEvaluationsSkor);
+
+            RobustnessFormula robustF;
+            RobustnessFormula robustFSkor;
+
+            index=0;
+            thresholdB = 1;
+            for(int i = 0; i < 20 ; i++){
+                double threshold = thresholdB + i;
+                threshold = threshold / 100;
+                robustF = new AtomicRobustnessFormula(itZ1TranslRate(x,w1,w2,replica),
+                        intdMax,
+                        RelationOperator.LESS_OR_EQUAL_THAN,
+                        threshold);
+                robustFSkor = new AtomicRobustnessFormula(itZ1TranslRate(x,w1,w2,replica),
+                        intdMaxSkor,
+                        RelationOperator.LESS_OR_EQUAL_THAN,
+                        threshold);
+                boolean value = new BooleanSemanticsVisitor(true).eval(robustF).eval(5, 0, sequence);
+                boolean valueSkor = new BooleanSemanticsVisitor(true).eval(robustFSkor).eval(5, 0, sequence);
+
+                System.out.println(" ");
+                System.out.println("\n robustF evaluation at " + threshold + ": " + value);
+                System.out.println("\n robustFSkor evaluation at " + threshold + ": " + valueSkor);
+                robEvaluations[index][1]=value? 1.0 : 0.0;
+                robEvaluationsSkor[index][1]=valueSkor? 1.0 : 0.0;
+                robEvaluations[index][0]=threshold;
+                robEvaluationsSkor[index][0]=threshold;
+                index++;
+            }
+            Util.writeToCSV("./evalR.csv",robEvaluations);
+
+
 
         } catch (RuntimeException e) {
             e.printStackTrace();
