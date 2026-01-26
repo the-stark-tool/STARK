@@ -352,7 +352,7 @@ public class Main_Skorokhod {
             which models the state of the data.
             Instances of <code>DataState</code> contains values for variables representing the quantities of the
             system and four values allowing us to model the evolution of time: gran, Tstep, Treal, Tdelta.
-            The initial state <code>state</code> is constructed by exploiting the static method
+            The initial data state <code>state</code> is constructed by exploiting the static method
             <code>getInitialState</code>, which will be defined later and assigns the initial value to all 30
             variables defined above.
              */
@@ -364,14 +364,14 @@ public class Main_Skorokhod {
             This configuration consists of 4 elements:
             - the controller <code>controller</code> defined above,
             - the data state <code>state</state> defined above,
-            - a random function over data states, which implements interface <code>DataStateFunction</code> and maps a
+            - a random function over data states, which implements the interface <code>DataStateFunction</code> and maps a
             random generator <code>rg</code> and a data state <code>ds</code> to the data state obtained by updating
             <code>ds</code> with the list of changes given by method <code>selectAndApplyReaction</code>. Essentially,
-            this static method, defined later, selects the next reaction among the 18 available according to Gillespie
+            this static method, defined later, selects one fo the 18 available available reactions according to Gillespie
             algorithm and realises the changes on variables that are consequence of the firing of the selected reaction,
             i.e. reactants are removed from <code>ds</code> and products are added to <code>ds</code>. Moreover, since
-            proteins are among reactants/products and their amount impact on burst frequencies, also those will be
-            updated.
+            proteins are among reactants/products and their amount impact on burst frequencies, also burst frequencies
+            will be updated.
             - an expression over data states, which implements interface <code>DataStateExpression</code> and maps a
             data state <code>ds</code> to the time of next reaction.
              */
@@ -396,12 +396,12 @@ public class Main_Skorokhod {
             and sample sets by class <code>SampleSet</code>.
             In this context, <code>size</code> is the cardinality of those sample sets.
             */
-            int size = 100; // was 100
+            int size = 10;
 
             /*
             The evolution sequence <code>sequence></code> created by the following instruction consists in a sequence of
             sample sets of configurations of cardinality <code>size</size>, where the first sample of the list consists
-            in <code>size</size> copies of configuration <code>system</code> defined above.
+            in <code>size</size> copies of the configuration <code>system</code> defined above.
             Notice that <code>sequence></code> contains initially only this first sample, the subsequent ones will be
             created "on demand".
              */
@@ -463,11 +463,12 @@ public class Main_Skorokhod {
             <code>size</code> of configurations, with the first sample set consisting in <code>size</code> copies of
             <code>system</code>.
             The second evolution sequence is perturbed by applying the perturbation returned by the static method
-            <code>itZ1TranslRate(x)</code> defined later. Essentially, the method returns a cyclic perturbation that
-            affects the translation rate of gene 1:  for <code>replica</code> times, it has no effect for the first w1
-            time points, i.e., the system behaves regularly, then in the subsequent <code>w2</code> time points, the
-            translation rate is decremented by x, which impacts directly on the evolution of <code>Z1</code> and,
-            through interactions, on <code>Z2</code> and <code>Z3</code>.
+            <code>itZ1TranslRate(x)</code> defined later.
+            Essentially, the method returns a cyclic perturbation that affects the translation rate of gene 1:
+            for <code>replica</code> times, it has no effect for the first w1 time points, i.e., the system behaves
+            regularly, then in the subsequent <code>w2</code> time points, the translation rate is decremented by x,
+            which impacts directly on the evolution of <code>Z1</code> and, through interactions, on <code>Z2</code>
+            and <code>Z3</code>.
             This perturbation models protein translation deregulation.
 
             For both evolution sequences, we store in .csv files some information allowing us to observe the dynamics of
@@ -476,10 +477,10 @@ public class Main_Skorokhod {
             obtained at that time unit.
 
             */
+
             System.out.println("");
             System.out.println("Simulation of nominal and perturbed system");
             System.out.println("");
-
 
             int N = 1000;    // length ot the evolution sequence
 
@@ -490,10 +491,80 @@ public class Main_Skorokhod {
             int w2=50;
             int replica= 5;
 
+            double[][] plot_z1 = new double[N][1];
+            double[][] plot_z2 = new double[N][1];
+            double[][] plot_z3 = new double[N][1];
+
+            double[][] plot_x1 = new double[N][1];
+            double[][] plot_x2 = new double[N][1];
+            double[][] plot_x3 = new double[N][1];
+
+            double[][] data = SystemState.sample(rand, F, system, N, size);
+            for (int i = 0; i<N; i++){
+                plot_z1[i][0] = data[i][3];
+                plot_z2[i][0] = data[i][7];
+                plot_z3[i][0] = data[i][11];
+
+                plot_x1[i][0] = data[i][2];
+                plot_x2[i][0] = data[i][6];
+                plot_x3[i][0] = data[i][10];
+            }
+            Util.writeToCSV("./new_plotZ1.csv",plot_z1);
+            Util.writeToCSV("./new_plotZ2.csv",plot_z2);
+            Util.writeToCSV("./new_plotZ3.csv",plot_z3);
+
+            Util.writeToCSV("./new_plotX1.csv",plot_x1);
+            Util.writeToCSV("./new_plotX2.csv",plot_x2);
+            Util.writeToCSV("./new_plotX3.csv",plot_x3);
+
+            double[][] plot_pz1 = new double[N][1];
+            double[][] plot_pz2 = new double[N][1];
+            double[][] plot_pz3 = new double[N][1];
+
+            double[][] plot_px1 = new double[N][1];
+            double[][] plot_px2 = new double[N][1];
+            double[][] plot_px3 = new double[N][1];
+
+            double[][] pdata = SystemState.sample(rand, F, itZ1TranslRate(x,w1,w2,replica), system, N, size);
+            for (int i = 0; i<N; i++){
+                plot_pz1[i][0] = pdata[i][3];
+                plot_pz2[i][0] = pdata[i][7];
+                plot_pz3[i][0] = pdata[i][11];
+
+                plot_px1[i][0] = pdata[i][2];
+                plot_px2[i][0] = pdata[i][6];
+                plot_px3[i][0] = pdata[i][10];
+            }
+            Util.writeToCSV("./new_pplotZ1.csv",plot_pz1);
+            Util.writeToCSV("./new_pplotZ2.csv",plot_pz2);
+            Util.writeToCSV("./new_pplotZ3.csv",plot_pz3);
+
+            Util.writeToCSV("./new_pplotX1.csv",plot_px1);
+            Util.writeToCSV("./new_pplotX2.csv",plot_px2);
+            Util.writeToCSV("./new_pplotX3.csv",plot_px3);
+
+
+
+
+
             /*
             While in the previous lines of code the average values of variables obtained step-by-step are stored in
             .cvs files, the following portion of code allows us to print them.
             */
+
+            System.out.println("");
+            System.out.println("Simulation of nominal system - data average values:");
+            System.out.println("");
+            printAvgData(rand, L, F, system, N, size, 0, N);
+            System.out.println("");
+            System.out.println("Simulation of perturbed system - data average values:");
+            System.out.println("");
+            printAvgDataPerturbed(rand, L, F, system, N, size, 0, N, itZ1TranslRate(x, w1, w2, replica));
+
+
+
+
+
 
             /*
 
@@ -510,7 +581,7 @@ public class Main_Skorokhod {
             /*
             In order to quantify the difference between two evolution sequences w.r.t. Zi, we need to define the
             difference between two configurations w.r.t. Zi: given two configurations with Zi=m and Zi=n, the
-            difference between those configurations w.r.t. Zi is the value |m-n|, normalised wrt the maximal value that
+            difference between those configurations w.r.t. Zi is the value |m-n|, normalised w.r.t. the maximal value that
             can be assumed by Zi, so that this difference is always in [0,1].
             Since we cannot know a priori which is the maximal value that can be assumed by Zi, we estimate it.
 
@@ -542,7 +613,7 @@ public class Main_Skorokhod {
             - as above, the perturbation is returned by the static method <code>itZ1PertRate()</code> defined later
             - the perturbation is applied at step 0
             - the sample sets of configurations in <code>sequence_p</code> have a cardinality which corresponds to that
-            of <code>sequence</code> multiplied by <code>scale>/code>
+            of <code>sequence</code> multiplied by <code>scale</code>
             */
 
             int scale=5;
@@ -681,30 +752,30 @@ public class Main_Skorokhod {
             Util.writeToCSV("./offsets_Z3.csv",offsets3);
 
             // plot system state:
-            double[][] plot_z1 = new double[N][1];
-            double[][] plot_z2 = new double[N][1];
-            double[][] plot_z3 = new double[N][1];
+            double[][] plot_z1_Skor = new double[N][1];
+            double[][] plot_z2_Skor = new double[N][1];
+            double[][] plot_z3_Skor = new double[N][1];
 
-            double[][] plot_pz1 = new double[N][1];
-            double[][] plot_pz2 = new double[N][1];
-            double[][] plot_pz3 = new double[N][1];
+            double[][] plot_pz1_Skor = new double[N][1];
+            double[][] plot_pz2_Skor = new double[N][1];
+            double[][] plot_pz3_Skor = new double[N][1];
 
             for (int i = 0; i<N; i++){
-                plot_z1[i][0] = Arrays.stream(sequence.get(i).evalPenaltyFunction(ds->ds.get(Z1))).average().orElse(Double.NaN);
-                plot_z2[i][0] = Arrays.stream(sequence.get(i).evalPenaltyFunction(ds->ds.get(Z2))).average().orElse(Double.NaN);
-                plot_z3[i][0] = Arrays.stream(sequence.get(i).evalPenaltyFunction(ds->ds.get(Z3))).average().orElse(Double.NaN);
+                plot_z1_Skor[i][0] = Arrays.stream(sequence.get(i).evalPenaltyFunction(ds->ds.get(Z1))).average().orElse(Double.NaN);
+                plot_z2_Skor[i][0] = Arrays.stream(sequence.get(i).evalPenaltyFunction(ds->ds.get(Z2))).average().orElse(Double.NaN);
+                plot_z3_Skor[i][0] = Arrays.stream(sequence.get(i).evalPenaltyFunction(ds->ds.get(Z3))).average().orElse(Double.NaN);
 
-                plot_pz1[i][0] = Arrays.stream(sequence_p.get(i).evalPenaltyFunction(ds->ds.get(Z1))).average().orElse(Double.NaN);
-                plot_pz2[i][0] = Arrays.stream(sequence_p.get(i).evalPenaltyFunction(ds->ds.get(Z2))).average().orElse(Double.NaN);
-                plot_pz3[i][0] = Arrays.stream(sequence_p.get(i).evalPenaltyFunction(ds->ds.get(Z3))).average().orElse(Double.NaN);
+                plot_pz1_Skor[i][0] = Arrays.stream(sequence_p.get(i).evalPenaltyFunction(ds->ds.get(Z1))).average().orElse(Double.NaN);
+                plot_pz2_Skor[i][0] = Arrays.stream(sequence_p.get(i).evalPenaltyFunction(ds->ds.get(Z2))).average().orElse(Double.NaN);
+                plot_pz3_Skor[i][0] = Arrays.stream(sequence_p.get(i).evalPenaltyFunction(ds->ds.get(Z3))).average().orElse(Double.NaN);
             }
-            Util.writeToCSV("./new_plotZ1.csv",plot_z1);
-            Util.writeToCSV("./new_plotZ2.csv",plot_z2);
-            Util.writeToCSV("./new_plotZ3.csv",plot_z3);
+            Util.writeToCSV("./new_plotZ1_Skor.csv",plot_z1);
+            Util.writeToCSV("./new_plotZ2_Skor.csv",plot_z2);
+            Util.writeToCSV("./new_plotZ3_Skor.csv",plot_z3);
 
-            Util.writeToCSV("./new_pplotZ1.csv",plot_pz1);
-            Util.writeToCSV("./new_pplotZ2.csv",plot_pz2);
-            Util.writeToCSV("./new_pplotZ3.csv",plot_pz3);
+            Util.writeToCSV("./new_pplotZ1_Skor.csv",plot_pz1);
+            Util.writeToCSV("./new_pplotZ2_Skor.csv",plot_pz2);
+            Util.writeToCSV("./new_pplotZ3_Skor.csv",plot_pz3);
 
 
             /*
@@ -1114,16 +1185,11 @@ public class Main_Skorokhod {
         if(lambdaSum > 0){
 
             double token = 1 - rg.nextDouble();
-
             int selReaction = 0;
-
             while (lambdaParSum[selReaction] < token * lambdaSum) {
                 selReaction++;
             }
-
             selReaction++;
-
-
 
             switch(selReaction){
                 case 1:
@@ -1260,7 +1326,7 @@ public class Main_Skorokhod {
 
 
     /*
-    Method getInitialState assigns the initial value to all variables.
+    The static method <code>getInitialState</code> assigns the initial value to all variables.
     The values are taken from "Ulysse Herbach: Harissa: Stochastic Simulation and Inference of Gene Regulatory Networks
     Based on Transcriptional Bursting. Proc. CMSB 2023".
 
