@@ -22,11 +22,12 @@
 
 package stark.distance;
 
-import stark.DefaultRandomGenerator;
-import stark.EvolutionSequence;
+import java.util.stream.IntStream;
+
 import org.apache.commons.math3.random.RandomGenerator;
 
-import java.util.stream.IntStream;
+import stark.DefaultRandomGenerator;
+import stark.EvolutionSequence;
 
 /**
  * Distance expressions are used for the definition of distances between evolution sequences.
@@ -43,7 +44,8 @@ public sealed interface DistanceExpression permits
         MinIntervalDistanceExpression,
         UntilDistanceExpression,
         SkorokhodDistanceExpression,
-        ThresholdDistanceExpression {
+        ThresholdDistanceExpression,
+        RevisedSkorokhodDistanceExpression {
 
     /**
      * Returns the evaluation of the distance expression between the two sequences at the given step.

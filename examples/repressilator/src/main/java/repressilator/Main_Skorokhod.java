@@ -20,7 +20,17 @@
  * limitations under the License.
  */
 
-package repressilator;
+package stark.examples.repressilator;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.math3.random.RandomGenerator;
 
 import stark.DefaultRandomGenerator;
 import stark.EvolutionSequence;
@@ -33,6 +43,7 @@ import stark.distance.AtomicDistanceExpression;
 import stark.distance.DistanceExpression;
 import stark.distance.MaxDistanceExpression;
 import stark.distance.MaxIntervalDistanceExpression;
+import stark.distance.RevisedSkorokhodDistanceExpression;
 import stark.distance.SkorokhodDistanceExpression;
 import stark.distance.ThresholdDistanceExpression;
 import stark.ds.DataState;
@@ -43,18 +54,9 @@ import stark.perturbation.AtomicPerturbation;
 import stark.perturbation.IterativePerturbation;
 import stark.perturbation.Perturbation;
 import stark.perturbation.SequentialPerturbation;
-import stark.robtl.*;
-
-import org.apache.commons.math3.random.RandomGenerator;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
+import stark.robtl.AtomicRobustnessFormula;
+import stark.robtl.BooleanSemanticsVisitor;
+import stark.robtl.RobustnessFormula;
 
 public class Main_Skorokhod {
 
@@ -509,13 +511,13 @@ public class Main_Skorokhod {
                 plot_x2[i][0] = data[i][6];
                 plot_x3[i][0] = data[i][10];
             }
-            Util.writeToCSV("./new_plotZ1.csv",plot_z1);
-            Util.writeToCSV("./new_plotZ2.csv",plot_z2);
-            Util.writeToCSV("./new_plotZ3.csv",plot_z3);
+            Util.writeToCSV("./results/new_plotZ1.csv",plot_z1);
+            Util.writeToCSV("./results/new_plotZ2.csv",plot_z2);
+            Util.writeToCSV("./results/new_plotZ3.csv",plot_z3);
 
-            Util.writeToCSV("./new_plotX1.csv",plot_x1);
-            Util.writeToCSV("./new_plotX2.csv",plot_x2);
-            Util.writeToCSV("./new_plotX3.csv",plot_x3);
+            Util.writeToCSV("./results/new_plotX1.csv",plot_x1);
+            Util.writeToCSV("./results/new_plotX2.csv",plot_x2);
+            Util.writeToCSV("./results/new_plotX3.csv",plot_x3);
 
             double[][] plot_pz1 = new double[N][1];
             double[][] plot_pz2 = new double[N][1];
@@ -535,13 +537,13 @@ public class Main_Skorokhod {
                 plot_px2[i][0] = pdata[i][6];
                 plot_px3[i][0] = pdata[i][10];
             }
-            Util.writeToCSV("./new_pplotZ1.csv",plot_pz1);
-            Util.writeToCSV("./new_pplotZ2.csv",plot_pz2);
-            Util.writeToCSV("./new_pplotZ3.csv",plot_pz3);
+            Util.writeToCSV("./results/new_pplotZ1.csv",plot_pz1);
+            Util.writeToCSV("./results/new_pplotZ2.csv",plot_pz2);
+            Util.writeToCSV("./results/new_pplotZ3.csv",plot_pz3);
 
-            Util.writeToCSV("./new_pplotX1.csv",plot_px1);
-            Util.writeToCSV("./new_pplotX2.csv",plot_px2);
-            Util.writeToCSV("./new_pplotX3.csv",plot_px3);
+            Util.writeToCSV("./results/new_pplotX1.csv",plot_px1);
+            Util.writeToCSV("./results/new_pplotX2.csv",plot_px2);
+            Util.writeToCSV("./results/new_pplotX3.csv",plot_px3);
 
 
 
@@ -668,42 +670,32 @@ public class Main_Skorokhod {
             int normalisationTime = 1000;
             int scanWidth = 400;
             int offsetEvaluationCount = 150;
+            double resolution = 0.001;
 
-            SkorokhodDistanceExpression skorokhodZ1 = new SkorokhodDistanceExpression(ds->ds.get(Z1)/normalisationZ1,
+            RevisedSkorokhodDistanceExpression skorokhodZ1 = new RevisedSkorokhodDistanceExpression(ds->ds.get(Z1)/normalisationZ1,
                     (v1, v2) -> Math.abs(v2-v1),
                     (a, b) -> Math.max(a, b),
                     offset->((double)offset/(double)normalisationTime),
                     leftBound,
-                    rightBound,false, offsetEvaluationCount, scanWidth);
+                    rightBound,false, resolution);
 
-            SkorokhodDistanceExpression skorokhodZ1Ref = new SkorokhodDistanceExpression(ds->ds.get(Z1)/normalisationZ1,
+            RevisedSkorokhodDistanceExpression skorokhodZ2 = new RevisedSkorokhodDistanceExpression(ds->ds.get(Z2)/normalisationZ2,
                     (v1, v2) -> Math.abs(v2-v1),
                     (a, b) -> Math.max(a, b),
                     offset->((double)offset/(double)normalisationTime),
                     leftBound,
-                    rightBound,false, offsetEvaluationCount, scanWidth);
+                    rightBound,false, resolution);
 
-            SkorokhodDistanceExpression skorokhodZ2 = new SkorokhodDistanceExpression(ds->ds.get(Z2)/normalisationZ2,
+            RevisedSkorokhodDistanceExpression skorokhodZ3 = new RevisedSkorokhodDistanceExpression(ds->ds.get(Z3)/normalisationZ3,
                     (v1, v2) -> Math.abs(v2-v1),
                     (a, b) -> Math.max(a, b),
                     offset->((double)offset/(double)normalisationTime),
                     leftBound,
-                    rightBound,false, offsetEvaluationCount, scanWidth);
-
-            SkorokhodDistanceExpression skorokhodZ3 = new SkorokhodDistanceExpression(ds->ds.get(Z3)/normalisationZ3,
-                    (v1, v2) -> Math.abs(v2-v1),
-                    (a, b) -> Math.max(a, b),
-                    offset->((double)offset/(double)normalisationTime),
-                    leftBound,
-                    rightBound,false, offsetEvaluationCount, scanWidth);
-
+                    rightBound,false, resolution);
 
             double[][] direct_evaluation_skorokhod_Z1 = new double[rightBound][1];
             double[][] direct_evaluation_skorokhod_Z2 = new double[rightBound][1];
             double[][] direct_evaluation_skorokhod_Z3 = new double[rightBound][1];
-
-            double[][] direct_evaluation_skorokhod_Z1_refined = new double[rightBound][1];
-            double[][] direct_evaluation_skorokhod_Z1_refined_diff = new double[rightBound][1];
 
             double[][] direct_evaluation_atomic_Z1 = new double[rightBound][1];
             double[][] direct_evaluation_atomic_Z2 = new double[rightBound][1];
@@ -711,8 +703,6 @@ public class Main_Skorokhod {
 
             for (int i = 0; i<(rightBound); i++){
                 direct_evaluation_skorokhod_Z1[i][0] = skorokhodZ1.compute(i, sequence, sequence_p);
-                direct_evaluation_skorokhod_Z1_refined[i][0] = skorokhodZ1Ref.computeRefined(i, sequence, sequence_p);
-                direct_evaluation_skorokhod_Z1_refined_diff[i][0] = direct_evaluation_skorokhod_Z1[i][0] - direct_evaluation_skorokhod_Z1_refined[i][0];
 
                 direct_evaluation_skorokhod_Z2[i][0] = skorokhodZ2.compute(i, sequence, sequence_p);
                 direct_evaluation_skorokhod_Z3[i][0] = skorokhodZ3.compute(i, sequence, sequence_p);
@@ -723,15 +713,13 @@ public class Main_Skorokhod {
                 direct_evaluation_atomic_Z3[i][0] = atomicZ3.compute(i, sequence, sequence_p);
             }
 
-            Util.writeToCSV("./skorokhod_Z1.csv",direct_evaluation_skorokhod_Z1);
-            Util.writeToCSV("./skorokhod_Z1_refined.csv",direct_evaluation_skorokhod_Z1_refined);
-            Util.writeToCSV("./skorokhod_Z1_refined_diff.csv",direct_evaluation_skorokhod_Z1_refined_diff);
-            Util.writeToCSV("./skorokhod_Z2.csv",direct_evaluation_skorokhod_Z2);
-            Util.writeToCSV("./skorokhod_Z3.csv",direct_evaluation_skorokhod_Z3);
+            Util.writeToCSV("./results/skorokhod_Z1.csv",direct_evaluation_skorokhod_Z1);
+            Util.writeToCSV("./results/skorokhod_Z2.csv",direct_evaluation_skorokhod_Z2);
+            Util.writeToCSV("./results/skorokhod_Z3.csv",direct_evaluation_skorokhod_Z3);
 
-            Util.writeToCSV("./atomic_Z1.csv",direct_evaluation_atomic_Z1);
-            Util.writeToCSV("./atomic_Z2.csv",direct_evaluation_atomic_Z2);
-            Util.writeToCSV("./atomic_Z3.csv",direct_evaluation_atomic_Z3);
+            Util.writeToCSV("./results/atomic_Z1.csv",direct_evaluation_atomic_Z1);
+            Util.writeToCSV("./results/atomic_Z2.csv",direct_evaluation_atomic_Z2);
+            Util.writeToCSV("./results/atomic_Z3.csv",direct_evaluation_atomic_Z3);
 
 
 
@@ -747,9 +735,9 @@ public class Main_Skorokhod {
                 offsets3[i][0] = _offsets3[i];
             }
 
-            Util.writeToCSV("./offsets_Z1.csv",offsets1);
-            Util.writeToCSV("./offsets_Z2.csv",offsets2);
-            Util.writeToCSV("./offsets_Z3.csv",offsets3);
+            Util.writeToCSV("./results/offsets_Z1.csv",offsets1);
+            Util.writeToCSV("./results/offsets_Z2.csv",offsets2);
+            Util.writeToCSV("./results/offsets_Z3.csv",offsets3);
 
             // plot system state:
             double[][] plot_z1_Skor = new double[N][1];
@@ -769,13 +757,13 @@ public class Main_Skorokhod {
                 plot_pz2_Skor[i][0] = Arrays.stream(sequence_p.get(i).evalPenaltyFunction(ds->ds.get(Z2))).average().orElse(Double.NaN);
                 plot_pz3_Skor[i][0] = Arrays.stream(sequence_p.get(i).evalPenaltyFunction(ds->ds.get(Z3))).average().orElse(Double.NaN);
             }
-            Util.writeToCSV("./new_plotZ1_Skor.csv",plot_z1);
-            Util.writeToCSV("./new_plotZ2_Skor.csv",plot_z2);
-            Util.writeToCSV("./new_plotZ3_Skor.csv",plot_z3);
+            Util.writeToCSV("./results/new_plotZ1_Skor.csv",plot_z1);
+            Util.writeToCSV("./results/new_plotZ2_Skor.csv",plot_z2);
+            Util.writeToCSV("./results/new_plotZ3_Skor.csv",plot_z3);
 
-            Util.writeToCSV("./new_pplotZ1_Skor.csv",plot_pz1);
-            Util.writeToCSV("./new_pplotZ2_Skor.csv",plot_pz2);
-            Util.writeToCSV("./new_pplotZ3_Skor.csv",plot_pz3);
+            Util.writeToCSV("./results/new_pplotZ1_Skor.csv",plot_pz1);
+            Util.writeToCSV("./results/new_pplotZ2_Skor.csv",plot_pz2);
+            Util.writeToCSV("./results/new_pplotZ3_Skor.csv",plot_pz3);
 
 
             /*
@@ -863,8 +851,8 @@ public class Main_Skorokhod {
                 robEvaluationsSkor[index][0]=threshold;
                 index++;
             }
-            Util.writeToCSV("./evalR.csv",robEvaluations);
-            Util.writeToCSV("./evalRSkor.csv",robEvaluationsSkor);
+            Util.writeToCSV("./results/evalR.csv",robEvaluations);
+            Util.writeToCSV("./results/evalRSkor.csv",robEvaluationsSkor);
 
             RobustnessFormula robustF;
             RobustnessFormula robustFSkor;
@@ -894,7 +882,7 @@ public class Main_Skorokhod {
                 robEvaluationsSkor[index][0]=threshold;
                 index++;
             }
-            Util.writeToCSV("./evalR.csv",robEvaluations);
+            Util.writeToCSV("./results/evalR.csv",robEvaluations);
 
 
 

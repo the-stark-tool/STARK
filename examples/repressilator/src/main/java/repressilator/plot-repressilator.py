@@ -40,20 +40,24 @@
 import numpy.random as rnd
 import matplotlib.pyplot as plt
 import numpy
+from pathlib import Path
 from statistics import mean
 import csv
 
-Protein_Z1 = numpy.genfromtxt("new_plotZ1.csv", names=["prot_Z1"])
-Protein_Z2 = numpy.genfromtxt("new_plotZ2.csv", names=["prot_Z2"])
-Protein_Z3 = numpy.genfromtxt("new_plotZ3.csv", names=["prot_Z3"])
+BASE_DIR = Path(__file__).resolve().parents[4]
+RESULTS_DIR = BASE_DIR / "results"
 
-pProtein_Z1 = numpy.genfromtxt("new_pplotZ1.csv", names=["pprot_Z1"])
-pProtein_Z2 = numpy.genfromtxt("new_pplotZ2.csv", names=["pprot_Z2"])
-pProtein_Z3 = numpy.genfromtxt("new_pplotZ3.csv", names=["pprot_Z3"])
+Protein_Z1 = numpy.genfromtxt(RESULTS_DIR / "new_plotZ1.csv", names=["prot_Z1"])
+Protein_Z2 = numpy.genfromtxt(RESULTS_DIR / "new_plotZ2.csv", names=["prot_Z2"])
+Protein_Z3 = numpy.genfromtxt(RESULTS_DIR / "new_plotZ3.csv", names=["prot_Z3"])
 
-mRNA_X1 = numpy.genfromtxt("new_plotX1.csv", names=["mRNA_X1"])
-mRNA_X2 = numpy.genfromtxt("new_plotX2.csv", names=["mRNA_X2"])
-mRNA_X3 = numpy.genfromtxt("new_plotX3.csv", names=["mRNA_X3"])
+pProtein_Z1 = numpy.genfromtxt(RESULTS_DIR / "new_pplotZ1.csv", names=["pprot_Z1"])
+pProtein_Z2 = numpy.genfromtxt(RESULTS_DIR / "new_pplotZ2.csv", names=["pprot_Z2"])
+pProtein_Z3 = numpy.genfromtxt(RESULTS_DIR / "new_pplotZ3.csv", names=["pprot_Z3"])
+
+mRNA_X1 = numpy.genfromtxt(RESULTS_DIR / "new_plotX1.csv", names=["mRNA_X1"])
+mRNA_X2 = numpy.genfromtxt(RESULTS_DIR / "new_plotX2.csv", names=["mRNA_X2"])
+mRNA_X3 = numpy.genfromtxt(RESULTS_DIR / "new_plotX3.csv", names=["mRNA_X3"])
 
 fix, ax = plt.subplots()
 ax.plot(range(0,1000),Protein_Z1['prot_Z1'],label="Z1")
@@ -85,9 +89,9 @@ plt.show()
 
 
 
-distance_Z1 = numpy.genfromtxt("atomic_Z1.csv", names=["d_prot_Z1"])
-distance_Z2 = numpy.genfromtxt("atomic_Z2.csv", names=["d_prot_Z2"])
-distance_Z3 = numpy.genfromtxt("atomic_Z3.csv", names=["d_prot_Z3"])
+distance_Z1 = numpy.genfromtxt(RESULTS_DIR / "atomic_Z1.csv", names=["d_prot_Z1"])
+distance_Z2 = numpy.genfromtxt(RESULTS_DIR / "atomic_Z2.csv", names=["d_prot_Z2"])
+distance_Z3 = numpy.genfromtxt(RESULTS_DIR / "atomic_Z3.csv", names=["d_prot_Z3"])
 
 
 fix, ax = plt.subplots()
@@ -103,7 +107,7 @@ plt.show()
 Threshold = []
 Value = []
 
-with open('evalR.csv','r') as csvfile:
+with open(RESULTS_DIR / 'evalR.csv','r') as csvfile:
     lines = csv.reader(csvfile, delimiter=',')
     for row in lines:
         Threshold.append(row[0])

@@ -8,5 +8,5 @@ dependencies {
 
 application {
     // Define the main class for the application.
-    mainClass = 'stark.examples.repressilator.Main'
+    mainClass = 'stark.examples.repressilator.Main_Skorokhod'
 }

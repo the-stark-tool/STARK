@@ -22,10 +22,23 @@
 
 package repressilator;
 
-import stark.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.math3.random.RandomGenerator;
+
+import stark.DefaultRandomGenerator;
+import stark.EvolutionSequence;
+import stark.SystemState;
+import stark.TimedSystem;
+import stark.Util;
 import stark.controller.Controller;
 import stark.controller.NilController;
-import stark.distance.*;
 import stark.distance.AtomicDistanceExpression;
 import stark.distance.DistanceExpression;
 import stark.distance.MaxDistanceExpression;
@@ -38,15 +51,10 @@ import stark.perturbation.AtomicPerturbation;
 import stark.perturbation.IterativePerturbation;
 import stark.perturbation.Perturbation;
 import stark.perturbation.SequentialPerturbation;
-import stark.robtl.*;
-import org.apache.commons.math3.random.RandomGenerator;
 import stark.robtl.AtomicRobustnessFormula;
 import stark.robtl.RobustnessFormula;
 import stark.robtl.ThreeValuedSemanticsVisitor;
 import stark.robtl.TruthValues;
-
-import java.io.IOException;
-import java.util.*;
 
 public class Main {
 
@@ -503,13 +511,13 @@ public class Main {
                 plot_x2[i][0] = data[i][6];
                 plot_x3[i][0] = data[i][10];
             }
-            Util.writeToCSV("./new_plotZ1.csv",plot_z1);
-            Util.writeToCSV("./new_plotZ2.csv",plot_z2);
-            Util.writeToCSV("./new_plotZ3.csv",plot_z3);
+            Util.writeToCSV("./results/new_plotZ1.csv",plot_z1);
+            Util.writeToCSV("./results/new_plotZ2.csv",plot_z2);
+            Util.writeToCSV("./results/new_plotZ3.csv",plot_z3);
 
-            Util.writeToCSV("./new_plotX1.csv",plot_x1);
-            Util.writeToCSV("./new_plotX2.csv",plot_x2);
-            Util.writeToCSV("./new_plotX3.csv",plot_x3);
+            Util.writeToCSV("./results/new_plotX1.csv",plot_x1);
+            Util.writeToCSV("./results/new_plotX2.csv",plot_x2);
+            Util.writeToCSV("./results/new_plotX3.csv",plot_x3);
 
             double[][] plot_pz1 = new double[N][1];
             double[][] plot_pz2 = new double[N][1];
@@ -529,13 +537,13 @@ public class Main {
                 plot_px2[i][0] = pdata[i][6];
                 plot_px3[i][0] = pdata[i][10];
             }
-            Util.writeToCSV("./new_pplotZ1.csv",plot_pz1);
-            Util.writeToCSV("./new_pplotZ2.csv",plot_pz2);
-            Util.writeToCSV("./new_pplotZ3.csv",plot_pz3);
+            Util.writeToCSV("./results/new_pplotZ1.csv",plot_pz1);
+            Util.writeToCSV("./results/new_pplotZ2.csv",plot_pz2);
+            Util.writeToCSV("./results/new_pplotZ3.csv",plot_pz3);
 
-            Util.writeToCSV("./new_pplotX1.csv",plot_px1);
-            Util.writeToCSV("./new_pplotX2.csv",plot_px2);
-            Util.writeToCSV("./new_pplotX3.csv",plot_px3);
+            Util.writeToCSV("./results/new_pplotX1.csv",plot_px1);
+            Util.writeToCSV("./results/new_pplotX2.csv",plot_px2);
+            Util.writeToCSV("./results/new_pplotX3.csv",plot_px3);
 
 
 
@@ -656,9 +664,9 @@ public class Main {
                 direct_evaluation_atomic_Z3[i][0] = atomicZ3.compute(i+leftBound, sequence, sequence_p);
             }
 
-            Util.writeToCSV("./atomic_Z1.csv",direct_evaluation_atomic_Z1);
-            Util.writeToCSV("./atomic_Z2.csv",direct_evaluation_atomic_Z2);
-            Util.writeToCSV("./atomic_Z3.csv",direct_evaluation_atomic_Z3);
+            Util.writeToCSV("./results/atomic_Z1.csv",direct_evaluation_atomic_Z1);
+            Util.writeToCSV("./results/atomic_Z2.csv",direct_evaluation_atomic_Z2);
+            Util.writeToCSV("./results/atomic_Z3.csv",direct_evaluation_atomic_Z3);
 
 
 
@@ -720,7 +728,7 @@ public class Main {
                 robEvaluations[index][0]=threshold;
                 index++;
             }
-            Util.writeToCSV("./evalR.csv",robEvaluations);
+            Util.writeToCSV("./results/evalR.csv",robEvaluations);
 
 
 
