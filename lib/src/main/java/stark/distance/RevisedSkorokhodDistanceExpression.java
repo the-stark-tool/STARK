@@ -54,6 +54,9 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
 
     private final double[][] DPTable; // Dynamic Programming table, used to store calculated wasserstein distances, to avoid calculating them multiple times
 
+    private boolean usePF;
+    private double[][] PFTable; // PathFinding table, used to find the offsets resulting in the lowest average distance 
+
     /**
      * Generates the atomic distance expression that will use the given penalty function
      * and the given distance over reals for the evaluation of the ground distance on data states.
@@ -67,7 +70,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
      * @param resolution the resolution in which the skorokhod distance will be estimated using the binary search in the algorithm
      */
     public RevisedSkorokhodDistanceExpression(DataStateExpression rho, DoubleBinaryOperator distance, DoubleBinaryOperator muLogic ,ToDoubleFunction<Integer> rho2,
-                                       int leftBound, int rightBound, boolean direction, double resolution) {
+                                       int leftBound, int rightBound, boolean direction, double resolution, boolean usePF) {
         this.rho = rho;
         this.rho2 = rho2;
         this.distanceOperator = distance;
@@ -77,6 +80,8 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         this.muLogic = muLogic;
         this.resolution = resolution;
         this.maxOffset = 0;
+        this.PFTable = null;
+        this.usePF = usePF;
 
         // offsets, including right bound itself
         this.offsets = new int[rightBound + 1];
@@ -119,7 +124,13 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         {
             System.out.println("\nDetermining offsets\n");
             // fill offset list
-            DetermineOffsets(this.resolution, this.offsets, seq1, seq2);
+            double SkorokhodDistance = DetermineOffsets(this.resolution, this.offsets, seq1, seq2);
+
+            if (this.usePF)
+            {
+                System.out.println("Minimising average distance");
+                Dijkstra(this.offsets, SkorokhodDistance, seq1, seq2);
+            }
         }
 
         // sample wasserstein distance using offset
@@ -132,26 +143,27 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         throw new UnsupportedOperationException("Not implemented yet");
     }
 
-    private void DetermineOffsets(double resolution, int[] _offsets , EvolutionSequence seq1, EvolutionSequence seq2) 
+    private double DetermineOffsets(double resolution, int[] _offsets , EvolutionSequence seq1, EvolutionSequence seq2) 
     {
         // Find skorokhod distance at desired resolution, using binary search.
 	    double upper = 1.0;
 	    double lower = 0.0;
 
         Boolean conformance = false;
-        
+        double maxDistance = (upper + lower) / 2;
 	    while (!conformance || upper - lower >= resolution)
         {
-            double maxDistance = (upper + lower) / 2;
+            maxDistance = (upper + lower) / 2;
             conformance = TestSkorokhodConformance(maxDistance, _offsets, seq1, seq2);
 
             // if the sequence meets the current max skorokhod distance,
             // set upper to maxDistance, else set lower to maxDistance
             upper = conformance ? maxDistance : upper;
             lower = conformance ? lower : maxDistance;
-            System.out.println("current resolution: " + (upper - lower));
-            System.out.println("current maxDistance: " + maxDistance);
+            // System.out.println("current resolution: " + (upper - lower));
+            // System.out.println("current maxDistance: " + maxDistance);
         }
+        return maxDistance;
     }
 
     Boolean TestSkorokhodConformance(double maxDistance, int[] _offsets, EvolutionSequence seq1, EvolutionSequence seq2)
@@ -182,10 +194,10 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
             }
             _offsets[step] = _offset;
 
-            if ((step > this.leftBound) && (_offsets[step] < _offsets[step - 1]))
-            {
-                System.out.println("\nOffset reduced at " + (step) + ", from " + _offsets[step - 1]  + " to" + _offsets[step]);
-            }
+            // if ((step > this.leftBound) && (_offsets[step] < _offsets[step - 1]))
+            // {
+            //     System.out.println("\nOffset reduced at " + (step) + ", from " + _offsets[step - 1]  + " to" + _offsets[step]);
+            // }
 
             step++; 
         }
@@ -199,7 +211,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
             step++;
         }
 
-        // fill offset array with offsets for steps before left bound
+        // before left bound, offset = 0
         step = 0;
         while (step < this.leftBound)
         {
@@ -208,6 +220,96 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         }
 
         return true;
+    }
+
+    private void Dijkstra(int[] _offsets, double skorokhodDistance, EvolutionSequence seq1, EvolutionSequence seq2)
+    {
+        // if for some magical reason the optimal offset is 1 at most, pathfinding wont help.
+        if (this.maxOffset <= 1)
+        {
+            return;
+        }
+
+        // + 1 since leftbount = 0, rightbound = 1 should result in 2 wasserstein distances
+        int size = rightBound + 1 - leftBound - this.maxOffset;
+        this.PFTable = new double[size][this.maxOffset + 1];
+
+        // fill all nodes with infinity
+        for (int i = 0; i <= this.maxOffset; i++) {
+            for (int j = 0; j < size; j++) {
+                this.PFTable[j][i] = Integer.MAX_VALUE;
+            }
+        }
+        // set starting node distance to 0
+        this.PFTable[0][0] = 0;
+
+        // visit all nodes
+        // stop 1 earlier, since final nodes do not need to be visited themselves
+        for (int step = 0; step < size - 1; step++) 
+        {
+            for (int _offset = 0; _offset <= this.maxOffset; _offset++)
+            {
+                double sourceDistance = this.PFTable[step][_offset];
+
+                // scan over all reachable neighbours from this node, setting the min distance to source, decreasing offsets are not allowed
+                for (int unvisitedNeighbour = _offset; unvisitedNeighbour <= this.maxOffset; unvisitedNeighbour++) {
+
+                    double timeOffset = rho2.applyAsDouble(unvisitedNeighbour);
+
+                    double neighbourDistance = sample(leftBound + step + 1, unvisitedNeighbour, seq1, seq2);
+                    double mu = this.muLogic.applyAsDouble(timeOffset, neighbourDistance);
+ 
+                    double distance = (mu > skorokhodDistance) ? Double.MAX_VALUE : neighbourDistance + sourceDistance;
+
+                    // if moving from current node to this neighbour results in a lower total distance, save it.
+                    if (distance < this.PFTable[step + 1][unvisitedNeighbour])
+                    {
+                        this.PFTable[step + 1][unvisitedNeighbour] = distance;
+                    }
+                }
+            }
+        }
+
+        System.out.println("SkorokhodDistance: " + skorokhodDistance);
+        System.out.println("Max offset: " + this.maxOffset);
+
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j <= this.maxOffset; j++) {
+                if (this.PFTable[i][j] >= 2000) {
+                    System.out.printf(" inf ");
+                } else {
+                    System.out.printf(" %.3f ", this.PFTable[i][j]);
+                }
+            }
+            System.out.println();
+        }
+
+        int PrevNodeOffset = this.maxOffset;
+
+        // fill entire offset list
+        for (int step = size - 1; step > 0; step--) 
+        {
+            double minDistance = Double.MAX_VALUE;
+            int bestOffset = PrevNodeOffset;
+            for (int i = PrevNodeOffset; i >= 0; i--) 
+            {
+                if (this.PFTable[step][i] < minDistance)
+                {
+                    minDistance = this.PFTable[step][i];
+                    bestOffset = i;
+                }
+            }
+
+            PrevNodeOffset = bestOffset;
+
+            // System.out.println("Offset:" + _offsets[step + leftBound]);
+
+            if (_offsets[step + leftBound] != bestOffset)
+            {
+                System.out.println("Changed offset from:" + _offsets[step + leftBound] + " to: " + bestOffset + " at step:" + step);
+            }
+            _offsets[step + leftBound] = bestOffset;
+        }
     }
 
     /**

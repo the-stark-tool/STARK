@@ -674,28 +674,28 @@ public class Main_Skorokhod {
                     (a, b) -> Math.max(a, b),
                     offset->((double)offset/(double)normalisationTime),
                     leftBound,
-                    rightBound,false, resolution);
+                    rightBound,false, resolution, true);
 
-            SkorokhodDistanceExpression skorokhodZ1Old = new SkorokhodDistanceExpression(ds->ds.get(Z1)/normalisationZ1,
+            RevisedSkorokhodDistanceExpression skorokhodZ1Old = new RevisedSkorokhodDistanceExpression(ds->ds.get(Z1)/normalisationZ1,
                     (v1, v2) -> Math.abs(v2-v1),
                     (a, b) -> Math.max(a, b),
                     offset->((double)offset/(double)normalisationTime),
                     leftBound,
-                    rightBound,false, offsetEvaluationCount, scanWidth);
+                    rightBound,false, resolution, false);
 
             RevisedSkorokhodDistanceExpression skorokhodZ2 = new RevisedSkorokhodDistanceExpression(ds->ds.get(Z2)/normalisationZ2,
                     (v1, v2) -> Math.abs(v2-v1),
                     (a, b) -> Math.max(a, b),
                     offset->((double)offset/(double)normalisationTime),
                     leftBound,
-                    rightBound,false, resolution);
+                    rightBound,false, resolution, false);
 
             RevisedSkorokhodDistanceExpression skorokhodZ3 = new RevisedSkorokhodDistanceExpression(ds->ds.get(Z3)/normalisationZ3,
                     (v1, v2) -> Math.abs(v2-v1),
                     (a, b) -> Math.max(a, b),
                     offset->((double)offset/(double)normalisationTime),
                     leftBound,
-                    rightBound,false, resolution);
+                    rightBound,false, resolution, false);
 
 
             double[][] direct_evaluation_skorokhod_Z1 = new double[rightBound][1];
@@ -708,11 +708,18 @@ public class Main_Skorokhod {
             double[][] direct_evaluation_atomic_Z1 = new double[rightBound][1];
             double[][] direct_evaluation_atomic_Z2 = new double[rightBound][1];
             double[][] direct_evaluation_atomic_Z3 = new double[rightBound][1];
-
+            double sumOld = 0;
+            double sumRevised = 0;
             for (int i = 0; i<(rightBound); i++){
                 direct_evaluation_skorokhod_Z1[i][0] = skorokhodZ1.compute(i, sequence, sequence_p);
-                direct_evaluation_skorokhod_Z1_Old[i][0] = skorokhodZ1Old.computeRefined(i, sequence, sequence_p);
+                direct_evaluation_skorokhod_Z1_Old[i][0] = skorokhodZ1Old.compute(i, sequence, sequence_p);
                 direct_evaluation_skorokhod_Z1_Old_diff[i][0] = direct_evaluation_skorokhod_Z1[i][0] - direct_evaluation_skorokhod_Z1_Old[i][0];
+
+                if (i >= leftBound)
+                {
+                    sumOld+=direct_evaluation_skorokhod_Z1_Old[i][0];
+                    sumRevised+=direct_evaluation_skorokhod_Z1[i][0];
+                }
 
                 direct_evaluation_skorokhod_Z2[i][0] = skorokhodZ2.compute(i, sequence, sequence_p);
                 direct_evaluation_skorokhod_Z3[i][0] = skorokhodZ3.compute(i, sequence, sequence_p);
@@ -722,6 +729,11 @@ public class Main_Skorokhod {
                 direct_evaluation_atomic_Z2[i][0] = atomicZ2.compute(i, sequence, sequence_p);
                 direct_evaluation_atomic_Z3[i][0] = atomicZ3.compute(i, sequence, sequence_p);
             }
+            double avgRev = sumRevised / (rightBound - leftBound);
+            double avgOld = sumOld / (rightBound - leftBound);
+            System.out.println("RevisedAverage: " + avgRev);
+            System.out.println("OldAverage: " + avgOld);
+            System.out.println("OldAverage - RevisedAverage: " + (avgOld - avgRev));
 
             Util.writeToCSV("./results/skorokhod_Z1.csv",direct_evaluation_skorokhod_Z1);
             Util.writeToCSV("./results/skorokhod_Z1_old.csv",direct_evaluation_skorokhod_Z1_Old);
@@ -878,8 +890,8 @@ public class Main_Skorokhod {
                 double value = thresholdExpr.compute(0, sequence, sequence_p);
                 double valueSkor = thresholdExprSkor.compute(0, sequence, sequence_p);
 
-                System.out.println("\nrobustF evaluation at " + threshold + ": " + value + "intdMax: " + intdMax.compute(0, sequence, sequence_p));
-                System.out.println("robustFSkor evaluation at " + threshold + ": " + valueSkor + "intdMaxSkor: " + intdMaxSkor.compute(0, sequence, sequence_p));
+                System.out.println("\nrobustF evaluation at " + threshold + ": " + value);
+                System.out.println("robustFSkor evaluation at " + threshold + ": " + valueSkor);
                 robEvaluations[index][1]=value;
                 robEvaluations[index][0]=threshold;
                 robEvaluationsSkor[index][1]=valueSkor;

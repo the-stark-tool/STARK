@@ -54,7 +54,8 @@ public final class SkorokhodDistanceExpression implements DistanceExpression {
 
     private final int[] usedOffsets;
 
-    private double[][] DPTable; // Dynamic Programming table, used to store calculated wasserstein distances, to avoid calculating them multiple times
+    private final double[][] DPTable; // Dynamic Programming table, used to store calculated wasserstein distances, to avoid calculating them multiple times
+
 
     /**
      * Generates the atomic distance expression that will use the given penalty function
