@@ -482,7 +482,7 @@ public class Main_Skorokhod {
             System.out.println("Simulation of nominal and perturbed system");
             System.out.println("");
 
-            int N = 1000;    // length ot the evolution sequence
+            int N = 2000;    // length ot the evolution sequence
 
             double x = -3.0; // x positive: higher values for Z1, lower for Z2, higher for Z3
             // x negative: lower values for Z1, higher for Z2, lower for Z3
@@ -686,28 +686,32 @@ public class Main_Skorokhod {
 
             SkorokhodDistanceExpression skorokhodZ1 = new SkorokhodDistanceExpression(ds->ds.get(Z1)/normalisationZ1,
                     (v1, v2) -> Math.abs(v2-v1),
-                    (a, b) -> Math.max(a, b),
+                    (a, b) -> b,
+                    // (a, b) -> Math.max(a, b),
                     offset->((double)offset/(double)normalisationTime),
                     leftBound,
                     rightBound,false, offsetEvaluationCount, scanWidth);
 
             SkorokhodDistanceExpression skorokhodZ1Ref = new SkorokhodDistanceExpression(ds->ds.get(Z1)/normalisationZ1,
                     (v1, v2) -> Math.abs(v2-v1),
-                    (a, b) -> Math.max(a, b),
+                    (a, b) -> b,
+                    //(a, b) -> Math.max(a, b),
                     offset->((double)offset/(double)normalisationTime),
                     leftBound,
                     rightBound,false, offsetEvaluationCount, scanWidth);
 
             SkorokhodDistanceExpression skorokhodZ2 = new SkorokhodDistanceExpression(ds->ds.get(Z2)/normalisationZ2,
                     (v1, v2) -> Math.abs(v2-v1),
-                    (a, b) -> Math.max(a, b),
+                    (a, b) -> b,
+                    //(a, b) -> Math.max(a, b),
                     offset->((double)offset/(double)normalisationTime),
                     leftBound,
                     rightBound,false, offsetEvaluationCount, scanWidth);
 
             SkorokhodDistanceExpression skorokhodZ3 = new SkorokhodDistanceExpression(ds->ds.get(Z3)/normalisationZ3,
                     (v1, v2) -> Math.abs(v2-v1),
-                    (a, b) -> Math.max(a, b),
+                    (a, b) -> b,
+                    //(a, b) -> Math.max(a, b),
                     offset->((double)offset/(double)normalisationTime),
                     leftBound,
                     rightBound,false, offsetEvaluationCount, scanWidth);
@@ -740,11 +744,24 @@ public class Main_Skorokhod {
                 direct_evaluation_atomic_Z3[i][0] = atomicZ3.compute(i, sequence, sequence_p);
 
                 direct_evaluation_skorokhod_Z1[i][0] = skorokhodZ1.compute(i, sequence, sequence_p);
+                skorokhodZ1.Reset();
                 direct_evaluation_skorokhod_Z1_refined[i][0] = skorokhodZ1Ref.computeRefined(i, sequence, sequence_p);
                 direct_evaluation_skorokhod_Z1_refined_diff[i][0] = direct_evaluation_skorokhod_Z1[i][0] - direct_evaluation_skorokhod_Z1_refined[i][0];
                 direct_evaluation_skorokhod_Z2[i][0] = skorokhodZ2.compute(i, sequence, sequence_p);
+                skorokhodZ2.Reset();
                 direct_evaluation_skorokhod_Z3[i][0] = skorokhodZ3.compute(i, sequence, sequence_p);
+                skorokhodZ3.Reset();
 
+            }
+
+            for (int i = 0; i<(rightBound); i++){
+
+                if(direct_evaluation_skorokhod_Z1[i][0] > direct_evaluation_atomic_Z1[i][0]) {
+
+                    System.out.println("atomic Z1 distance at step " + i + ": " + direct_evaluation_atomic_Z1[i][0]);
+                    System.out.println("Skorok Z1 distance at step " + i + ": " + direct_evaluation_skorokhod_Z1[i][0]);
+                    System.out.println(" ");
+                }
             }
 
             Util.writeToCSV("./AS_atomic_Z1.csv",direct_evaluation_atomic_Z1);
@@ -886,7 +903,7 @@ public class Main_Skorokhod {
             double[][] distEvaluationsSkor = new double[20][2];
 
             int index=0;
-            double thresholdB = 1;
+            double thresholdB = 5;
             for(int i = 0; i < 20 ; i++){
                 double threshold = thresholdB + i;
                 threshold = threshold / 100;
@@ -928,7 +945,7 @@ public class Main_Skorokhod {
             RobustnessFormula robustFSkor;
 
             index=0;
-            thresholdB = 1;
+            thresholdB = 5;
             for(int i = 0; i < 20 ; i++){
                 double threshold = thresholdB + i;
                 threshold = threshold / 100;
