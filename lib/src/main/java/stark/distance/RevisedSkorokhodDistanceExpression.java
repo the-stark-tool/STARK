@@ -48,8 +48,9 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
     private final int leftBound;
 
     private final double resolution;
+    private int maxOffset;
 
-    private int[] Offsets;
+    private final int[] offsets;
 
     private final double[][] DPTable; // Dynamic Programming table, used to store calculated wasserstein distances, to avoid calculating them multiple times
 
@@ -74,8 +75,16 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         this.rightBound = rightBound;
         this.leftBound = leftBound;
         this.muLogic = muLogic;
-        this.Offsets = null;
         this.resolution = resolution;
+        this.maxOffset = 0;
+
+        // offsets, including right bound itself
+        this.offsets = new int[rightBound + 1];
+        
+        // fill with negative numbers to indicate that the distances are not yet calculated.
+        for (int i = 0; i < rightBound + 1; i++) {
+                this.offsets[i] = -1;
+            }
 
         int size = rightBound + 1 - leftBound;
         // + 1 since leftbount = 0, rightbound = 1 should result in 2 (by 2) wasserstein distances
@@ -106,14 +115,15 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
     public double compute(int step, EvolutionSequence seq1, EvolutionSequence seq2) {
 
         // Check wether offsets list contains this step
-        if (Offsets == null)
+        if (this.offsets[step] < 0)
         {
+            System.out.println("\nDetermining offsets\n");
             // fill offset list
-            Offsets = DetermineOffsets(this.resolution, seq1, seq2);
+            DetermineOffsets(this.resolution, this.offsets, seq1, seq2);
         }
 
         // sample wasserstein distance using offset
-        return sample(step, Offsets[step], seq1, seq2);
+        return sample(step, this.offsets[step], seq1, seq2);
     }
 
     // not yet implemented:
@@ -122,19 +132,18 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         throw new UnsupportedOperationException("Not implemented yet");
     }
 
-    private int[] DetermineOffsets(double resolution, EvolutionSequence seq1, EvolutionSequence seq2) 
+    private void DetermineOffsets(double resolution, int[] _offsets , EvolutionSequence seq1, EvolutionSequence seq2) 
     {
-        // offsets, including right bound itself
-        int[] _offsets = new int[rightBound + 1];
-
         // Find skorokhod distance at desired resolution, using binary search.
 	    double upper = 1.0;
 	    double lower = 0.0;
+
+        Boolean conformance = false;
         
-	    while (upper - lower >= resolution)
+	    while (!conformance || upper - lower >= resolution)
         {
             double maxDistance = (upper + lower) / 2;
-            Boolean conformance = TestSkorokhodConformance(maxDistance, _offsets, seq1, seq2);
+            conformance = TestSkorokhodConformance(maxDistance, _offsets, seq1, seq2);
 
             // if the sequence meets the current max skorokhod distance,
             // set upper to maxDistance, else set lower to maxDistance
@@ -143,16 +152,14 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
             System.out.println("current resolution: " + (upper - lower));
             System.out.println("current maxDistance: " + maxDistance);
         }
-
-        return _offsets;
     }
 
     Boolean TestSkorokhodConformance(double maxDistance, int[] _offsets, EvolutionSequence seq1, EvolutionSequence seq2)
     {
         int _offset = 0;
-        int step = leftBound;
+        int step = this.leftBound;
         // stop checking once one of the sequences would be sampled beyond the right bound.
-        while (step + _offset <= rightBound)
+        while (step + _offset <= this.rightBound)
         {
             // calculate distance at this step, using normalised distance and time
             double timeOffset = rho2.applyAsDouble(_offset);
@@ -164,7 +171,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
                 _offset++;
                 timeOffset = rho2.applyAsDouble(_offset);
                 // if new offset exceeds bounds, no offset was found within bounds that still meets the max distance
-                if (timeOffset > maxDistance || step + _offset > rightBound)
+                if (timeOffset > maxDistance || step + _offset > this.rightBound)
                 {
                     return false;
                 }
@@ -174,12 +181,27 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
                 mu = this.muLogic.applyAsDouble(timeOffset, sampledDistance);
             }
             _offsets[step] = _offset;
+
+            if ((step > this.leftBound) && (_offsets[step] < _offsets[step - 1]))
+            {
+                System.out.println("\nOffset reduced at " + (step) + ", from " + _offsets[step - 1]  + " to" + _offsets[step]);
+            }
+
+            step++; 
+        }
+        // after scanning, the maximum offset is reached:
+        this.maxOffset = _offset;
+
+        // fill remaining steps on right with offset of 0, these steps should not be included in robustness analysis
+        while (step <= this.rightBound)
+        {
+            _offsets[step] = 0;
             step++;
         }
 
         // fill offset array with offsets for steps before left bound
         step = 0;
-        while (step < leftBound)
+        while (step < this.leftBound)
         {
             _offsets[step] = 0;
             step++;
@@ -205,7 +227,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         int indexSeq2 = this.direction ? step + offset  : step;
 
         // do not use DPTable before left bound
-        if (indexSeq1 < leftBound || indexSeq2 < leftBound)
+        if (indexSeq1 < this.leftBound || indexSeq2 < this.leftBound)
         {
             return seq1.get(indexSeq1).distance(this.rho, this.distanceOperator, seq2.get(indexSeq2));
         }
@@ -241,11 +263,18 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
 
     public int[] GetOffsetArray()
     {
-        return this.Offsets;
+        return this.offsets;
+    }
+
+    public int GetMaxOffset()
+    {
+        return this.maxOffset;
     }
 
     public void Reset()
     {
-        this.Offsets = null;
+        for (int i = 0; i < this.rightBound + 1; i++) {
+            this.offsets[i] = -1;
+        }
     }
 }

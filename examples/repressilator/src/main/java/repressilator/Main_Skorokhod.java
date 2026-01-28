@@ -54,9 +54,6 @@ import stark.perturbation.AtomicPerturbation;
 import stark.perturbation.IterativePerturbation;
 import stark.perturbation.Perturbation;
 import stark.perturbation.SequentialPerturbation;
-import stark.robtl.AtomicRobustnessFormula;
-import stark.robtl.BooleanSemanticsVisitor;
-import stark.robtl.RobustnessFormula;
 
 public class Main_Skorokhod {
 
@@ -679,6 +676,13 @@ public class Main_Skorokhod {
                     leftBound,
                     rightBound,false, resolution);
 
+            SkorokhodDistanceExpression skorokhodZ1Old = new SkorokhodDistanceExpression(ds->ds.get(Z1)/normalisationZ1,
+                    (v1, v2) -> Math.abs(v2-v1),
+                    (a, b) -> Math.max(a, b),
+                    offset->((double)offset/(double)normalisationTime),
+                    leftBound,
+                    rightBound,false, offsetEvaluationCount, scanWidth);
+
             RevisedSkorokhodDistanceExpression skorokhodZ2 = new RevisedSkorokhodDistanceExpression(ds->ds.get(Z2)/normalisationZ2,
                     (v1, v2) -> Math.abs(v2-v1),
                     (a, b) -> Math.max(a, b),
@@ -693,9 +697,13 @@ public class Main_Skorokhod {
                     leftBound,
                     rightBound,false, resolution);
 
+
             double[][] direct_evaluation_skorokhod_Z1 = new double[rightBound][1];
             double[][] direct_evaluation_skorokhod_Z2 = new double[rightBound][1];
             double[][] direct_evaluation_skorokhod_Z3 = new double[rightBound][1];
+
+            double[][] direct_evaluation_skorokhod_Z1_Old = new double[rightBound][1];
+            double[][] direct_evaluation_skorokhod_Z1_Old_diff = new double[rightBound][1];
 
             double[][] direct_evaluation_atomic_Z1 = new double[rightBound][1];
             double[][] direct_evaluation_atomic_Z2 = new double[rightBound][1];
@@ -703,6 +711,8 @@ public class Main_Skorokhod {
 
             for (int i = 0; i<(rightBound); i++){
                 direct_evaluation_skorokhod_Z1[i][0] = skorokhodZ1.compute(i, sequence, sequence_p);
+                direct_evaluation_skorokhod_Z1_Old[i][0] = skorokhodZ1Old.computeRefined(i, sequence, sequence_p);
+                direct_evaluation_skorokhod_Z1_Old_diff[i][0] = direct_evaluation_skorokhod_Z1[i][0] - direct_evaluation_skorokhod_Z1_Old[i][0];
 
                 direct_evaluation_skorokhod_Z2[i][0] = skorokhodZ2.compute(i, sequence, sequence_p);
                 direct_evaluation_skorokhod_Z3[i][0] = skorokhodZ3.compute(i, sequence, sequence_p);
@@ -714,6 +724,8 @@ public class Main_Skorokhod {
             }
 
             Util.writeToCSV("./results/skorokhod_Z1.csv",direct_evaluation_skorokhod_Z1);
+            Util.writeToCSV("./results/skorokhod_Z1_old.csv",direct_evaluation_skorokhod_Z1_Old);
+            Util.writeToCSV("./results/skorokhod_Z1_old_diff.csv",direct_evaluation_skorokhod_Z1_Old_diff);
             Util.writeToCSV("./results/skorokhod_Z2.csv",direct_evaluation_skorokhod_Z2);
             Util.writeToCSV("./results/skorokhod_Z3.csv",direct_evaluation_skorokhod_Z3);
 
@@ -733,6 +745,11 @@ public class Main_Skorokhod {
                 offsets1[i][0] = _offsets1[i];
                 offsets2[i][0] = _offsets2[i];
                 offsets3[i][0] = _offsets3[i];
+
+                if ((i > 0) && (_offsets2[i] < _offsets2[i - 1]))
+                {
+                    System.out.println("\nOffset L2 reduced at " + (i) + ", from " + _offsets2[i - 1]  + " to" + _offsets2[i]);
+                }
             }
 
             Util.writeToCSV("./results/offsets_Z1.csv",offsets1);
@@ -788,9 +805,9 @@ public class Main_Skorokhod {
             int rightRBound=1000;
 
             // reset distance expression's stored previous offset
-            skorokhodZ1.Reset();
-            skorokhodZ2.Reset();
-            skorokhodZ2.Reset();
+            // skorokhodZ1.Reset();
+            // skorokhodZ2.Reset();
+            // skorokhodZ2.Reset();
 
             DistanceExpression dMax = new MaxDistanceExpression(
                     atomicZ1,
@@ -802,6 +819,27 @@ public class Main_Skorokhod {
                     new MaxDistanceExpression(skorokhodZ2, skorokhodZ3)
             );
 
+            // get maximum offset used in any of skorokhod expressions
+            int maxOffset = Math.max(skorokhodZ1.GetMaxOffset(), Math.max(skorokhodZ2.GetMaxOffset(), skorokhodZ3.GetMaxOffset()));
+
+            DistanceExpression intdMaxSkorOld = new MaxIntervalDistanceExpression(
+                    skorokhodZ1Old,
+                    leftRBound,
+                    rightRBound - skorokhodZ1.GetMaxOffset()
+            );
+
+            DistanceExpression intdMaxSkorRevised = new MaxIntervalDistanceExpression(
+                    skorokhodZ1,
+                    leftRBound,
+                    rightRBound - skorokhodZ1.GetMaxOffset()
+            );
+
+            double maxDistanceOld = intdMaxSkorOld.compute(0, sequence, sequence_p);
+            double maxDistanceRevised = intdMaxSkorRevised.compute(0, sequence, sequence_p);
+            
+            System.out.println("\nBetween leftbound and (rightbound - maxOffset):\nRevised Max distance: " + maxDistanceRevised + 
+                                "\nOld Max distance: " + maxDistanceOld);
+            System.out.println("maxDistanceOld - maxDistanceRevised: " + (maxDistanceOld - maxDistanceRevised));
 
             DistanceExpression intdMax = new MaxIntervalDistanceExpression(
                     dMax,
@@ -809,13 +847,12 @@ public class Main_Skorokhod {
                     rightRBound
             );
 
+            // subtract maxoffset from right bound, since there one of the sequences is sampled out of bound, not producing a reliable result
             DistanceExpression intdMaxSkor = new MaxIntervalDistanceExpression(
                     dMaxSkor,
                     leftRBound,
-                    rightRBound
+                    rightRBound - maxOffset
             );
-
-
 
             double[][] robEvaluations = new double[20][2];
             double[][] robEvaluationsSkor = new double[20][2];
@@ -841,10 +878,8 @@ public class Main_Skorokhod {
                 double value = thresholdExpr.compute(0, sequence, sequence_p);
                 double valueSkor = thresholdExprSkor.compute(0, sequence, sequence_p);
 
-
-                System.out.println(" ");
-                System.out.println("\n robustF evaluation at " + threshold + ": " + value);
-                System.out.println("\n robustFSkor evaluation at " + threshold + ": " + valueSkor);
+                System.out.println("\nrobustF evaluation at " + threshold + ": " + value + "intdMax: " + intdMax.compute(0, sequence, sequence_p));
+                System.out.println("robustFSkor evaluation at " + threshold + ": " + valueSkor + "intdMaxSkor: " + intdMaxSkor.compute(0, sequence, sequence_p));
                 robEvaluations[index][1]=value;
                 robEvaluations[index][0]=threshold;
                 robEvaluationsSkor[index][1]=valueSkor;
@@ -853,36 +888,36 @@ public class Main_Skorokhod {
             }
             Util.writeToCSV("./results/evalR.csv",robEvaluations);
             Util.writeToCSV("./results/evalRSkor.csv",robEvaluationsSkor);
+            
+            // RobustnessFormula robustF;
+            // RobustnessFormula robustFSkor;
 
-            RobustnessFormula robustF;
-            RobustnessFormula robustFSkor;
+            // index=0;
+            // thresholdB = 1;
+            // for(int i = 0; i < 20 ; i++){
+            //     double threshold = thresholdB + i;
+            //     threshold = threshold / 100;
+            //     robustF = new AtomicRobustnessFormula(itZ1TranslRate(x,w1,w2,replica),
+            //             intdMax,
+            //             RelationOperator.LESS_OR_EQUAL_THAN,
+            //             threshold);
+            //     robustFSkor = new AtomicRobustnessFormula(itZ1TranslRate(x,w1,w2,replica),
+            //             intdMaxSkor,
+            //             RelationOperator.LESS_OR_EQUAL_THAN,
+            //             threshold);
+            //     boolean value = new BooleanSemanticsVisitor(true).eval(robustF).eval(5, 0, sequence);
+            //     boolean valueSkor = new BooleanSemanticsVisitor(true).eval(robustFSkor).eval(5, 0, sequence);
 
-            index=0;
-            thresholdB = 1;
-            for(int i = 0; i < 20 ; i++){
-                double threshold = thresholdB + i;
-                threshold = threshold / 100;
-                robustF = new AtomicRobustnessFormula(itZ1TranslRate(x,w1,w2,replica),
-                        intdMax,
-                        RelationOperator.LESS_OR_EQUAL_THAN,
-                        threshold);
-                robustFSkor = new AtomicRobustnessFormula(itZ1TranslRate(x,w1,w2,replica),
-                        intdMaxSkor,
-                        RelationOperator.LESS_OR_EQUAL_THAN,
-                        threshold);
-                boolean value = new BooleanSemanticsVisitor(true).eval(robustF).eval(5, 0, sequence);
-                boolean valueSkor = new BooleanSemanticsVisitor(true).eval(robustFSkor).eval(5, 0, sequence);
-
-                System.out.println(" ");
-                System.out.println("\n robustF evaluation at " + threshold + ": " + value);
-                System.out.println("\n robustFSkor evaluation at " + threshold + ": " + valueSkor);
-                robEvaluations[index][1]=value? 1.0 : 0.0;
-                robEvaluationsSkor[index][1]=valueSkor? 1.0 : 0.0;
-                robEvaluations[index][0]=threshold;
-                robEvaluationsSkor[index][0]=threshold;
-                index++;
-            }
-            Util.writeToCSV("./results/evalR.csv",robEvaluations);
+            //     System.out.println(" ");
+            //     System.out.println("\n robustF evaluation at " + threshold + ": " + value);
+            //     System.out.println("\n robustFSkor evaluation at " + threshold + ": " + valueSkor);
+            //     robEvaluations[index][1]=value? 1.0 : 0.0;
+            //     robEvaluationsSkor[index][1]=valueSkor? 1.0 : 0.0;
+            //     robEvaluations[index][0]=threshold;
+            //     robEvaluationsSkor[index][0]=threshold;
+            //     index++;
+            // }
+            // Util.writeToCSV("./results/evalR.csv",robEvaluations);
 
 
 
