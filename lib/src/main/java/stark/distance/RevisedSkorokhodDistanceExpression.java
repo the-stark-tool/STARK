@@ -54,12 +54,14 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
 
     private final double[][] DPTable; // Dynamic Programming table, used to store calculated wasserstein distances, to avoid calculating them multiple times
 
-    private boolean usePF;
+    private final boolean minimizeAverage;
     private double[][] PFTable; // PathFinding table, used to find the offsets resulting in the lowest average distance 
 
+    private EvolutionSequence previousSeq1;
+    private EvolutionSequence previousSeq2;
+
     /**
-     * Generates the atomic distance expression that will use the given penalty function
-     * and the given distance over reals for the evaluation of the ground distance on data states.
+     * Generates the Skorokhod distance expression that will use the given parameters
      * @param rho the penalty function
      * @param distance ground distance on reals.
      * @param muLogic logic to assign weight/cost to sampled lambda
@@ -68,9 +70,10 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
      * @param rightBound will not sample beyond this step
      * @param direction direction to allow time jumps toward, true = forward/positive offsets, false = backward/negative offsets.
      * @param resolution the resolution in which the skorokhod distance will be estimated using the binary search in the algorithm
+     * @param minimizeAverge Wether to minimize the average distance (without increasing the Skorokhod distance) using Dijkstra's algorithm
      */
     public RevisedSkorokhodDistanceExpression(DataStateExpression rho, DoubleBinaryOperator distance, DoubleBinaryOperator muLogic ,ToDoubleFunction<Integer> rho2,
-                                       int leftBound, int rightBound, boolean direction, double resolution, boolean usePF) {
+                                       int leftBound, int rightBound, boolean direction, double resolution, boolean minimizeAverge) {
         this.rho = rho;
         this.rho2 = rho2;
         this.distanceOperator = distance;
@@ -81,7 +84,9 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         this.resolution = resolution;
         this.maxOffset = 0;
         this.PFTable = null;
-        this.usePF = usePF;
+        this.minimizeAverage = minimizeAverge;
+        this.previousSeq1 = null;
+        this.previousSeq2 = null;
 
         // offsets, including right bound itself
         this.offsets = new int[rightBound + 1];
@@ -118,15 +123,30 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
      */
     @Override
     public double compute(int step, EvolutionSequence seq1, EvolutionSequence seq2) {
+        // if this step falls outside the bounds, return regular wasserstein distance
+        if (step > rightBound || step < 0)
+        {
+            return seq1.get(step).distance(this.rho, this.distanceOperator, seq2.get(step));
+        }
+
+        // If the sequences have changed since previous compute, offsets should be recomputed
+        if ((this.previousSeq1 != seq1 || this.previousSeq2 != seq2) && this.offsets[step] >= 0)
+        {
+            this.Reset();
+        }
 
         // Check wether offsets list contains this step
         if (this.offsets[step] < 0)
         {
+            // store sequences that were used to compute offsets
+            this.previousSeq1 = seq1;
+            this.previousSeq2 = seq2;
+
             System.out.println("\nDetermining offsets\n");
             // fill offset list
-            double SkorokhodDistance = DetermineOffsets(this.resolution, this.offsets, seq1, seq2);
+            double SkorokhodDistance = FindSkorokhodDistance(this.resolution, this.offsets, seq1, seq2);
 
-            if (this.usePF)
+            if (this.minimizeAverage)
             {
                 System.out.println("Minimising average distance");
                 Dijkstra(this.offsets, SkorokhodDistance, seq1, seq2);
@@ -143,7 +163,20 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         throw new UnsupportedOperationException("Not implemented yet");
     }
 
-    private double DetermineOffsets(double resolution, int[] _offsets , EvolutionSequence seq1, EvolutionSequence seq2) 
+    /**
+     * Evaluates the skorokhod distance between two evolution sequences,
+     * and additionally returns the offsets used to achieve it
+     *
+     * @param resolution the maximum allowed deviation from the resulting and 
+     * actual Skorokhod distance
+     * @param _offsets array where the offsets used to achieve the resulting 
+     * Skorokhod distance will be written
+     * @param seq1 an evolution sequence
+     * @param seq2 an evolution sequence
+     * @return the minimum skorokhod distance that the sequences conform to, 
+     * with maximum deviation of param resolution
+     */
+    private double FindSkorokhodDistance(double resolution, int[] _offsets , EvolutionSequence seq1, EvolutionSequence seq2) 
     {
         // Find skorokhod distance at desired resolution, using binary search.
 	    double upper = 1.0;
@@ -154,7 +187,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
 	    while (!conformance || upper - lower >= resolution)
         {
             maxDistance = (upper + lower) / 2;
-            conformance = TestSkorokhodConformance(maxDistance, _offsets, seq1, seq2);
+            conformance = EvaluateSkorokhodConformance(maxDistance, _offsets, seq1, seq2);
 
             // if the sequence meets the current max skorokhod distance,
             // set upper to maxDistance, else set lower to maxDistance
@@ -166,7 +199,19 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         return maxDistance;
     }
 
-    Boolean TestSkorokhodConformance(double maxDistance, int[] _offsets, EvolutionSequence seq1, EvolutionSequence seq2)
+    /**
+     * Evaluates whether the sequences conform to a maximum Skorokhod distance
+     * and additionally returns the offsets used to achieve it
+     *
+     * @param maxDistance the maximum allowed Skorokhod distance
+     * @param _offsets array where the offsets used to achieve the resulting 
+     * Skorokhod distance will be written
+     * @param seq1 an evolution sequence
+     * @param seq2 an evolution sequence
+     * @return whether the sequences conform to the maximum Skorokhod distance
+     * 
+     */
+    Boolean EvaluateSkorokhodConformance(double maxDistance, int[] _offsets, EvolutionSequence seq1, EvolutionSequence seq2)
     {
         int _offset = 0;
         int step = this.leftBound;
@@ -193,12 +238,6 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
                 mu = this.muLogic.applyAsDouble(timeOffset, sampledDistance);
             }
             _offsets[step] = _offset;
-
-            // if ((step > this.leftBound) && (_offsets[step] < _offsets[step - 1]))
-            // {
-            //     System.out.println("\nOffset reduced at " + (step) + ", from " + _offsets[step - 1]  + " to" + _offsets[step]);
-            // }
-
             step++; 
         }
         // after scanning, the maximum offset is reached:
@@ -222,6 +261,19 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         return true;
     }
 
+    /**
+     * Minimises average distance between sequences without increasing SkorokhodDistance
+     * using Dijkstra's algorithm.
+     *
+     * @param skorokhodDistance the maximum allowed Skorokhod distance
+     * @param _offsets array where the offsets used to achieve the resulting 
+     * average distance will be written
+     * @param seq1 an evolution sequence
+     * @param seq2 an evolution sequence
+     * @return the offsets used to achieve the resulting 
+     * average distance
+     * 
+     */
     private void Dijkstra(int[] _offsets, double skorokhodDistance, EvolutionSequence seq1, EvolutionSequence seq2)
     {
         // if for some magical reason the optimal offset is 1 at most, pathfinding wont help.
@@ -270,19 +322,17 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
             }
         }
 
-        System.out.println("SkorokhodDistance: " + skorokhodDistance);
-        System.out.println("Max offset: " + this.maxOffset);
-
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j <= this.maxOffset; j++) {
-                if (this.PFTable[i][j] >= 2000) {
-                    System.out.printf(" inf ");
-                } else {
-                    System.out.printf(" %.3f ", this.PFTable[i][j]);
-                }
-            }
-            System.out.println();
-        }
+        // print pathfinding matrix:
+        // for (int i = 0; i < size; i++) {
+        //     for (int j = 0; j <= this.maxOffset; j++) {
+        //         if (this.PFTable[i][j] >= 2000) {
+        //             System.out.printf(" inf ");
+        //         } else {
+        //             System.out.printf(" %.3f ", this.PFTable[i][j]);
+        //         }
+        //     }
+        //     System.out.println();
+        // }
 
         int PrevNodeOffset = this.maxOffset;
 
@@ -301,13 +351,6 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
             }
 
             PrevNodeOffset = bestOffset;
-
-            // System.out.println("Offset:" + _offsets[step + leftBound]);
-
-            if (_offsets[step + leftBound] != bestOffset)
-            {
-                System.out.println("Changed offset from:" + _offsets[step + leftBound] + " to: " + bestOffset + " at step:" + step);
-            }
             _offsets[step + leftBound] = bestOffset;
         }
     }
