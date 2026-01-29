@@ -50,7 +50,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
     private final double resolution;
     private int maxOffset;
 
-    private final int[] offsets;
+    private int[] offsets;
 
     private final double[][] DPTable; // Dynamic Programming table, used to store calculated wasserstein distances, to avoid calculating them multiple times
 
@@ -87,14 +87,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         this.minimizeAverage = minimizeAverge;
         this.previousSeq1 = null;
         this.previousSeq2 = null;
-
-        // offsets, including right bound itself
-        this.offsets = new int[rightBound + 1];
-        
-        // fill with negative numbers to indicate that the distances are not yet calculated.
-        for (int i = 0; i < rightBound + 1; i++) {
-                this.offsets[i] = -1;
-            }
+        this.offsets = null;
 
         int size = rightBound + 1 - leftBound;
         // + 1 since leftbount = 0, rightbound = 1 should result in 2 (by 2) wasserstein distances
@@ -130,14 +123,16 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         }
 
         // If the sequences have changed since previous compute, offsets should be recomputed
-        if ((this.previousSeq1 != seq1 || this.previousSeq2 != seq2) && this.offsets[step] >= 0)
+        if ((this.previousSeq1 != seq1 || this.previousSeq2 != seq2) && this.offsets != null)
         {
             this.Reset();
         }
 
         // Check wether offsets list contains this step
-        if (this.offsets[step] < 0)
+        if (this.offsets == null)
         {
+            this.offsets = new int[rightBound + 1];
+            
             // store sequences that were used to compute offsets
             this.previousSeq1 = seq1;
             this.previousSeq2 = seq2;
@@ -366,10 +361,21 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
      */
     private double sample(int step, int offset, EvolutionSequence seq1, EvolutionSequence seq2)
     {
+        // if a negative offset is provided, simply temporarily swap the direction with which we sample
+        boolean swapDirection = false;
+        if (offset < 0)
+        {
+            swapDirection = true;
+            offset *= -1;
+        }
+
+        // XOR swapdirection and this.direction, resulting in swapped direction if swapdirection = true.
+        boolean useForwardDirection = this.direction ^ swapDirection;
+
         // if forward direction, iterate over seq2 by adding the offset to its index
         // else iterate over seq 1
-        int indexSeq1 = this.direction ? step           : step + offset;
-        int indexSeq2 = this.direction ? step + offset  : step;
+        int indexSeq1 = useForwardDirection ? step           : step + offset;
+        int indexSeq2 = useForwardDirection ? step + offset  : step;
 
         // do not use DPTable before left bound
         if (indexSeq1 < this.leftBound || indexSeq2 < this.leftBound)
@@ -418,8 +424,6 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
 
     public void Reset()
     {
-        for (int i = 0; i < this.rightBound + 1; i++) {
-            this.offsets[i] = -1;
-        }
+        this.offsets = null;
     }
 }
