@@ -50,8 +50,8 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
     private final double resolution;
     private int maxOffset;
     private int minOffset;
-    private int finalOffset;
     private int finalStep;
+    private int firstOffset;
 
     private int[] offsets;
 
@@ -93,6 +93,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         this.offsets = null;
         this.minOffset = Integer.MAX_VALUE;
         this.finalStep = 0;
+        this.firstOffset = Integer.MAX_VALUE;
 
         int size = rightBound + 1 - leftBound;
         // + 1 since leftbount = 0, rightbound = 1 should result in 2 (by 2) wasserstein distances
@@ -152,7 +153,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
             }
 
             // for safety. may be removed once algorithm is certainly correct
-            for (int i = 1; i < offsets.length; i++) {
+            for (int i = 1; i < finalStep; i++) {
                 if (offsets[i - 1] - offsets[i] > 1)
                 {
                     System.err.println("produced offsets are not monotone!");
@@ -223,6 +224,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
     {
         this.maxOffset = Integer.MIN_VALUE;
         this.minOffset = Integer.MAX_VALUE;
+        this.firstOffset = Integer.MAX_VALUE;
         int _offset = 0;
         int step = this.leftBound;
         // stop checking once one of the sequences would be sampled beyond the right bound.
@@ -247,6 +249,11 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
                 sampledDistance = sample(step, _offset, seq1, seq2);
                 mu = this.muLogic.applyAsDouble(timeOffset, sampledDistance);
             }
+            if (this.firstOffset == Integer.MAX_VALUE)
+            {
+                this.firstOffset = _offset;
+            }
+
             _offsets[step] = _offset;
             // if this offset is min or max, store it.
             if (_offset < this.minOffset ) this.minOffset = _offset;
@@ -255,7 +262,6 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
             _offset--;
             step++; 
         }
-        this.finalOffset = _offset;
         this.finalStep = step - 1; // -1 since step++ is done after last offset is stored
 
         // fill remaining steps on right with offset of 0, these steps should not be included in robustness analysis
@@ -314,7 +320,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         }
 
         // set starting node distance to 0
-        this.PFTable[0][0 - this.minOffset] = 0;
+        this.PFTable[0][this.firstOffset - this.minOffset] = 0;
 
         // visit all nodes
         // stop 1 earlier, since final nodes do not need to be visited themselves
@@ -349,24 +355,19 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         }
 
         // print pathfinding matrix:
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < offsetSpan; j++) {
-                if (this.PFTable[i][j] >= 2000) {
-                    System.out.printf(" inf ");
-                } else {
-                    System.out.printf(" %.3f ", this.PFTable[i][j]);
-                }
-            }
-            System.out.println();
-        }
+        // for (int i = 0; i < size; i++) {
+        //     for (int j = 0; j < offsetSpan; j++) {
+        //         if (this.PFTable[i][j] >= 2000) {
+        //             System.out.printf(" inf ");
+        //         } else {
+        //             System.out.printf(" %.3f ", this.PFTable[i][j]);
+        //         }
+        //     }
+        //     System.out.println();
+        // }
 
         int PrevNodeOffset = this.maxOffset;
-        // this.offsets = new int[rightBound + 1];
-        // int size = this.rightBound + 1 - this.leftBound - this.finalOffset;
-    
-        // int finalStep = this.rightBound - this.leftBound - Math.abs(this.finalOffset);
-        System.out.println("finalStep:" + (this.rightBound - this.leftBound - Math.abs(this.finalOffset)) + ", this.finalstep:" + (this.finalStep - this.leftBound) + ", size:" + size);
-        // System.out.println("finalStep" + finalStep + ", size" + size + ", right-left" + (this.rightBound - this.leftBound));
+
         // fill entire offset list
         for (int step = (this.finalStep - this.leftBound); step > 0; step--) 
         {
@@ -384,12 +385,13 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
             // add one because the path may decrease offset once per step
             PrevNodeOffset = Math.min(bestOffset + 1, this.maxOffset);
         }
-        System.out.println("");
-        for (int i = 0; i < size; i++) {
-            System.out.print(_offsets[i + leftBound]);
-            System.out.print(",");
-        }
-        System.out.println("");
+        // print all produced offsets:
+        // System.out.println("");
+        // for (int i = 0; i < size; i++) {
+        //     System.out.print(_offsets[i + leftBound]);
+        //     System.out.print(",");
+        // }
+        // System.out.println("");
     }
 
     /**
@@ -467,8 +469,9 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
     public void Reset()
     {
         this.offsets = null;
-        this.maxOffset = 0;
+        this.maxOffset = Integer.MIN_VALUE;
         this.minOffset = Integer.MAX_VALUE;
-        this.finalStep = 0;
+        this.finalStep = Integer.MIN_VALUE;
+        this.firstOffset = Integer.MAX_VALUE;
     }
 }
