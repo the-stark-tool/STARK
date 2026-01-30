@@ -31,3 +31,4 @@ build
 *.csv
 
 .idea
+*.png

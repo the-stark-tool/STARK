@@ -44,7 +44,6 @@ import stark.distance.DistanceExpression;
 import stark.distance.MaxDistanceExpression;
 import stark.distance.MaxIntervalDistanceExpression;
 import stark.distance.RevisedSkorokhodDistanceExpression;
-import stark.distance.SkorokhodDistanceExpression;
 import stark.distance.ThresholdDistanceExpression;
 import stark.ds.DataState;
 import stark.ds.DataStateExpression;
@@ -758,10 +757,10 @@ public class Main_Skorokhod {
                 offsets2[i][0] = _offsets2[i];
                 offsets3[i][0] = _offsets3[i];
 
-                if ((i > 0) && (_offsets2[i] < _offsets2[i - 1]))
-                {
-                    System.out.println("\nOffset L2 reduced at " + (i) + ", from " + _offsets2[i - 1]  + " to" + _offsets2[i]);
-                }
+                // if ((i > 0) && (_offsets2[i] < _offsets2[i - 1]))
+                // {
+                //     System.out.println("\nOffset L2 reduced at " + (i) + ", from " + _offsets2[i - 1]  + " to" + _offsets2[i]);
+                // }
             }
 
             Util.writeToCSV("./results/offsets_Z1.csv",offsets1);
