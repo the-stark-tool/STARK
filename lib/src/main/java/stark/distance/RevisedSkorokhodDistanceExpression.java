@@ -150,6 +150,15 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
                 System.out.println("Minimising average distance");
                 Dijkstra(this.offsets, SkorokhodDistance, seq1, seq2);
             }
+
+            // for safety. may be removed once algorithm is certainly correct
+            for (int i = 1; i < offsets.length; i++) {
+                if (offsets[i - 1] - offsets[i] > 1)
+                {
+                    System.err.println("produced offsets are not monotone!");
+                    break;
+                }
+            }
         }
 
         // sample wasserstein distance using offset
@@ -305,7 +314,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         }
 
         // set starting node distance to 0
-        this.PFTable[0][0] = 0;
+        this.PFTable[0][0 - this.minOffset] = 0;
 
         // visit all nodes
         // stop 1 earlier, since final nodes do not need to be visited themselves
@@ -368,17 +377,17 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
                 if (this.PFTable[step][i] < minDistance)
                 {
                     minDistance = this.PFTable[step][i];
-                    bestOffset = i;
+                    bestOffset = i + this.minOffset;
                 }
             }
-            _offsets[step + leftBound] = bestOffset + this.minOffset;
+            _offsets[step + leftBound] = bestOffset;
             // add one because the path may decrease offset once per step
             PrevNodeOffset = Math.min(bestOffset + 1, this.maxOffset);
         }
         System.out.println("");
         for (int i = 0; i < size; i++) {
-            System.out.print(_offsets[i]);
-             System.out.print(",");
+            System.out.print(_offsets[i + leftBound]);
+            System.out.print(",");
         }
         System.out.println("");
     }

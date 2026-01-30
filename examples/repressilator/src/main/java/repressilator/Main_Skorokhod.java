@@ -756,11 +756,6 @@ public class Main_Skorokhod {
                 offsets1[i][0] = _offsets1[i];
                 offsets2[i][0] = _offsets2[i];
                 offsets3[i][0] = _offsets3[i];
-
-                // if ((i > 0) && (_offsets2[i] < _offsets2[i - 1]))
-                // {
-                //     System.out.println("\nOffset L2 reduced at " + (i) + ", from " + _offsets2[i - 1]  + " to" + _offsets2[i]);
-                // }
             }
 
             Util.writeToCSV("./results/offsets_Z1.csv",offsets1);
