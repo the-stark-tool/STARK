@@ -20,7 +20,7 @@
  * limitations under the License.
  */
 
-package stark.examples.repressilator;
+//package stark.examples.repressilator;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -392,7 +392,7 @@ public class Main_Skorokhod {
             and sample sets by class <code>SampleSet</code>.
             In this context, <code>size</code> is the cardinality of those sample sets.
             */
-            int size = 10;
+            int size = 50;
 
             /*
             The evolution sequence <code>sequence></code> created by the following instruction consists in a sequence of
@@ -476,7 +476,7 @@ public class Main_Skorokhod {
             System.out.println("Simulation of nominal and perturbed system");
             System.out.println("");
 
-            int N = 1000;    // length ot the evolution sequence
+            int N = 2000;    // length ot the evolution sequence
 
             double x = -3.0; // x positive: higher values for Z1, lower for Z2, higher for Z3
             // x negative: lower values for Z1, higher for Z2, lower for Z3
@@ -641,10 +641,10 @@ public class Main_Skorokhod {
 
             */
 
-            AtomicDistanceExpression atomicZ1 = new AtomicDistanceExpression(ds -> ds.get(Z1) / normalisationZ1, (v1, v2) -> Math.abs(v2 - v1));
-            MaxIntervalDistanceExpression intAtomicZ1 = new MaxIntervalDistanceExpression(atomicZ1, 400, 700);
-            AtomicDistanceExpression atomicZ2 = new AtomicDistanceExpression(ds -> ds.get(Z2) / normalisationZ2, (v1, v2) -> Math.abs(v2 - v1));
-            AtomicDistanceExpression atomicZ3 = new AtomicDistanceExpression(ds -> ds.get(Z3) / normalisationZ3, (v1, v2) -> Math.abs(v2 - v1));
+            //AtomicDistanceExpression atomicZ1 = new AtomicDistanceExpression(ds -> ds.get(Z1) / normalisationZ1, (v1, v2) -> Math.abs(v2 - v1));
+            //MaxIntervalDistanceExpression intAtomicZ1 = new MaxIntervalDistanceExpression(atomicZ1, 400, 700);
+            //AtomicDistanceExpression atomicZ2 = new AtomicDistanceExpression(ds -> ds.get(Z2) / normalisationZ2, (v1, v2) -> Math.abs(v2 - v1));
+            //AtomicDistanceExpression atomicZ3 = new AtomicDistanceExpression(ds -> ds.get(Z3) / normalisationZ3, (v1, v2) -> Math.abs(v2 - v1));
 
 
 
@@ -678,6 +678,7 @@ public class Main_Skorokhod {
             int offsetEvaluationCount = 100; //150;
 
 
+            /*
             SkorokhodDistanceExpression skorrAtomicZ1 = new SkorokhodDistanceExpression(ds -> ds.get(Z1) / normalisationZ1,
                     (v1, v2) -> Math.abs(v2 - v1),
                     //(a, b) -> b,
@@ -685,6 +686,8 @@ public class Main_Skorokhod {
                     offset -> ((double) offset / (double) normalisationTime),
                     leftBound, rightBound, false, offsetEvaluationCount, scanWidth);
             double v = skorrAtomicZ1.compute(leftBound, sequence, sequence_p);
+
+             */
 
 
 
@@ -697,15 +700,28 @@ public class Main_Skorokhod {
 
             double avg_diff_maxInt_skor = 0.0;
             for (int i = 0; i < 100; i++) {
+                AtomicDistanceExpression atomicZ1 = new AtomicDistanceExpression(ds -> ds.get(Z1) / normalisationZ1, (v1, v2) -> Math.abs(v2 - v1));
                 MaxIntervalDistanceExpression maxIntAtomicZ1 = new MaxIntervalDistanceExpression(atomicZ1, i + leftBound , i + leftBound +100 );
-                SkorokhodDistanceExpression skorAtomicZ1 = new SkorokhodDistanceExpression(ds -> ds.get(Z1) / normalisationZ1,
+                /* SkorokhodDistanceExpression skorAtomicZ1 = new SkorokhodDistanceExpression(ds -> ds.get(Z1) / normalisationZ1,
                         (v1, v2) -> Math.abs(v2 - v1),
                         (a, b) -> b,
                         //(a, b) -> Math.max(a, b),
                         offset -> ((double) offset / (double) normalisationTime),
                         leftBound, rightBound, false, offsetEvaluationCount, scanWidth);
+                */
+                RevisedSkorokhodDistanceExpression skorAtomicZ1 = new RevisedSkorokhodDistanceExpression(ds -> ds.get(Z1) / normalisationZ1,
+                        (v1, v2) -> Math.abs(v2 - v1),
+                        (a, b) -> b,
+                        //(a, b) -> Math.max(a, b),
+                        offset -> ((double) offset / (double) normalisationTime),
+                        leftBound, rightBound, true, 0.01, true);
+                        //offsetEvaluationCount, scanWidth);
                 evaluation_maxint_atomic_Z1[i][0] = maxIntAtomicZ1.compute(i, sequence, sequence_p);
+
                 evaluation_skorokhod_Z1[i][0] = skorAtomicZ1.compute(i, sequence, sequence_p);
+                for(int j=0; j< skorAtomicZ1.GetOffsetArray().length;j++){
+                    System.out.println("lambda for " + i + " maps " + leftBound+j + " to " + skorAtomicZ1.GetOffsetArray()[j]);
+                }
                 avg_diff_maxInt_skor = avg_diff_maxInt_skor + evaluation_maxint_atomic_Z1[i][0] - evaluation_skorokhod_Z1[i][0];
             }
 
@@ -760,6 +776,7 @@ public class Main_Skorokhod {
             for(int thresholdInc = 0; thresholdInc < 20 ; thresholdInc=thresholdInc+1){
 
                 double threshold = (baseThreshold + thresholdInc)/100.0;
+                AtomicDistanceExpression atomicZ1 = new AtomicDistanceExpression(ds -> ds.get(Z1) / normalisationZ1, (v1, v2) -> Math.abs(v2 - v1));
                 MaxIntervalDistanceExpression maxIntAtomicZ1 = new MaxIntervalDistanceExpression(atomicZ1,leftBound,rightBound);
 
                 robustMaxIntZ1 = new AtomicRobustnessFormula(itZ1TranslRate(x,w1,w2,replica),
