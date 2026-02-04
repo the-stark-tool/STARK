@@ -701,7 +701,7 @@ public class Main_Skorokhod {
             double avg_diff_maxInt_skor = 0.0;
             for (int i = 0; i < 100; i++) {
                 AtomicDistanceExpression atomicZ1 = new AtomicDistanceExpression(ds -> ds.get(Z1) / normalisationZ1, (v1, v2) -> Math.abs(v2 - v1));
-                MaxIntervalDistanceExpression maxIntAtomicZ1 = new MaxIntervalDistanceExpression(atomicZ1, i + leftBound , i + leftBound +100 );
+                MaxIntervalDistanceExpression maxIntAtomicZ1 = new MaxIntervalDistanceExpression(atomicZ1, i + leftBound , rightBound );
                 /* SkorokhodDistanceExpression skorAtomicZ1 = new SkorokhodDistanceExpression(ds -> ds.get(Z1) / normalisationZ1,
                         (v1, v2) -> Math.abs(v2 - v1),
                         (a, b) -> b,
@@ -720,7 +720,7 @@ public class Main_Skorokhod {
 
                 evaluation_skorokhod_Z1[i][0] = skorAtomicZ1.compute(i, sequence, sequence_p);
                 for(int j=0; j< skorAtomicZ1.GetOffsetArray().length;j++){
-                    System.out.println("lambda for " + i + " maps " + leftBound+j + " to " + skorAtomicZ1.GetOffsetArray()[j]);
+                    System.out.println("lambda for " + i + " maps " + j + " to " + skorAtomicZ1.GetOffsetArray()[j]);
                 }
                 avg_diff_maxInt_skor = avg_diff_maxInt_skor + evaluation_maxint_atomic_Z1[i][0] - evaluation_skorokhod_Z1[i][0];
             }
