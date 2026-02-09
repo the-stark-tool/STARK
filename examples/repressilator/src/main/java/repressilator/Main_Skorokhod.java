@@ -723,12 +723,12 @@ public class Main_Skorokhod {
                         (a, b) -> b,
                         //(a, b) -> Math.max(a, b),
                         offset -> ((double) offset / (double) normalisationTime),
-                        leftBound, rightBound, true, 100, 100);
+                        leftBound, rightBound, true, 50, 100);
                 //offsetEvaluationCount, scanWidth);
 
                 evaluation_maxint_atomic_Z2[i][0] = maxIntAtomicZ2.compute(i, sequence, sequence_p);
-                evaluation_skorokhod_Z2[i][0] = skorAtomicZ2.compute(i, sequence, sequence_p);
-                evaluation_skorokhod_rough_Z2[i][0] = skorrAtomicRoughZ2.compute(i, sequence, sequence_p);
+                evaluation_skorokhod_Z2[i][0] = skorAtomicZ2.compute(i+leftBound, sequence, sequence_p);
+                evaluation_skorokhod_rough_Z2[i][0] = skorrAtomicRoughZ2.compute(i+leftBound, sequence, sequence_p);
 
                 //for(int j=0; j< skorAtomicZ2.GetOffsetArray().length;j++){
                   //  System.out.println("lambda for " + i + " maps " + j + " to " + skorAtomicZ1.GetOffsetArray()[j]);
@@ -740,7 +740,7 @@ public class Main_Skorokhod {
                 System.out.println(" ");
                 int step = i+leftBound;
                 System.out.println("MaxInterv Z2 distance at step " + step + ": " + evaluation_maxint_atomic_Z2[i][0]);
-                System.out.println("Skorokhod Z2 distance at step " + step + ": " + evaluation_skorokhod_rough_Z2[i][0]);
+                System.out.println("Skorok. R Z2 distance at step " + step + ": " + evaluation_skorokhod_rough_Z2[i][0]);
                 System.out.println("Skorokhod Z2 distance at step " + step + ": " + evaluation_skorokhod_Z2[i][0]);
                 double diff = evaluation_maxint_atomic_Z2[i][0] - evaluation_skorokhod_Z2[i][0];
                 if(diff < 0) {
