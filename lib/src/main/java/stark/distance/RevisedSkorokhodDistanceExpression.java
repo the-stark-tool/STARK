@@ -22,6 +22,7 @@
 
 package stark.distance;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.DoubleBinaryOperator;
 import java.util.function.ToDoubleFunction;
 
@@ -162,8 +163,26 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
             }
         }
 
+        // if the offset did not increase this step, simply return this offset
+        if (step == 0 || this.offsets[step - 1] <= offsets[step])
+        {
+            return sample(step, this.offsets[step], seq1, seq2);
+        }
+
+        double _maxDistance = Double.MIN_VALUE;
+
+        // distance is now the maximum between all distributions that are mapped to each other.
+        // when we increase offset, all distributions in between will be mapped to each other.
+        for (int i = this.offsets[step - 1]; i < offsets[step]; i++) {
+            double sample = sample(step, this.offsets[i], seq1, seq2);
+            if (sample > _maxDistance)
+            {
+                _maxDistance = sample;
+            }
+        }
+
         // sample wasserstein distance using offset
-        return sample(step, this.offsets[step], seq1, seq2);
+        return _maxDistance;
     }
 
     // not yet implemented:
@@ -220,7 +239,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
      * @return whether the sequences conform to the maximum Skorokhod distance
      * 
      */
-    Boolean EvaluateSkorokhodConformance(double maxDistance, int[] _offsets, EvolutionSequence seq1, EvolutionSequence seq2)
+    private Boolean EvaluateSkorokhodConformance(double maxDistance, int[] _offsets, EvolutionSequence seq1, EvolutionSequence seq2)
     {
         this.maxOffset = Integer.MIN_VALUE;
         this.minOffset = Integer.MAX_VALUE;
@@ -279,6 +298,38 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
             step++;
         }
 
+        return true;
+    }
+
+    private boolean func(int step, AtomicInteger offset, double maxDistance, EvolutionSequence seq1, EvolutionSequence seq2)
+    {
+        // since offset can not be reduced by this function, maxDistance is not
+        // feasible if timeOffset > maxDistance itself
+        double timeOffset = rho2.applyAsDouble(Math.abs(offset.get()));
+        if (timeOffset > maxDistance) return false;
+
+        double sampledDistance = sample(step, offset.get(), seq1, seq2);
+        double mu = this.muLogic.applyAsDouble(timeOffset, sampledDistance);
+        while (mu > maxDistance)
+        {
+            // it this step is the leftbound, there is no way to decrease the space deviation, since time function
+            // must be a surjective mapping.
+            if (step == this.leftBound) return false;
+            
+            // increase the previous step's offset, to check whether the previous distribution has a lower distance 
+            // compared to the other distribution, to hopefully still meet maxDistance. 
+            // Then, recalculate mu and check whether this step meets maxDistance
+            offset.incrementAndGet();
+            boolean feasible = func(step - 1, offset, maxDistance, seq1, seq2);
+            if (!feasible) return false;
+
+            // calculation of mu:
+            timeOffset = rho2.applyAsDouble(Math.abs(offset.get()));
+            if (timeOffset > maxDistance) return false;
+            sampledDistance = sample(step, offset.get(), seq1, seq2);
+            mu = this.muLogic.applyAsDouble(timeOffset, sampledDistance);
+        }
+        
         return true;
     }
 
