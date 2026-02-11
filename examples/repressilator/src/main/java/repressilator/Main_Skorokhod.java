@@ -709,9 +709,13 @@ public class Main_Skorokhod {
             double[][] direct_evaluation_atomic_Z3 = new double[rightBound][1];
             double sumOld = 0;
             double sumRevised = 0;
+            System.out.println("skorokhodZ1: " + skorokhodZ1.compute(0, sequence, sequence_p));
+            System.out.println("skorokhodZ1Old: " + skorokhodZ1Old.compute(0, sequence, sequence_p));
+            System.out.println("skorokhodZ2: " + skorokhodZ2.compute(0, sequence, sequence_p));
+            System.out.println("skorokhodZ3: " + skorokhodZ3.compute(0, sequence, sequence_p));
             for (int i = 0; i<(rightBound); i++){
-                direct_evaluation_skorokhod_Z1[i][0] = skorokhodZ1.compute(i, sequence, sequence_p);
-                direct_evaluation_skorokhod_Z1_Old[i][0] = skorokhodZ1Old.compute(i, sequence, sequence_p);
+                direct_evaluation_skorokhod_Z1[i][0] = skorokhodZ1.sampleDistance(i, sequence, sequence_p);
+                direct_evaluation_skorokhod_Z1_Old[i][0] = skorokhodZ1Old.sampleDistance(i, sequence, sequence_p);
                 direct_evaluation_skorokhod_Z1_Old_diff[i][0] = direct_evaluation_skorokhod_Z1[i][0] - direct_evaluation_skorokhod_Z1_Old[i][0];
 
                 if (i >= leftBound)
@@ -720,8 +724,8 @@ public class Main_Skorokhod {
                     sumRevised+=direct_evaluation_skorokhod_Z1[i][0];
                 }
 
-                direct_evaluation_skorokhod_Z2[i][0] = skorokhodZ2.compute(i, sequence, sequence_p);
-                direct_evaluation_skorokhod_Z3[i][0] = skorokhodZ3.compute(i, sequence, sequence_p);
+                direct_evaluation_skorokhod_Z2[i][0] = skorokhodZ2.sampleDistance(i, sequence, sequence_p);
+                direct_evaluation_skorokhod_Z3[i][0] = skorokhodZ3.sampleDistance(i, sequence, sequence_p);
 
                 // atomic; on same sequence for direct comparison
                 direct_evaluation_atomic_Z1[i][0] = atomicZ1.compute(i, sequence, sequence_p);
@@ -820,32 +824,32 @@ public class Main_Skorokhod {
                     new MaxDistanceExpression(atomicZ2, atomicZ3)
             );
 
-            DistanceExpression dMaxSkor = new MaxDistanceExpression(
-                    skorokhodZ1,
-                    new MaxDistanceExpression(skorokhodZ2, skorokhodZ3)
-            );
+            // DistanceExpression dMaxSkor = new MaxDistanceExpression(
+            //         skorokhodZ1,
+            //         new MaxDistanceExpression(skorokhodZ2, skorokhodZ3)
+            // );
 
             // get maximum offset used in any of skorokhod expressions
-            int maxOffset = Math.max(skorokhodZ1.GetMaxOffset(), Math.max(skorokhodZ2.GetMaxOffset(), skorokhodZ3.GetMaxOffset()));
+            // int maxOffset = Math.max(skorokhodZ1.GetMaxOffset(), Math.max(skorokhodZ2.GetMaxOffset(), skorokhodZ3.GetMaxOffset()));
 
-            DistanceExpression intdMaxSkorOld = new MaxIntervalDistanceExpression(
-                    skorokhodZ1Old,
-                    leftRBound,
-                    rightRBound - skorokhodZ1.GetMaxOffset()
-            );
+            // DistanceExpression intdMaxSkorOld = new MaxIntervalDistanceExpression(
+            //         skorokhodZ1Old,
+            //         leftRBound,
+            //         rightRBound - skorokhodZ1.GetMaxOffset()
+            // );
 
-            DistanceExpression intdMaxSkorRevised = new MaxIntervalDistanceExpression(
-                    skorokhodZ1,
-                    leftRBound,
-                    rightRBound - skorokhodZ1.GetMaxOffset()
-            );
+            // DistanceExpression intdMaxSkorRevised = new MaxIntervalDistanceExpression(
+            //         skorokhodZ1,
+            //         leftRBound,
+            //         rightRBound - skorokhodZ1.GetMaxOffset()
+            // );
 
-            double maxDistanceOld = intdMaxSkorOld.compute(0, sequence, sequence_p);
-            double maxDistanceRevised = intdMaxSkorRevised.compute(0, sequence, sequence_p);
+            // double maxDistanceOld = intdMaxSkorOld.compute(0, sequence, sequence_p);
+            // double maxDistanceRevised = intdMaxSkorRevised.compute(0, sequence, sequence_p);
             
-            System.out.println("\nBetween leftbound and (rightbound - maxOffset):\nRevised Max distance: " + maxDistanceRevised + 
-                                "\nOld Max distance: " + maxDistanceOld);
-            System.out.println("maxDistanceOld - maxDistanceRevised: " + (maxDistanceOld - maxDistanceRevised));
+            // System.out.println("\nBetween leftbound and (rightbound - maxOffset):\nRevised Max distance: " + maxDistanceRevised + 
+            //                     "\nOld Max distance: " + maxDistanceOld);
+            // System.out.println("maxDistanceOld - maxDistanceRevised: " + (maxDistanceOld - maxDistanceRevised));
 
             DistanceExpression intdMax = new MaxIntervalDistanceExpression(
                     dMax,
@@ -854,14 +858,14 @@ public class Main_Skorokhod {
             );
 
             // subtract maxoffset from right bound, since there one of the sequences is sampled out of bound, not producing a reliable result
-            DistanceExpression intdMaxSkor = new MaxIntervalDistanceExpression(
-                    dMaxSkor,
-                    leftRBound,
-                    rightRBound - maxOffset
-            );
+            // DistanceExpression intdMaxSkor = new MaxIntervalDistanceExpression(
+            //         dMaxSkor,
+            //         leftRBound,
+            //         rightRBound - maxOffset
+            // );
 
             double[][] robEvaluations = new double[20][2];
-            double[][] robEvaluationsSkor = new double[20][2];
+            // double[][] robEvaluationsSkor = new double[20][2];
 
             int index=0;
             double thresholdB = 1;
@@ -879,21 +883,21 @@ public class Main_Skorokhod {
                 // ThreeValuedSemanticsVisitor(rand,50,1.96).eval(robustF).eval(5, 0, sequence);
 
                 ThresholdDistanceExpression thresholdExpr = new ThresholdDistanceExpression(intdMax, RelationOperator.LESS_OR_EQUAL_THAN, threshold);
-                ThresholdDistanceExpression thresholdExprSkor = new ThresholdDistanceExpression(intdMaxSkor, RelationOperator.LESS_OR_EQUAL_THAN, threshold);
+                // ThresholdDistanceExpression thresholdExprSkor = new ThresholdDistanceExpression(intdMaxSkor, RelationOperator.LESS_OR_EQUAL_THAN, threshold);
 
                 double value = thresholdExpr.compute(0, sequence, sequence_p);
-                double valueSkor = thresholdExprSkor.compute(0, sequence, sequence_p);
+                // double valueSkor = thresholdExprSkor.compute(0, sequence, sequence_p);
 
                 System.out.println("\nrobustF evaluation at " + threshold + ": " + value);
-                System.out.println("robustFSkor evaluation at " + threshold + ": " + valueSkor);
+                // System.out.println("robustFSkor evaluation at " + threshold + ": " + valueSkor);
                 robEvaluations[index][1]=value;
                 robEvaluations[index][0]=threshold;
-                robEvaluationsSkor[index][1]=valueSkor;
-                robEvaluationsSkor[index][0]=threshold;
+                // robEvaluationsSkor[index][1]=valueSkor;
+                // robEvaluationsSkor[index][0]=threshold;
                 index++;
             }
             Util.writeToCSV("./results/evalR.csv",robEvaluations);
-            Util.writeToCSV("./results/evalRSkor.csv",robEvaluationsSkor);
+            // Util.writeToCSV("./results/evalRSkor.csv",robEvaluationsSkor);
             
             // RobustnessFormula robustF;
             // RobustnessFormula robustFSkor;
