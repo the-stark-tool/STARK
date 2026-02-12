@@ -23,6 +23,9 @@
 package stark.examples.repressilator;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -504,6 +507,12 @@ public class Main_Skorokhod {
                 plot_x2[i][0] = data[i][6];
                 plot_x3[i][0] = data[i][10];
             }
+            Path path = Paths.get("results");
+
+            if (Files.notExists(path)) {
+                Files.createDirectories(path);
+            }
+
             Util.writeToCSV("./results/new_plotZ1.csv",plot_z1);
             Util.writeToCSV("./results/new_plotZ2.csv",plot_z2);
             Util.writeToCSV("./results/new_plotZ3.csv",plot_z3);
@@ -661,8 +670,6 @@ public class Main_Skorokhod {
             int leftBound = 550;
             int rightBound = 1000;
             int normalisationTime = 1000;
-            int scanWidth = 400;
-            int offsetEvaluationCount = 150;
             double resolution = 0.001;
 
             RevisedSkorokhodDistanceExpression skorokhodZ1 = new RevisedSkorokhodDistanceExpression(ds->ds.get(Z1)/normalisationZ1,
@@ -684,14 +691,14 @@ public class Main_Skorokhod {
                     (a, b) -> Math.max(a, b),
                     offset->((double)offset/(double)normalisationTime),
                     leftBound,
-                    rightBound,false, resolution, true);
+                    rightBound,false, resolution, false);
 
             RevisedSkorokhodDistanceExpression skorokhodZ3 = new RevisedSkorokhodDistanceExpression(ds->ds.get(Z3)/normalisationZ3,
                     (v1, v2) -> Math.abs(v2-v1),
                     (a, b) -> Math.max(a, b),
                     offset->((double)offset/(double)normalisationTime),
                     leftBound,
-                    rightBound,false, resolution, true);
+                    rightBound,false, resolution, false);
 
 
             double[][] direct_evaluation_skorokhod_Z1 = new double[rightBound][1];

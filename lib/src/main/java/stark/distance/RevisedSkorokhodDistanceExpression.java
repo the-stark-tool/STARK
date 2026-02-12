@@ -162,7 +162,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         }
 
         // if this step falls outside the bounds, return regular wasserstein distance
-        if (step >= this.absoluteRightBound || step < this.absoluteLeftBound)
+        if (step > this.absoluteRightBound || step < this.absoluteLeftBound)
         {
             return sample(step, 0);
         }
@@ -174,15 +174,32 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         }
 
         int offsetsIndex = step - this.absoluteLeftBound;
+        
+        double _maxDistance = Double.MIN_VALUE;
+        if (offsetsIndex == 0)
+        {
+            for (int i = 0; i <= this.offsets[0]; i++) {
+                if (step + Math.abs(i) > this.absoluteRightBound)
+                {
+                    return sample(step, 0);
+                }
+                double sample = sample(step, i);
+                if (sample > _maxDistance)
+                {
+                    _maxDistance = sample;
+                }
+            }
+            return _maxDistance;
+        }
 
         // if the offset did not increase this step, simply evaluate using offset at desired step
-        if (offsetsIndex <= 0 || this.offsets[offsetsIndex] <= this.offsets[offsetsIndex - 1])
+        if (offsetsIndex < 0 || (offsetsIndex > 0 && this.offsets[offsetsIndex] <= this.offsets[offsetsIndex - 1]))
         { 
             // System.err.println(offsetsIndex);
             return sample(step, this.offsets[offsetsIndex]);
         }
 
-        double _maxDistance = Double.MIN_VALUE;
+        _maxDistance = Double.MIN_VALUE;
 
         // distance is now the maximum between all distributions that are mapped to each other.
         // when offset is increased, all distributions in between will be mapped to each other, 
@@ -448,116 +465,159 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
             }
         }
 
+        // print all produced offsets:
+        System.out.println("");
+        for (int i = 0; i < size; i++) {
+            System.out.print(this.offsets[i]);
+            System.out.print(",");
+        }
+        System.out.println("");
+
         // set starting node distance to 0
         this.PFTable[0][this.offsets[0] - minOffset] = 0;
 
         // visit all nodes
-        // stop 1 earlier, since final nodes do not need to be visited themselves
-        for (int unvisitedStepRelative = 0; unvisitedStepRelative < size - 1; unvisitedStepRelative++) 
+        for (int unvisitedStepRelative = 0; unvisitedStepRelative < size; unvisitedStepRelative++) 
         {
             for (int unvisitedOffset = minOffset; unvisitedOffset <= maxOffset; unvisitedOffset++)
             {
+                // each node is allowed to go in three directions: 
+                // diagonal: reducing offset and moving to next step
+                // right: moving to next step without changing offset
+                // down: increasing offset without changing step
                 double sourceDistance = this.PFTable[unvisitedStepRelative][unvisitedOffset - minOffset];
+                
+                // diagonal: reducing offset and moving to next step
+                int neighbourOffset = unvisitedOffset - 1;
+                int neighbourStep = unvisitedStepRelative + 1;
+                if (neighbourOffset >= minOffset && neighbourStep + Math.abs(neighbourOffset) <= this.intervalSize)
+                {
+                    double timeOffset = rho2.applyAsDouble(Math.abs(neighbourOffset));
+                    double distanceCost = sample(neighbourStep, neighbourOffset);
+                    double mu = this.muLogic.applyAsDouble(timeOffset, distanceCost);
+                    
+                    // if the distance exceeds skorokhod distance, set it to infinity
+                    double distance = (mu > skorokhodDistance) ? inf : Math.min(distanceCost + sourceDistance, inf);
 
-                double maxDistance = Double.MIN_VALUE;
-                // scan over all reachable neighbours from this node, setting the min distance to source
-                // offset may decrease by 1 every step, so start visiting neighbours from unvisitedOffset - 1 up to and including maxOffset
-                for (int neighbourOffset = Math.max(unvisitedOffset - 1, minOffset); neighbourOffset <= maxOffset; neighbourOffset++) {
-                    // absolute step that this neighbour may be indexed at:
-                    int neighbourStep = this.absoluteLeftBound + unvisitedStepRelative + 1;
-                    if (neighbourStep + Math.abs(neighbourOffset) <= this.absoluteRightBound)
+                    // if moving from current node to this neighbour results in a lower total distance, save it.
+                    if (distance < this.PFTable[neighbourStep][neighbourOffset - minOffset])
                     {
-                        // A distance at a step, is now dependent on the difference in offsets.
-                        // Due to surjectivity, the maximum distance between all distributions that would have been skipped
-                        // must be used as the actual distance corresponding to this location.
+                        this.PFTable[neighbourStep][neighbourOffset - minOffset] = distance;
+                    }
+                }
 
-                        double timeOffset = rho2.applyAsDouble(Math.abs(neighbourOffset));
-                        double distanceCost = sample(neighbourStep, neighbourOffset);
-                        
-                        // unvisitedOffset is the source offset, the previous offset. We now compute for each possible offset to use for
-                        // the next offset what the associated distance would be. So if it increases, we use the maximum distance between all of the
-                        // previously computed distances.
+                // right: moving to next step without changing offset
+                neighbourOffset = unvisitedOffset;
+                neighbourStep = unvisitedStepRelative + 1;
+                if (neighbourOffset >= minOffset && neighbourStep + Math.abs(neighbourOffset) <= this.intervalSize)
+                {
+                    double timeOffset = rho2.applyAsDouble(Math.abs(neighbourOffset));
+                    double distanceCost = sample(neighbourStep, neighbourOffset);
+                    double mu = this.muLogic.applyAsDouble(timeOffset, distanceCost);
+                    
+                    // if the distance exceeds skorokhod distance, set it to infinity
+                    double distance = (mu > skorokhodDistance) ? inf : Math.min(distanceCost + sourceDistance, inf);
 
-                        //for (int i = this.offsets[offsetsIndex - 1]; i < this.offsets[offsetsIndex]; i++) {
-                        if (unvisitedOffset < neighbourOffset) // neighbourOffset - unvisitedOffset > 0
-                        {
-                            if (distanceCost > maxDistance) 
-                                {
-                                    maxDistance = distanceCost;
-                                }
+                    // if moving from current node to this neighbour results in a lower total distance, save it.
+                    if (distance < this.PFTable[neighbourStep][neighbourOffset - minOffset])
+                    {
+                        this.PFTable[neighbourStep][neighbourOffset - minOffset] = distance;
+                    }
+                }
 
-                            distanceCost = maxDistance;
-                        }
+                // down: increasing offset without changing step
+                neighbourOffset = unvisitedOffset + 1;
+                neighbourStep = unvisitedStepRelative;
+                if (neighbourOffset >= minOffset && neighbourOffset <= maxOffset && neighbourStep + Math.abs(neighbourOffset) <= this.intervalSize)
+                {
+                    double timeOffset = rho2.applyAsDouble(Math.abs(neighbourOffset));
+                    double distanceCost = sample(neighbourStep, neighbourOffset);
+                    double mu = this.muLogic.applyAsDouble(timeOffset, distanceCost);
+                    
+                    // if the distance exceeds skorokhod distance, set it to infinity
+                    double distance = (mu > skorokhodDistance) ? inf : Math.min(distanceCost + sourceDistance, inf);
 
-                        double mu = this.muLogic.applyAsDouble(timeOffset, distanceCost);
-                        
-                        // if the distance exceeds skorokhod distance, set it to infinity
-                        double distance = (mu > skorokhodDistance) ? inf : Math.min(distanceCost + sourceDistance, inf);
-
-                        // if moving from current node to this neighbour results in a lower total distance, save it.
-                        if (distance < this.PFTable[unvisitedStepRelative + 1][neighbourOffset - minOffset])
-                        {
-                            this.PFTable[unvisitedStepRelative + 1][neighbourOffset - minOffset] = distance;
-                        }
+                    // if moving from current node to this neighbour results in a lower total distance, save it.
+                    if (distance < this.PFTable[neighbourStep][neighbourOffset - minOffset])
+                    {
+                        this.PFTable[neighbourStep][neighbourOffset - minOffset] = distance;
                     }
                 }
             }
         }
 
         // print pathfinding matrix:
-        // for (int i = 0; i < size; i++) {
-        //     for (int j = 0; j < offsetSpan; j++) {
-        //         if (this.PFTable[i][j] >= 2000) {
-        //             System.out.printf(" inf ");
-        //         } else {
-        //             System.out.printf(" %.3f ", this.PFTable[i][j]);
-        //         }
-        //     }
-        //     System.out.println();
-        // }
+        for (int i = 0; i < 15; i++) {
+            for (int j = 0; j < offsetSpan; j++) {
+                if (this.PFTable[i][j] >= 2000) {
+                    System.out.printf(" inf ");
+                } else {
+                    System.out.printf(" %.10f ", this.PFTable[i][j]);
+                }
+            }
+            System.out.println();
+        }
 
         int currentOffset = 0;
+        int currentStep = this.intervalSize;
 
         // fill entire offset list
         // due to surjectivity, we may not perform large jumps in offset. 
         // Only diagonal, horizontal or vertical steps are allowed.
-        for (int currentStep = this.intervalSize; currentStep > 0; currentStep--) 
+        while (currentStep > 0) 
         {
             double minDistance = Double.MAX_VALUE;
             int bestOffset = currentOffset;
             int bestStep = currentStep;
+
             // check up
-            double updist = this.PFTable[currentStep][Math.max(currentOffset - 1 - minOffset, 0)];
-            if (updist < minDistance)
+            if (currentOffset - 1 >= minOffset)
             {
-                minDistance = updist;
-                bestOffset = Math.max(currentOffset - 1 - minOffset, 0);
-                bestStep = currentStep;
+                double updist = this.PFTable[currentStep][currentOffset - 1 - minOffset];
+                if (updist < minDistance)
+                {
+                    minDistance = updist;
+                    bestOffset = currentOffset - 1;
+                    bestStep = currentStep;
+                }
             }
+            
             // check left
-            double leftdist = this.PFTable[Math.max(currentStep - 1,0)][currentOffset - minOffset];
-            if (leftdist < minDistance)
+            if (currentStep - 1 >= 0)
             {
-                minDistance = leftdist;
-                bestOffset = currentOffset;
-                bestStep = Math.max(currentStep - 1,0);
+                double leftdist = this.PFTable[currentStep - 1][currentOffset - minOffset];
+                if (leftdist < minDistance)
+                {
+                    minDistance = leftdist;
+                    bestOffset = currentOffset;
+                    bestStep = currentStep - 1;
+                }
             }
             // check diagonal
-            double diagdist = this.PFTable[Math.max(currentStep - 1,0)][Math.max(currentOffset - 1 - minOffset, 0)];
-            if (diagdist < minDistance)
+            if (currentStep - 1 >= 0 && currentOffset + 1 <= maxOffset)
             {
-                bestOffset = Math.max(currentStep - 1,0);
-                bestStep = Math.max(currentOffset - 1 - minOffset, 0);
+                double diagdist = this.PFTable[currentStep - 1][currentOffset + 1 - minOffset];
+                if (diagdist < minDistance)
+                {
+                    minDistance = diagdist;
+                    bestStep = currentStep - 1;
+                    bestOffset = currentOffset + 1;
+                }
+                
             }
+
             this.offsets[bestStep] = bestOffset;
+
+            currentOffset = bestOffset;
+            currentStep = bestStep;
         }
         // print all produced offsets:
-        // System.out.println("");
-        // for (int i = 0; i < size; i++) {
-        //     System.out.print(_offsets[i + leftBound]);
-        //     System.out.print(",");
-        // }
-        // System.out.println("");
+        System.out.println("");
+        for (int i = 0; i < size; i++) {
+            System.out.print(this.offsets[i]);
+            System.out.print(",");
+        }
+        System.out.println("");
     }
 
     /**
