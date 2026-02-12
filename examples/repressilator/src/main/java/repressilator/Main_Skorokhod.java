@@ -56,16 +56,16 @@ public class Main_Skorokhod {
 
     /*
 
-    THE TWO STATE MODEL OF THE REPRESSILATOR
+    THE TWO STATE MODEL OF THE REPRESSILATOR NETWORK
 
     The "repressilator" network consists in n genes forming a directed cycle of "negative interactions".
     As in "Herbach et al: Inferring gene regulatory networks from single-cell data: a mechanistic approach,
     BMC Systems Biology (2017) 11:105", we proceed as follows:
-    - we adopt the "two state model" of gene expression, where the gene promoter can be either active or inactive;
-    - we consider both mRNA molecules, which can be transcribed only during the active period, and proteins, which
-    are produced by mRNA molecules at a constant rate;
+    - we adopt the "two state model" of gene expression: the gene promoter can be either active or inactive;
+    - we consider mRNA molecules, which can be transcribed only during the active period;
+    - we consider proteins, which are produced by mRNA molecules at a constant rate;
     - we use chemical reactions for specifying the model;
-    - we model a network with 3 genes.
+    - we model a network with n=3 genes.
 
     For i=1,2,3 we have the following variables that will allow us to model the status of such a kind of system:
     - Gi: models the inactive promoter, Gi is 1 if the promoter is inactive, otherwise Gi is 0.
@@ -85,13 +85,14 @@ public class Main_Skorokhod {
 
 
 
+
     /*
 
     SPECIFYING THE TWO STATE MODEL OF THE REPRESSILATOR WITH CHEMICAL REACTIONS
 
     As in "Herbach et al: Inferring gene regulatory networks from single-cell data: a mechanistic approach,
-    BMC Systems Biology (2017) 11:105", we use chemical reactions for specifying the repressilator in the two state
-    model approach.
+    BMC Systems Biology (2017) 11:105", we use chemical reactions for specifying the repressilator in the
+    two state model approach.
     In particular, reactions model the following dynamics:
     - activation of the promoter, modelled by reaction Gi -- koni --> AGi
     - deactivation of the promoter, modelled by reaction AGi -- koffi --> Gi,
@@ -104,6 +105,7 @@ public class Main_Skorokhod {
     The value of Z1, Z2, Z3 will impact on kon1, kon2, kon3, thus realising gene interaction.
 
     */
+
 
 
     /*
@@ -328,42 +330,44 @@ public class Main_Skorokhod {
 
             INITIAL CONFIGURATION
 
-            In order to perform simulations/analysis/model checking for a particular system, we need to create its
-            initial configuration, which is an instance of <code>TimedSystem>/code>
+            In order to perform simulations/analysis/model checking for a particular system, we need
+            to create its initial configuration, which is an instance of <code>TimedSystem>/code>
 
             */
 
 
             /*
-            One of the elements of a system configuration is the "controller", i.e. an instance of <code>Controller</code>.
-            In this example we do not need controllers, therefore we use a controller that does nothing, i.e. an instance
-            of <code>NilController</code>.
+            One of the elements of a system configuration is the "controller", i.e. an instance of
+            <code>Controller</code>.
+            In this example we do not need controllers, therefore we use a controller that does
+            nothing, i.e. an instance of <code>NilController</code>.
             In other case studies, controllers may be used to control the activity of a system.
             For instance, a scheduling of a therapy may be modelled by a controller.
             */
             Controller controller = new NilController();
 
             /*
-            Another element of a system configuration is the "data state", i.e. an instance of <code>DataState</code>,
-            which models the state of the data.
-            Instances of <code>DataState</code> contains values for variables representing the quantities of the
-            system and four values allowing us to model the evolution of time: gran, Tstep, Treal, Tdelta.
+            Another element of a system configuration is the "data state", i.e. an instance of
+            <code>DataState</code>, which models the state of the data.
+            Instances of <code>DataState</code> contains values for variables representing the quantities
+            of the system and four values allowing us to model the evolution of time:
+            gran, Tstep, Treal, Tdelta.
             The initial data state <code>state</code> is constructed by exploiting the static method
-            <code>getInitialState</code>, which will be defined later and assigns the initial value to all 30
-            variables defined above.
+            <code>getInitialState</code>, which will be defined later and assigns the initial value to
+            all 30 variables defined above.
              */
             DataState state = getInitialState(1.0,0.0,0.0,0.0);
 
             /*
-            We define the <code>TimedSystem</code> <code>system</code>, which will be the starting configuration from
-            which the evolution sequence will be constructed.
+            We define the <code>TimedSystem</code> <code>system</code>, which will be the starting
+            configuration from which the evolution sequence will be constructed.
             This configuration consists of 4 elements:
-            - the controller <code>controller</code> defined above,
-            - the data state <code>state</state> defined above,
+            - the controller <code>controller</code> defined above;
+            - the data state <code>state</state> defined above;
             - a random function over data states, which implements the interface <code>DataStateFunction</code> and maps a
             random generator <code>rg</code> and a data state <code>ds</code> to the data state obtained by updating
             <code>ds</code> with the list of changes given by method <code>selectAndApplyReaction</code>. Essentially,
-            this static method, defined later, selects one fo the 18 available available reactions according to Gillespie
+            this static method, defined later, selects one fo the 18 available reactions according to Gillespie
             algorithm and realises the changes on variables that are consequence of the firing of the selected reaction,
             i.e. reactants are removed from <code>ds</code> and products are added to <code>ds</code>. Moreover, since
             proteins are among reactants/products and their amount impact on burst frequencies, also burst frequencies
@@ -459,10 +463,10 @@ public class Main_Skorokhod {
             The second evolution sequence is perturbed by applying the perturbation returned by the static method
             <code>itZ1TranslRate(x)</code> defined later.
             Essentially, the method returns a cyclic perturbation that affects the translation rate of gene 1:
-            for <code>replica</code> times, it has no effect for the first w1 time points, i.e., the system behaves
-            regularly, then in the subsequent <code>w2</code> time points, the translation rate is decremented by x,
-            which impacts directly on the evolution of <code>Z1</code> and, through interactions, on <code>Z2</code>
-            and <code>Z3</code>.
+            for <code>replica</code> times, it has no effect for the first <code>w1</code> time points, i.e., the system
+            behaves regularly, then in the subsequent <code>w2</code> time points, the translation rate is
+            decremented by x, which impacts directly on the evolution of <code>Z1</code> and, through interactions, on
+            <code>Z2</code> and <code>Z3</code>.
             This perturbation models protein translation deregulation.
 
             For both evolution sequences, we store in .csv files some information allowing us to observe the dynamics of
@@ -472,10 +476,6 @@ public class Main_Skorokhod {
 
             */
 
-            System.out.println("");
-            System.out.println("Simulation of nominal and perturbed system");
-            System.out.println("");
-
             int N = 2000;    // length ot the evolution sequence
 
             double x = -3.0; // x positive: higher values for Z1, lower for Z2, higher for Z3
@@ -484,6 +484,13 @@ public class Main_Skorokhod {
             int w1=50;
             int w2=50;
             int replica= 5;
+
+
+            System.out.println("");
+            System.out.println("Simulation of nominal and perturbed system");
+            System.out.println("");
+
+
 
             double[][] plot_z1 = new double[N][1];
             double[][] plot_z2 = new double[N][1];
@@ -503,15 +510,18 @@ public class Main_Skorokhod {
                 plot_x2[i][0] = data[i][6];
                 plot_x3[i][0] = data[i][10];
             }
-            /*
-            Util.writeToCSV("./results/new_plotZ1.csv",plot_z1);
-            Util.writeToCSV("./results/new_plotZ2.csv",plot_z2);
-            Util.writeToCSV("./results/new_plotZ3.csv",plot_z3);
 
-            Util.writeToCSV("./results/new_plotX1.csv",plot_x1);
-            Util.writeToCSV("./results/new_plotX2.csv",plot_x2);
-            Util.writeToCSV("./results/new_plotX3.csv",plot_x3);
-             */
+
+
+
+            Util.writeToCSV("./AS_new_plotZ1.csv",plot_z1);
+            Util.writeToCSV("./AS_new_plotZ2.csv",plot_z2);
+            Util.writeToCSV("./AS_new_plotZ3.csv",plot_z3);
+
+            Util.writeToCSV("./AS_new_plotX1.csv",plot_x1);
+            Util.writeToCSV("./AS_new_plotX2.csv",plot_x2);
+            Util.writeToCSV("./AS_new_plotX3.csv",plot_x3);
+
             double[][] plot_pz1 = new double[N][1];
             double[][] plot_pz2 = new double[N][1];
             double[][] plot_pz3 = new double[N][1];
@@ -530,25 +540,22 @@ public class Main_Skorokhod {
                 plot_px2[i][0] = pdata[i][6];
                 plot_px3[i][0] = pdata[i][10];
             }
-            /*
-            Util.writeToCSV("./results/new_pplotZ1.csv",plot_pz1);
-            Util.writeToCSV("./results/new_pplotZ2.csv",plot_pz2);
-            Util.writeToCSV("./results/new_pplotZ3.csv",plot_pz3);
 
-            Util.writeToCSV("./results/new_pplotX1.csv",plot_px1);
-            Util.writeToCSV("./results/new_pplotX2.csv",plot_px2);
-            Util.writeToCSV("./results/new_pplotX3.csv",plot_px3);
+            Util.writeToCSV("./AS_new_pplotZ1.csv",plot_pz1);
+            Util.writeToCSV("./AS_new_pplotZ2.csv",plot_pz2);
+            Util.writeToCSV("./AS_new_pplotZ3.csv",plot_pz3);
 
-
-             */
-
-
+            Util.writeToCSV("./AS_new_pplotX1.csv",plot_px1);
+            Util.writeToCSV("./AS_new_pplotX2.csv",plot_px2);
+            Util.writeToCSV("./AS_new_pplotX3.csv",plot_px3);
 
 
             /*
+
             While in the previous lines of code the average values of variables obtained step-by-step are stored in
             .cvs files, the following portion of code allows us to print them.
-            */
+
+             */
 
             System.out.println("");
             System.out.println("Simulation of nominal system - data average values:");
@@ -567,9 +574,9 @@ public class Main_Skorokhod {
 
 
             Now we generate again a nominal and a perturbed evolution sequence, as above.
-            Then, we quantify the differences between those evolutions sequences, which corresponds to quantifying the
-            behavioural distance between the nominal and the perturbed system. The differences are quantified with
-            respect to the amount of protein Z1, Z2 or Z3.
+            Then, we quantify the differences between those evolutions sequences, which corresponds to quantifying
+            the behavioural distance between the nominal and the perturbed system. The differences are quantified
+            with respect to the amount of protein Z2.
 
              */
 
@@ -671,78 +678,93 @@ public class Main_Skorokhod {
 
 
             System.out.println("Step-by-step evaluation of distances between nominal and perturbed system");
-            int leftBound = 600;
-            int rightBound = 1000;
+
+
             int normalisationTime = 2000;
-            int scanWidth = 100; // 400;
-            int offsetEvaluationCount = 100; //150;
+
+
+
+            double[][] evaluation_maxint_atomic_Z2 = new double[300][1];
+            double[][] evaluation_skorokhod_Z2_mat = new double[300][1];
+            //double[][] evaluation_skorokhod_Z2_maf = new double[300][1];
+
+
+
+            for (int i = 0; i < 300; i++) {
+                int leftBound = 0;
+                int rightBound = 200;
+
+                /*
+            Now we define an atomic distance between evolution sequences, named <code>atomicZ2</code>.
+            Technically, <code>atomicZ2</code> is an atomic distance in the sense that it is an instance of
+            class <code>AtomicDistanceExpression</code>, which consists in:
+             - a data state expression, assigning a "rank" to a data state. In this case the rank is the
+             normalised value of protein Z2.
+             - a binary operator mapping the rank of two data states to their distance. In this case the
+             operator simply returns the absolute value of their difference.
+             Distance <code>atomicZ2</code> can be evaluated on two evolution sequences s1 and s2 at a given
+             time point t, returning a real value v, obtained as follows:
+             - for each configuration c1 in the t^{th} sample set of s1 and for each configuration c2
+               in the t^{th} sample set of s2, their distance is computed by first assigning a rank to
+               the data states in c1 and c2 by the data state expression and, then, by applying the binary
+               operator to those ranks.
+             - the distances between the configurations are lifted to the two sample sets of configurations
+               by applying the Wasserstein lifting.
+                 */
+                AtomicDistanceExpression atomicZ2 = new AtomicDistanceExpression(ds -> ds.get(Z2) / normalisationZ2, (v1, v2) -> Math.abs(v2 - v1));
+
+            /*
+            Now we define the distance <code>maxIntAtomicZ2</code>, as instances of <code>MaxIntervalDistanceExpression</code>.
+            Essentially, when evaluated at a given time point t on two evolution sequences s1 and s2,
+            <code>maxIntAtomicZ2</code> evaluates <code>atomicZ2</code> in all time-points in the interval
+            [t + <code>leftBound</code> , t + <code>rightBound</code>] and returns the max value.
+             */
+
+                MaxIntervalDistanceExpression maxIntAtomicZ2 = new MaxIntervalDistanceExpression(atomicZ2, leftBound , rightBound);
 
 
             /*
-            SkorokhodDistanceExpression skorrAtomicZ1 = new SkorokhodDistanceExpression(ds -> ds.get(Z1) / normalisationZ1,
-                    (v1, v2) -> Math.abs(v2 - v1),
-                    //(a, b) -> b,
-                    (a, b) -> Math.max(a, b),
-                    offset -> ((double) offset / (double) normalisationTime),
-                    leftBound, rightBound, false, offsetEvaluationCount, scanWidth);
-            double v = skorrAtomicZ1.compute(leftBound, sequence, sequence_p);
+            Below we define a Skorokhod-like distance as an instance of <code>RevisedSkorokhodDistanceExpression>/code>.
+            Essentially, such a distance differ from the <code>maxIntAtomicZ2</code> defined above since the sample set
+            of configurations obtained in the first sequence at time t are compared to the sample set of configurations
+            obtained in the second sequence at a time t', which is obtained from t through a Skorokhod-like retiming.
 
              */
-
-
-
-
-
-
-
-            double[][] evaluation_maxint_atomic_Z2 = new double[100][1];
-            double[][] evaluation_skorokhod_Z2 = new double[100][1];
-            double[][] evaluation_skorokhod_rough_Z2 = new double[100][1];
-
-            double avg_diff_maxInt_skor = 0.0;
-            for (int i = 0; i < 100; i++) {
-                AtomicDistanceExpression atomicZ2 = new AtomicDistanceExpression(ds -> ds.get(Z2) / normalisationZ2, (v1, v2) -> Math.abs(v2 - v1));
-                MaxIntervalDistanceExpression maxIntAtomicZ2 = new MaxIntervalDistanceExpression(atomicZ2, i + leftBound , i + leftBound +100 );
-                /* SkorokhodDistanceExpression skorAtomicZ1 = new SkorokhodDistanceExpression(ds -> ds.get(Z1) / normalisationZ1,
+                RevisedSkorokhodDistanceExpression skorAtomicZ2mat = new RevisedSkorokhodDistanceExpression(ds -> ds.get(Z2) / normalisationZ2,
                         (v1, v2) -> Math.abs(v2 - v1),
                         (a, b) -> b,
                         //(a, b) -> Math.max(a, b),
                         offset -> ((double) offset / (double) normalisationTime),
-                        leftBound, rightBound, false, offsetEvaluationCount, scanWidth);
-                */
-                RevisedSkorokhodDistanceExpression skorAtomicZ2 = new RevisedSkorokhodDistanceExpression(ds -> ds.get(Z2) / normalisationZ2,
-                        (v1, v2) -> Math.abs(v2 - v1),
-                        (a, b) -> b,
-                        //(a, b) -> Math.max(a, b),
-                        offset -> ((double) offset / (double) normalisationTime),
-                        leftBound, rightBound, true, 0.01, true);
+                        leftBound, rightBound, true, 0.001, true);
                         //offsetEvaluationCount, scanWidth);
 
-                SkorokhodDistanceExpression skorrAtomicRoughZ2 = new SkorokhodDistanceExpression(ds -> ds.get(Z2) / normalisationZ2,
+                /*RevisedSkorokhodDistanceExpression skorAtomicZ2maf = new RevisedSkorokhodDistanceExpression(ds -> ds.get(Z2) / normalisationZ2,
                         (v1, v2) -> Math.abs(v2 - v1),
                         (a, b) -> b,
                         //(a, b) -> Math.max(a, b),
                         offset -> ((double) offset / (double) normalisationTime),
-                        leftBound, rightBound, true, 50, 100);
-                //offsetEvaluationCount, scanWidth);
+                        leftBound, rightBound, true, 0.001, false);
 
-                evaluation_maxint_atomic_Z2[i][0] = maxIntAtomicZ2.compute(i, sequence, sequence_p);
-                evaluation_skorokhod_Z2[i][0] = skorAtomicZ2.compute(i+leftBound, sequence, sequence_p);
-                evaluation_skorokhod_rough_Z2[i][0] = skorrAtomicRoughZ2.compute(i+leftBound, sequence, sequence_p);
+
+                 */
+
+                evaluation_maxint_atomic_Z2[i][0] = maxIntAtomicZ2.compute(i+500, sequence, sequence_p);
+                evaluation_skorokhod_Z2_mat[i][0] = skorAtomicZ2mat.compute(i+500, sequence, sequence_p);
+                //evaluation_skorokhod_Z2_maf[i][0] = skorAtomicZ2maf.compute(i+500, sequence, sequence_p);
 
                 //for(int j=0; j< skorAtomicZ2.GetOffsetArray().length;j++){
                   //  System.out.println("lambda for " + i + " maps " + j + " to " + skorAtomicZ1.GetOffsetArray()[j]);
                 //2}
-                avg_diff_maxInt_skor = avg_diff_maxInt_skor + evaluation_maxint_atomic_Z2[i][0] - evaluation_skorokhod_Z2[i][0];
+                //avg_diff_maxInt_skor = avg_diff_maxInt_skor + evaluation_maxint_atomic_Z2[i][0] - evaluation_skorokhod_Z2[i][0];
             }
 
-            for (int i = 0; i<100; i++){
+            for (int i = 0; i<300; i++){
                 System.out.println(" ");
-                int step = i+leftBound;
-                System.out.println("MaxInterv Z2 distance at step " + step + ": " + evaluation_maxint_atomic_Z2[i][0]);
-                System.out.println("Skorok. R Z2 distance at step " + step + ": " + evaluation_skorokhod_rough_Z2[i][0]);
-                System.out.println("Skorokhod Z2 distance at step " + step + ": " + evaluation_skorokhod_Z2[i][0]);
-                double diff = evaluation_maxint_atomic_Z2[i][0] - evaluation_skorokhod_Z2[i][0];
+                int step = i+500;
+                System.out.println("MaxInterval   Z2 distance at step " + step + ": " + evaluation_maxint_atomic_Z2[i][0]);
+                System.out.println("Skorokhod mat Z2 distance at step " + step + ": " + evaluation_skorokhod_Z2_mat[i][0]);
+                //System.out.println("Skorokhod maf Z2 distance at step " + step + ": " + evaluation_skorokhod_Z2_maf[i][0]);
+                double diff = evaluation_maxint_atomic_Z2[i][0] - evaluation_skorokhod_Z2_mat[i][0];
                 if(diff < 0) {
                     System.out.println("Unexpectedly, Skorokhod distance is higher than max interval distance !!!!!!!!!!!!!!!!!!!!");
                 }
@@ -751,10 +773,8 @@ public class Main_Skorokhod {
                 }
             }
 
-            avg_diff_maxInt_skor = avg_diff_maxInt_skor / 100.0;
-            System.out.println(" ");
-            System.out.println("Avg difference between maxInterval and Skorokhod: " + avg_diff_maxInt_skor);
-
+            Util.writeToCSV("./AS_evalDMI.csv",evaluation_maxint_atomic_Z2);
+            Util.writeToCSV("./AS_evalDSK.csv",evaluation_skorokhod_Z2_mat);
 
 
             /*
@@ -781,36 +801,40 @@ public class Main_Skorokhod {
             double[][] robustnessEvaluationsMaxInt = new double[20][2];
             double[][] robustnessEvaluationsSkor = new double[20][2];
 
-            RobustnessFormula robustMaxIntZ1;
-            RobustnessFormula robustSkorZ1;
+            RobustnessFormula robustMaxIntZ2;
+            RobustnessFormula robustSkorZ2;
             int index=0;
             double baseThreshold = 1.0;
             for(int thresholdInc = 0; thresholdInc < 20 ; thresholdInc=thresholdInc+1){
 
-                double threshold = (baseThreshold + thresholdInc)/100.0;
-                AtomicDistanceExpression atomicZ1 = new AtomicDistanceExpression(ds -> ds.get(Z1) / normalisationZ1, (v1, v2) -> Math.abs(v2 - v1));
-                MaxIntervalDistanceExpression maxIntAtomicZ1 = new MaxIntervalDistanceExpression(atomicZ1,leftBound,rightBound);
+                int leftBound = 0;
+                int rightBound = 200;
+                AtomicDistanceExpression atomicZ2 = new AtomicDistanceExpression(ds -> ds.get(Z2) / normalisationZ2, (v1, v2) -> Math.abs(v2 - v1));
+                MaxIntervalDistanceExpression maxIntAtomicZ2 = new MaxIntervalDistanceExpression(atomicZ2, leftBound , rightBound);
 
-                robustMaxIntZ1 = new AtomicRobustnessFormula(itZ1TranslRate(x,w1,w2,replica),
-                        maxIntAtomicZ1,
-                        RelationOperator.LESS_OR_EQUAL_THAN,
-                        threshold);
-
-                SkorokhodDistanceExpression skorAtomicZ1 = new SkorokhodDistanceExpression(ds->ds.get(Z1)/normalisationZ1,
-                        (v1, v2) -> Math.abs(v2-v1),
+                RevisedSkorokhodDistanceExpression skorAtomicZ2mat = new RevisedSkorokhodDistanceExpression(ds -> ds.get(Z2) / normalisationZ2,
+                        (v1, v2) -> Math.abs(v2 - v1),
                         (a, b) -> b,
-                        // (a, b) -> Math.max(a, b),
-                        offset->((double)offset/(double)normalisationTime),
-                        leftBound,
-                        rightBound,false, offsetEvaluationCount, scanWidth);
+                        //(a, b) -> Math.max(a, b),
+                        offset -> ((double) offset / (double) normalisationTime),
+                        leftBound, rightBound, true, 0.001, true);
+                //offsetEvaluationCount, scanWidth);
 
-                robustSkorZ1 = new AtomicRobustnessFormula(itZ1TranslRate(x,w1,w2,replica),
-                        skorAtomicZ1,
+                double threshold = (baseThreshold + thresholdInc)/100.0;
+
+                robustMaxIntZ2 = new AtomicRobustnessFormula(itZ1TranslRate(x,w1,w2,replica),
+                        maxIntAtomicZ2,
                         RelationOperator.LESS_OR_EQUAL_THAN,
                         threshold);
 
-                boolean robValue = new BooleanSemanticsVisitor(true).eval(robustMaxIntZ1).eval(3, 0, sequence);
-                boolean robValueSkor = new BooleanSemanticsVisitor(true).eval(robustSkorZ1).eval(3, 0, sequence);
+
+                robustSkorZ2 = new AtomicRobustnessFormula(itZ1TranslRate(x,w1,w2,replica),
+                        skorAtomicZ2mat,
+                        RelationOperator.LESS_OR_EQUAL_THAN,
+                        threshold);
+
+                boolean robValue = new BooleanSemanticsVisitor(true).eval(robustMaxIntZ2).eval(3, 500, sequence);
+                boolean robValueSkor = new BooleanSemanticsVisitor(true).eval(robustSkorZ2).eval(3, 500, sequence);
 
                 System.out.println(" ");
                 System.out.println("\n robustF evaluation at " + threshold + ": " + robValue);
@@ -822,8 +846,8 @@ public class Main_Skorokhod {
                 index++;
             }
 
-            Util.writeToCSV("./AS_evalR.csv",robustnessEvaluationsMaxInt);
-            Util.writeToCSV("./AS_evalR.csv",robustnessEvaluationsSkor);
+            Util.writeToCSV("./AS_evalRMI.csv",robustnessEvaluationsMaxInt);
+            Util.writeToCSV("./AS_evalRSK.csv",robustnessEvaluationsSkor);
 
 
 
