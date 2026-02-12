@@ -684,14 +684,14 @@ public class Main_Skorokhod {
                     (a, b) -> Math.max(a, b),
                     offset->((double)offset/(double)normalisationTime),
                     leftBound,
-                    rightBound,false, resolution, false);
+                    rightBound,false, resolution, true);
 
             RevisedSkorokhodDistanceExpression skorokhodZ3 = new RevisedSkorokhodDistanceExpression(ds->ds.get(Z3)/normalisationZ3,
                     (v1, v2) -> Math.abs(v2-v1),
                     (a, b) -> Math.max(a, b),
                     offset->((double)offset/(double)normalisationTime),
                     leftBound,
-                    rightBound,false, resolution, false);
+                    rightBound,false, resolution, true);
 
 
             double[][] direct_evaluation_skorokhod_Z1 = new double[rightBound][1];
