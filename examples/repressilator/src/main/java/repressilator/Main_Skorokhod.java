@@ -394,7 +394,7 @@ public class Main_Skorokhod {
             and sample sets by class <code>SampleSet</code>.
             In this context, <code>size</code> is the cardinality of those sample sets.
             */
-            int size = 10;
+            int size = 2;
 
             /*
             The evolution sequence <code>sequence></code> created by the following instruction consists in a sequence of
@@ -748,18 +748,25 @@ public class Main_Skorokhod {
             Util.writeToCSV("./results/atomic_Z2.csv",direct_evaluation_atomic_Z2);
             Util.writeToCSV("./results/atomic_Z3.csv",direct_evaluation_atomic_Z3);
 
-
-
             int[] _offsets1 = skorokhodZ1.GetOffsetArray();
             int[] _offsets2 = skorokhodZ2.GetOffsetArray();
             int[] _offsets3 = skorokhodZ3.GetOffsetArray();
             double[][] offsets1 = new double[rightBound][1];
             double[][] offsets2 = new double[rightBound][1];
             double[][] offsets3 = new double[rightBound][1];
-            for (int i = 0; i < offsets1.length; i++) {
-                offsets1[i][0] = _offsets1[i];
-                offsets2[i][0] = _offsets2[i];
-                offsets3[i][0] = _offsets3[i];
+            for (int i = 0; i < rightBound; i++) {
+                if (i < leftBound)
+                {
+                    offsets1[i][0] = 0;
+                    offsets2[i][0] = 0;
+                    offsets3[i][0] = 0;
+                }
+                else
+                {
+                    offsets1[i][0] = _offsets1[i - leftBound];
+                    offsets2[i][0] = _offsets2[i - leftBound];
+                    offsets3[i][0] = _offsets3[i - leftBound];
+                }
             }
 
             Util.writeToCSV("./results/offsets_Z1.csv",offsets1);

@@ -48,6 +48,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
     private final int relativeRightBound;
     private final int relativeLeftBound;
     private int absoluteLeftBound;
+    private int absoluteRightBound;
     
     private final double resolution;
     private int maxOffset;
@@ -161,19 +162,45 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
     public double sampleDistance(int step, EvolutionSequence seq1, EvolutionSequence seq2)
     {
         // if this step falls outside the bounds, return regular wasserstein distance
-        if (step > absoluteLeftBound - relativeLeftBound + relativeRightBound || step < absoluteLeftBound)
+        if (step > this.absoluteRightBound || step < this.absoluteLeftBound)
         {
-            return seq1.get(step).distance(this.rho, this.distanceOperator, seq2.get(step));
+            return sample(step, 0, seq1, seq2);
         }
 
         if (this.offsets == null)
         {
             System.err.println("Call compute() first!");
-            return -1;
+            return Double.MIN_VALUE;
         }
 
+        int offsetsIndex = step - this.absoluteLeftBound;
+
+        // if the offset did not increase this step, simply evaluate using offset at desired step
+        if (offsetsIndex <= 0 || this.offsets[offsetsIndex] <= this.offsets[offsetsIndex - 1])
+        { 
+            // System.err.println(offsetsIndex);
+            return sample(step, this.offsets[offsetsIndex], seq1, seq2);
+        }
+
+        double _maxDistance = Double.MIN_VALUE;
+
+        // distance is now the maximum between all distributions that are mapped to each other.
+        // when offset id increased, all distributions in between will be mapped to each other, 
+        // as such their distances are still important.
+        for (int i = this.offsets[offsetsIndex - 1]; i < this.offsets[offsetsIndex]; i++) {
+            if (step + Math.abs(i) > this.absoluteRightBound)
+            {
+                return sample(step, 0, seq1, seq2);
+            }
+            double sample = sample(step, i, seq1, seq2);
+            if (sample > _maxDistance)
+            {
+                _maxDistance = sample;
+            }
+        }
+        // System.err.println(_maxDistance);
         // sample wasserstein distance using offset
-        return sample(step, this.offsets[step], seq1, seq2, false);
+        return _maxDistance;
     }
 
     // computes skorokhod distance, and places it in this.skorokhodDistance
@@ -183,8 +210,9 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         if (this.offsets == null)
         {
             this.absoluteLeftBound = step + this.relativeLeftBound;
+            this.absoluteRightBound = step + this.relativeRightBound;
 
-            this.offsets = new int[step + relativeRightBound + relativeLeftBound + 1];
+            this.offsets = new int[relativeRightBound - relativeLeftBound + 1];
             // store sequences that were used to compute offsets
             this.previousSeq1 = seq1;
             this.previousSeq2 = seq2;
@@ -193,14 +221,14 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
             // fill offset list
             this.skorokhodDistance = FindSkorokhodDistance(this.resolution, this.offsets, step, seq1, seq2);
 
-            if (this.minimizeAverage)
-            {
-                System.out.println("Minimising average distance");
-                Dijkstra(this.offsets, step, this.skorokhodDistance, seq1, seq2);
-            }
+            // if (this.minimizeAverage)
+            // {
+            //     System.out.println("Minimising average distance");
+            //     Dijkstra(this.offsets, step, this.skorokhodDistance, seq1, seq2);
+            // }
 
             // for safety. may be removed once algorithm is certainly correct
-            for (int i = 1; i < finalStep; i++) {
+            for (int i = 1; i < offsets.length; i++) {
                 if (offsets[i - 1] - offsets[i] > 1)
                 {
                     System.err.println("produced offsets are not monotone!");
@@ -212,27 +240,6 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         {
             System.err.println("this.offsets was not null! did not recompute skorokhod");
         }
-
-        // if the offset did not increase this step, simply return this offset
-        // if (step == 0 || this.offsets[step - 1] <= offsets[step])
-        // {
-        //     return sample(step, this.offsets[step], seq1, seq2);
-        // }
-
-        // double _maxDistance = Double.MIN_VALUE;
-
-        // // distance is now the maximum between all distributions that are mapped to each other.
-        // // when we increase offset, all distributions in between will be mapped to each other.
-        // for (int i = this.offsets[step - 1]; i < offsets[step]; i++) {
-        //     double sample = sample(step, this.offsets[i], seq1, seq2);
-        //     if (sample > _maxDistance)
-        //     {
-        //         _maxDistance = sample;
-        //     }
-        // }
-
-        // // sample wasserstein distance using offset
-        // return _maxDistance;
     }
 
     /**
@@ -289,13 +296,13 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         this.minOffset = Integer.MAX_VALUE;
         this.firstOffset = Integer.MAX_VALUE;
         int _offset = 0;
-        int currentStep = this.relativeLeftBound + step;
+        int currentStep = this.absoluteLeftBound;
         // stop checking once one of the sequences would be sampled beyond the right bound.
-        while (currentStep + Math.abs(_offset) <= this.relativeRightBound + step)
+        while (currentStep + Math.abs(_offset) <= this.absoluteRightBound)
         {
             // calculate distance at this step, using normalised distance and time
             double timeOffset = rho2.applyAsDouble(Math.abs(_offset));
-            double sampledDistance = sample(currentStep, _offset, seq1, seq2, false);
+            double sampledDistance = sample(currentStep, _offset, seq1, seq2);
             double mu = this.muLogic.applyAsDouble(timeOffset, sampledDistance);
 
             // increase offset if distance is too large
@@ -303,13 +310,13 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
                 _offset++;
                 timeOffset = rho2.applyAsDouble(Math.abs(_offset));
                 // if new offset exceeds bounds, no offset was found within bounds that still meets the max distance
-                if (timeOffset > maxDistance || currentStep + Math.abs(_offset) > this.relativeRightBound + step)
+                if (timeOffset > maxDistance || currentStep + Math.abs(_offset) > this.absoluteRightBound)
                 {
                     return false;
                 }
 
                 // recalculate mu using increased offset
-                sampledDistance = sample(currentStep, _offset, seq1, seq2, false);
+                sampledDistance = sample(currentStep, _offset, seq1, seq2);
                 mu = this.muLogic.applyAsDouble(timeOffset, sampledDistance);
             }
             if (this.firstOffset == Integer.MAX_VALUE)
@@ -317,7 +324,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
                 this.firstOffset = _offset;
             }
 
-            _offsets[currentStep] = _offset;
+            _offsets[currentStep - this.absoluteLeftBound] = _offset;
             // if this offset is min or max, store it.
             if (_offset < this.minOffset ) this.minOffset = _offset;
             if (_offset > this.maxOffset ) this.maxOffset = _offset;
@@ -328,17 +335,9 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         this.finalStep = currentStep - 1; // -1 since step++ is done after last offset is stored
 
         // fill remaining steps on right with offset of 0, these steps should not be included in robustness analysis
-        while (currentStep <= this.relativeRightBound + step)
+        while (currentStep <= this.absoluteRightBound)
         {
-            _offsets[currentStep] = 0;
-            currentStep++;
-        }
-
-        // before left bound, offset = 0
-        currentStep = 0;
-        while (currentStep < this.relativeLeftBound + step)
-        {
-            _offsets[currentStep] = 0;
+            _offsets[currentStep - this.absoluteLeftBound] = 0;
             currentStep++;
         }
 
@@ -402,7 +401,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         }
 
         // + 1 such that the final step is included
-        int size = this.finalStep - this.relativeLeftBound - step + 1;
+        int size = this.relativeRightBound - this.relativeLeftBound + 1;
         this.PFTable = new double[size][offsetSpan];
 
         double inf = Double.MAX_VALUE / 4;
@@ -433,7 +432,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
                     if (neighbourStep + Math.abs(neighbourOffset) <= this.relativeRightBound + step)
                     {
                         double timeOffset = rho2.applyAsDouble(Math.abs(neighbourOffset));
-                        double neighbourDistance = sample(neighbourStep, neighbourOffset, seq1, seq2, false);
+                        double neighbourDistance = sample(neighbourStep, neighbourOffset, seq1, seq2);
                         double mu = this.muLogic.applyAsDouble(timeOffset, neighbourDistance);
                         
                         // if the distance exceeds skorokhod distance, set it to infinity
@@ -476,7 +475,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
                     bestOffset = i + this.minOffset;
                 }
             }
-            _offsets[currentStep + relativeLeftBound + step] = bestOffset;
+            _offsets[currentStep] = bestOffset;
             // add one because the path may decrease offset once per step
             PrevNodeOffset = Math.min(bestOffset + 1, this.maxOffset);
         }
@@ -496,10 +495,9 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
      * @param offset one of the sequences will be sampled at an offset from the other
      * @param seq1 an evolution sequence
      * @param seq2 the other evolution sequence
-     * @param relative if true, sequence is sampled at step + absoluteLeftBound (relative to the left bound), if false, it is sampled at step (interpreted as an absolute step)
      * @return the wasserstein distance between 2 sequences
      */
-    private double sample(int step, int offset, EvolutionSequence seq1, EvolutionSequence seq2, boolean relative)
+    private double sample(int step, int offset, EvolutionSequence seq1, EvolutionSequence seq2)
     {
         // if a negative offset is provided, simply temporarily swap the direction with which we sample
         boolean swapDirection = false;
@@ -512,16 +510,10 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         // XOR swapdirection and this.direction, resulting in swapped direction if swapdirection = true.
         boolean useForwardDirection = this.direction ^ swapDirection;
 
-        int stepToUse = step;
-        if (relative)
-        {
-            stepToUse = step + this.absoluteLeftBound;
-        }
-
         // if forward direction, iterate over seq2 by adding the offset to its index
         // else iterate over seq 1
-        int indexSeq1 = useForwardDirection ? stepToUse           : stepToUse + offset;
-        int indexSeq2 = useForwardDirection ? stepToUse + offset  : stepToUse;
+        int indexSeq1 = useForwardDirection ? step           : step + offset;
+        int indexSeq2 = useForwardDirection ? step + offset  : step;
 
         // do not use DPTable before left bound
         if (indexSeq1 < this.absoluteLeftBound || indexSeq2 < this.absoluteLeftBound)
