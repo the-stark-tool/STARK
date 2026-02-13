@@ -486,6 +486,8 @@ public class Main_Skorokhod {
             int replica= 5;
 
 
+
+            /*
             System.out.println("");
             System.out.println("Simulation of nominal and perturbed system");
             System.out.println("");
@@ -550,6 +552,8 @@ public class Main_Skorokhod {
             Util.writeToCSV("./AS_new_pplotX3.csv",plot_px3);
 
 
+             */
+
             /*
 
             While in the previous lines of code the average values of variables obtained step-by-step are stored in
@@ -557,6 +561,7 @@ public class Main_Skorokhod {
 
              */
 
+            /*
             System.out.println("");
             System.out.println("Simulation of nominal system - data average values:");
             System.out.println("");
@@ -566,6 +571,8 @@ public class Main_Skorokhod {
             System.out.println("");
             printAvgDataPerturbed(rand, L, F, system, N, size, 0, N, itZ1TranslRate(x, w1, w2, replica));
 
+
+             */
 
 
             /*
