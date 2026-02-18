@@ -273,8 +273,9 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         int _offset = 0;
         int currentStep = this.absoluteLeftBound;
         // stop checking once one of the sequences would be sampled beyond the right bound.
-        while (currentStep + _offset <= this.absoluteRightBound && currentStep <= this.absoluteRightBound)
-        {
+        //while (currentStep + _offset <= this.absoluteRightBound && currentStep <= this.absoluteRightBound)
+
+        while (currentStep <= this.absoluteRightBound) {
             // calculate distance at this step, using normalised distance and time
             double timeOffset = rho2.applyAsDouble(Math.abs(_offset));
             double sampledDistance = sample(currentStep, _offset);
