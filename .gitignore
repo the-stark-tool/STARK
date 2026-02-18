@@ -32,3 +32,4 @@ build
 
 .idea
 *.png
+.vscode/launch.json
