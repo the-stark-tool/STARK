@@ -112,7 +112,9 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         // int size = this.intervalSize + 1;
         // rho2.applyAsDouble(Math.abs(_offset))
         int size_1 = this.intervalSize + 1;
-        int size_2 = maxIntervalScale * (this.intervalSize +1);
+        int size_2 = this.maxIntervalScale * (this.intervalSize +1);
+        System.out.println(size_1);
+        System.out.println(size_2);
 
         // + 1 since leftbount = 0, rightbound = 1 should result in 2 (by 2) wasserstein distances
         this.DPTable = new double[size_1][size_2];
@@ -301,7 +303,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
                 timeOffset = rho2.applyAsDouble(Math.abs(_offset));
                 // if new offset exceeds bounds, no offset was found within bounds that still meets the max distance
                 //if ((_offset > 0 && timeOffset > maxDistance) || currentStep + _offset > this.absoluteRightBound)
-                if ((_offset > 0 && timeOffset > maxDistance) || currentStep + _offset <= this.absoluteRightInterval)
+                if ((_offset > 0 && timeOffset > maxDistance) || currentStep + _offset > this.absoluteRightInterval)
                 {
                     return false;
                 }
@@ -546,10 +548,11 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
      */
     private void ResetDPTable()
     {
-        for (int i = 0; i < this.intervalSize + 1; i++) {
-            for (int j = 0; j < this.intervalSize + 1; j++) {
+        for (int i = 0; i < this.intervalSize + 1; i++) { // was this.intervalSize + 1;
+            for (int j = 0; j < this.maxIntervalScale * (this.intervalSize +1) ; j++) { // was this.intervalSize + 1;
                 this.DPTable[i][j] = -1;
             }
         }
     }
+
 }
