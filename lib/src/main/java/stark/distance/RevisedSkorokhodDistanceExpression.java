@@ -289,7 +289,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         this.maxOffset = Integer.MIN_VALUE;
         this.minOffset = Integer.MAX_VALUE;
         this.firstOffset = Integer.MAX_VALUE;
-        int _offset = -this.relativeLeftBound;
+        int _offset = - this.leftRetimingDecrement;
         int currentStep = this.absoluteLeftBound;
         // stop checking once one of the sequences would be sampled beyond the right bound.
         //while (currentStep + _offset <= this.absoluteRightBound && currentStep <= this.absoluteRightBound)
