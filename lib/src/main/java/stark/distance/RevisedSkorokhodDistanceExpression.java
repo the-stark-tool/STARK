@@ -38,9 +38,11 @@ import stark.ds.DataStateExpression;
  */
 public final class RevisedSkorokhodDistanceExpression implements DistanceExpression {
 
-    private final int maxIntervalScale;
-    private int absoluteRightInterval;
+    //private final int maxIntervalScale;
+    //private int absoluteRightInterval;
 
+    private final int leftRetimingDecrement;
+    private final int rightRetimingIncrement;
     private final DataStateExpression rho; // used to normalize distance
     private final ToDoubleFunction<Integer> rho2; // used to normalize time
     private final DoubleBinaryOperator distanceOperator;
@@ -86,9 +88,10 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
      * @param minimizeAverge Wether to minimize the average distance (without increasing the Skorokhod distance) using Dijkstra's algorithm
      */
     public RevisedSkorokhodDistanceExpression(DataStateExpression rho, DoubleBinaryOperator distance, DoubleBinaryOperator muLogic ,ToDoubleFunction<Integer> rho2,
-                                       int leftBound, int rightBound, boolean direction, double resolution, boolean minimizeAverge, int maxIntervalScale) {
+                                       int leftBound, int rightBound, boolean direction, double resolution, boolean minimizeAverge, int leftRetimingDecrement, int rightRetimingIncrement) {
 
-        this.maxIntervalScale = maxIntervalScale;
+        this.leftRetimingDecrement = leftRetimingDecrement;
+        this.rightRetimingIncrement = rightRetimingIncrement;
         this.rho = rho;
         this.rho2 = rho2;
         this.distanceOperator = distance;
@@ -112,7 +115,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         // int size = this.intervalSize + 1;
         // rho2.applyAsDouble(Math.abs(_offset))
         int size_1 = this.intervalSize + 1;
-        int size_2 = this.maxIntervalScale * (this.intervalSize +1);
+        int size_2 = this.intervalSize + 1 + this.rightRetimingIncrement + this.leftRetimingDecrement;
         System.out.println(size_1);
         System.out.println(size_2);
 
@@ -203,11 +206,11 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         {
             this.absoluteRightBound = step + this.relativeRightBound;
             this.absoluteLeftBound = step + this.relativeLeftBound;
-            this.absoluteRightInterval = (step + this.relativeRightBound) + (this.maxIntervalScale-1)*(this.relativeRightBound-this.relativeLeftBound);
+            //this.absoluteRightInterval = (step + this.relativeRightBound) + (this.maxIntervalScale-1)*(this.relativeRightBound-this.relativeLeftBound);
 
             System.out.println("this.absoluteRightBound = " + this.absoluteRightBound);
             System.out.println("this.absoluteLeftBound = " + this.absoluteLeftBound);
-            System.out.println("this.absoluteRightInterval = " + this.absoluteRightInterval);
+            //System.out.println("this.absoluteRightInterval = " + this.absoluteRightInterval);
 
             this.offsets = new int[step + relativeRightBound + relativeLeftBound + 1];
             // store sequences that were used to compute offsets
@@ -286,12 +289,12 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         this.maxOffset = Integer.MIN_VALUE;
         this.minOffset = Integer.MAX_VALUE;
         this.firstOffset = Integer.MAX_VALUE;
-        int _offset = 0;
+        int _offset = -this.relativeLeftBound;
         int currentStep = this.absoluteLeftBound;
         // stop checking once one of the sequences would be sampled beyond the right bound.
         //while (currentStep + _offset <= this.absoluteRightBound && currentStep <= this.absoluteRightBound)
 
-        while (currentStep <= this.absoluteRightBound && currentStep + _offset <= this.absoluteRightInterval) {
+        while (currentStep <= this.absoluteRightBound && currentStep + _offset <= this.absoluteRightBound + this.rightRetimingIncrement) {
             // calculate distance at this step, using normalised distance and time
             double timeOffset = rho2.applyAsDouble(Math.abs(_offset));
             double sampledDistance = sample(currentStep, _offset);
@@ -303,7 +306,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
                 timeOffset = rho2.applyAsDouble(Math.abs(_offset));
                 // if new offset exceeds bounds, no offset was found within bounds that still meets the max distance
                 //if ((_offset > 0 && timeOffset > maxDistance) || currentStep + _offset > this.absoluteRightBound)
-                if ((_offset > 0 && timeOffset > maxDistance) || currentStep + _offset > this.absoluteRightInterval)
+                if ((_offset > -leftRetimingDecrement && timeOffset > maxDistance) || currentStep + _offset > this.absoluteRightBound + this.rightRetimingIncrement)
                 {
                     return false;
                 }
@@ -549,7 +552,7 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
     private void ResetDPTable()
     {
         for (int i = 0; i < this.intervalSize + 1; i++) { // was this.intervalSize + 1;
-            for (int j = 0; j < this.maxIntervalScale * (this.intervalSize +1) ; j++) { // was this.intervalSize + 1;
+            for (int j = 0; j < this.intervalSize + 1 + rightRetimingIncrement + leftRetimingDecrement; j++) { // was this.intervalSize + 1;
                 this.DPTable[i][j] = -1;
             }
         }

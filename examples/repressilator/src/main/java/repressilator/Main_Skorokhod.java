@@ -723,7 +723,7 @@ public class Main_Skorokhod {
                         //(a, b) -> b,
                         (a, b) -> Math.max(a, b),
                         offset -> ((double) offset / (double) normalisationTime),
-                        leftBound, rightBound, true, 0.001, true, 3);
+                        leftBound, rightBound, true, 0.001, true, 0, 400);
 
                 int step = i+500;
 
@@ -757,7 +757,7 @@ public class Main_Skorokhod {
                         //(a, b) -> b,
                         (a, b) -> Math.max(a, b),
                         offset -> ((double) offset / (double) normalisationTime),
-                        leftBound, rightBound, true, 0.001, true, 3);
+                        leftBound, rightBound, true, 0.001, true, 0, 400);
 
                 int step = i+500;
 
