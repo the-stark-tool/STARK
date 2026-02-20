@@ -116,8 +116,8 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
         // rho2.applyAsDouble(Math.abs(_offset))
         int size_1 = this.intervalSize + 1;
         int size_2 = this.intervalSize + 1 + this.rightRetimingIncrement + this.leftRetimingDecrement;
-        System.out.println(size_1);
-        System.out.println(size_2);
+        // System.out.println(size_1);
+        // System.out.println(size_2);
 
         // + 1 since leftbount = 0, rightbound = 1 should result in 2 (by 2) wasserstein distances
         this.DPTable = new double[size_1][size_2];
@@ -208,16 +208,16 @@ public final class RevisedSkorokhodDistanceExpression implements DistanceExpress
             this.absoluteLeftBound = step + this.relativeLeftBound;
             //this.absoluteRightInterval = (step + this.relativeRightBound) + (this.maxIntervalScale-1)*(this.relativeRightBound-this.relativeLeftBound);
 
-            System.out.println("this.absoluteRightBound = " + this.absoluteRightBound);
-            System.out.println("this.absoluteLeftBound = " + this.absoluteLeftBound);
-            //System.out.println("this.absoluteRightInterval = " + this.absoluteRightInterval);
+            // System.out.println("this.absoluteRightBound = " + this.absoluteRightBound);
+            // System.out.println("this.absoluteLeftBound = " + this.absoluteLeftBound);
+            // System.out.println("this.absoluteRightInterval = " + this.absoluteRightInterval);
 
             this.offsets = new int[step + relativeRightBound + relativeLeftBound + 1];
             // store sequences that were used to compute offsets
             this.sequence1 = seq1;
             this.sequence2 = seq2;
 
-            System.out.println("\nDetermining offsets\n");
+            // System.out.println("\nDetermining offsets\n");
             // fill offset list
             this.skorokhodDistance = FindSkorokhodDistance(this.resolution);
 

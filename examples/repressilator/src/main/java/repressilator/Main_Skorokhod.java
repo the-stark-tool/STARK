@@ -499,6 +499,8 @@ public class Main_Skorokhod {
             double[][] plot_x2 = new double[N][1];
             double[][] plot_x3 = new double[N][1];
 
+
+
             double[][] data = SystemState.sample(rand, F, system, N, size);
             for (int i = 0; i<N; i++){
                 plot_z1[i][0] = data[i][3];
@@ -551,12 +553,15 @@ public class Main_Skorokhod {
 
 
 
+
+
             /*
 
             While in the previous lines of code the average values of variables obtained step-by-step are stored in
             .cvs files, the following portion of code allows us to print them.
 
              */
+
 
 
             System.out.println("");
@@ -567,6 +572,8 @@ public class Main_Skorokhod {
             System.out.println("Simulation of perturbed system - data average values:");
             System.out.println("");
             printAvgDataPerturbed(rand, L, F, system, N, size, 0, N, itZ1TranslRate(x, w1, w2, replica));
+
+
 
 
 
@@ -626,7 +633,7 @@ public class Main_Skorokhod {
             EvolutionSequence sequence_p = sequence.apply(itZ1TranslRate(x, w1, w2, replica), 0, scale);
 
 
-            System.out.println("Step-by-step evaluation of distances between nominal and perturbed system");
+            //System.out.println("Step-by-step evaluation of distances between nominal and perturbed system");
 
 
             int normalisationTime = 2000;
@@ -663,6 +670,14 @@ public class Main_Skorokhod {
 
             int leftBound = 0;
             int rightBound = 200;
+
+
+
+            System.out.println("");
+            System.out.println("");
+            System.out.println("Estimating resilience: step-by-step distances between nominal and perturbed system");
+            System.out.println("");
+            System.out.println("");
 
             for (int i = 0; i < 300; i++) {
 
@@ -744,6 +759,11 @@ public class Main_Skorokhod {
             }
 
 
+            System.out.println("");
+            System.out.println("");
+            System.out.println("Estimating robustness: step-by-step distances between perturbed and nominal system");
+            System.out.println("");
+            System.out.println("");
 
             for (int i = 0; i < 300; i++) {
 
