@@ -20,11 +20,12 @@
  * limitations under the License.
  */
 
-package autonomous.driving.AI;
+package monitoring;
 
-import stark.ds.DataState;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import stark.PerceivedSystemState;
+import stark.ds.DataState;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -51,9 +52,9 @@ public class AiState {
 
     protected final JSONObject state;
 
-    public AiState(JSONObject state, Connector connector) {
+    public AiState(JSONObject state, int historyIndex) {
         this.state = state;
-        this.historyIndex = connector.addAiStateToHistory(this);
+        this.historyIndex = historyIndex;
     }
 
    protected JSONObject toJson(){
@@ -143,7 +144,7 @@ public class AiState {
     }
 
     private int[] getDataStateIndexes(int column, int offset) {
-        if (originalValuesCount == -1){
+        if (offset == originalValuesCount && originalValuesCount==-1){
             throw new RuntimeException("Calling for perturbed datastate indexes before creating a datastate");
         }
         int[] m = new int[this.getCarCount()];
@@ -208,6 +209,10 @@ public class AiState {
             values.put(originalValuesCount + i, values.get(NUMBER_OF_NON_CAR_VALUES+i));
         }
         return new DataState(values.size(), i -> values.getOrDefault(i, Double.NaN));
+    }
+
+    public PerceivedSystemState getAsPerceivedSystemState(){
+        return new PerceivedSystemState(this.getDataState());
     }
 
 }
