@@ -32,21 +32,24 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
-public class Connector {
+public class HTTPConnector implements MonitoringAIStateProvider {
     private final String baseUrl;
-    private final ArrayList<ArrayList<AiState>> aiStates;
+    private final int sampleSize;
+    private final ArrayList<ArrayList<MonitoringAiState>> aiStates;
 
-    public Connector(String baseUrl) {
+    public HTTPConnector(String baseUrl, int sampleSize) {
         this.baseUrl = baseUrl;
+        this.sampleSize = sampleSize;
         aiStates = new ArrayList<>();
     }
 
-    public ArrayList<AiState> readInitialState(){
+
+    public ArrayList<MonitoringAiState> readInitialState(){
         aiStates.clear();
         return doNext(getInitConnection());
     }
 
-    public synchronized ArrayList<AiState> getAIStates(int timestep){
+    public synchronized ArrayList<MonitoringAiState> getAIStates(int timestep){
         while (aiStates.size() <= timestep){
             doNext(getStepConnection());
         }
@@ -56,19 +59,19 @@ public class Connector {
     private HttpURLConnection getInitConnection() {
         HttpURLConnection initConnection;
         try {
-            initConnection = (HttpURLConnection) new URL(baseUrl + "/reset").openConnection();
+            initConnection = (HttpURLConnection) new URL(baseUrl + "/reset?sample_size=" + sampleSize).openConnection();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
         return initConnection;
     }
 
-    private ArrayList<AiState> doNext(HttpURLConnection connection){
+    private ArrayList<MonitoringAiState> doNext(HttpURLConnection connection){
         JSONObject jsonStates = doGET(connection);
         org.json.JSONArray array = jsonStates.getJSONArray("states");
-        ArrayList<AiState> states = new ArrayList<>();
+        ArrayList<MonitoringAiState> states = new ArrayList<>();
         for (int i = 0; i < array.length(); i++) {
-            states.add(new AiState(array.getJSONObject(i), aiStates.size()));
+            states.add(new MonitoringAiState(array.getJSONObject(i), aiStates.size()));
         }
         aiStates.add(states);
         return states;
@@ -77,7 +80,7 @@ public class Connector {
     private HttpURLConnection getStepConnection() {
         HttpURLConnection stepConnection;
         try {
-            stepConnection = (HttpURLConnection) new URL(baseUrl + "/step").openConnection();
+            stepConnection = (HttpURLConnection) new URL(baseUrl + "/step?sample_size=" + sampleSize).openConnection();
             stepConnection.setDoOutput(true);
         } catch (IOException e) {
             throw new RuntimeException(e);

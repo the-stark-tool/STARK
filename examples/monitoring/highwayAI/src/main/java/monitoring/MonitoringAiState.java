@@ -31,14 +31,21 @@ import java.util.HashMap;
 import java.util.Map;
 
 
-public class AiState {
+public class MonitoringAiState {
     // expected features: ['presence', 'x', 'y', 'vx', 'vy']
+    // sample observation: Relative to ego car, unnormalized
+//    [ [  1.        180.58331     8.         29.14556     0.       ]
+//      [  1.         19.14256    -4.         -6.714924    0.       ]
+//      [  1.         40.12648    -8.        -12.395373    0.       ]
+//      [  1.         63.717155   -8.        -11.642069    0.       ]
+//      [  1.         87.08581    -8.        -13.0664015   0.       ]]
 
     private static final int PRESENCE_COLUMN = 0;
     private static final int X_POSITION_COLUMN = 1;
-    private static final int Y_SPEED_COLUMN = 2;
+    private static final int Y_POSITION_COLUMN =  2;
     private static final int X_SPEED_COLUMN = 3;
-    private static final int Y_POSITION_COLUMN =  4;
+    private static final int Y_SPEED_COLUMN = 4;
+
 
 
     private int originalValuesCount = -1; // includes non car values
@@ -52,7 +59,7 @@ public class AiState {
 
     protected final JSONObject state;
 
-    public AiState(JSONObject state, int historyIndex) {
+    public MonitoringAiState(JSONObject state, int historyIndex) {
         this.state = state;
         this.historyIndex = historyIndex;
     }
@@ -144,7 +151,7 @@ public class AiState {
     }
 
     private int[] getDataStateIndexes(int column, int offset) {
-        if (offset == originalValuesCount && originalValuesCount==-1){
+        if (offset == originalValuesCount && originalValuesCount==-1) {
             throw new RuntimeException("Calling for perturbed datastate indexes before creating a datastate");
         }
         int[] m = new int[this.getCarCount()];
