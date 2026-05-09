@@ -50,18 +50,19 @@ public class MonitoringAiState {
 
     private int originalValuesCount = -1; // includes non car values
 
-    public static final int DATASTATE_INDEX_FOR_HISTORY_INDEX = 0;
+    // Index of the datastate element that stores the simulation step that the datastate belongs to
+    public static final int DATASTATE_INDEX_FOR_TIMESTEP = 0;
     protected static final int DATASTATE_INDEX_FOR_CRASHES = 1;
 
     private static final int NUMBER_OF_NON_CAR_VALUES = 2;
 
-    private final int historyIndex;
+    private final int timestep;
 
     protected final JSONObject state;
 
-    public MonitoringAiState(JSONObject state, int historyIndex) {
+    public MonitoringAiState(JSONObject state, int timestep) {
         this.state = state;
-        this.historyIndex = historyIndex;
+        this.timestep = timestep;
     }
 
    protected JSONObject toJson(){
@@ -192,7 +193,7 @@ public class MonitoringAiState {
 
         Map<Integer, Double> values = new HashMap<>();
 
-        values.put(DATASTATE_INDEX_FOR_HISTORY_INDEX, (double) this.historyIndex);
+        values.put(DATASTATE_INDEX_FOR_TIMESTEP, (double) this.timestep);
         values.put(DATASTATE_INDEX_FOR_CRASHES, (double) getCrashes());
 
         for (int i = 0; i < carCount; i++) {

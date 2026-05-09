@@ -30,7 +30,7 @@ public class JSONFileReader implements MonitoringAIStateProvider {
     }
 
     @Override
-    public ArrayList<MonitoringAiState> getAIStates(int timestep) {
+    public synchronized ArrayList<MonitoringAiState> getAIStates(int timestep) {
         while (aiStates.size() <= timestep){
             getNext();
         }
@@ -55,8 +55,9 @@ public class JSONFileReader implements MonitoringAIStateProvider {
 
         org.json.JSONArray array = jsonStates.getJSONArray("states");
         ArrayList<MonitoringAiState> states = new ArrayList<>();
+        int timestep = aiStates.size();
         for (int i = 0; i < array.length(); i++) {
-            states.add(new MonitoringAiState(array.getJSONObject(i), aiStates.size()));
+            states.add(new MonitoringAiState(array.getJSONObject(i), timestep));
         }
         aiStates.add(states);
         return states;
