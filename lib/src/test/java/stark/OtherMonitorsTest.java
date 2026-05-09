@@ -22,7 +22,6 @@
 
 package stark;
 
-
 import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
 import stark.distl.*;
