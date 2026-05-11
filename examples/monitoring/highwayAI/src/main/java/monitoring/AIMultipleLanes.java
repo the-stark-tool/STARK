@@ -36,6 +36,8 @@ import stark.ds.*;
 import stark.monitors.DefaultMonitorBuilder;
 import stark.monitors.DefaultUDisTLMonitor;
 import stark.udistl.UDisTLFormula;
+import stark.udistl.UnboundedAlwaysuDisTLFormula;
+import stark.udistl.UnboundedEventuallyuDisTLFormula;
 import stark.udistl.UnboundedUntiluDisTLFormula;
 
 import java.io.OutputStream;
@@ -65,7 +67,7 @@ public class AIMultipleLanes {
 
 //    private static MonitoringAIStateProvider provider = new HTTPConnector("http://127.0.0.1:6000", EVOLUTION_SEQUENCE_SIZE);
     private static final MonitoringAIStateProvider provider =
-        new JSONFileReader("/home/sebastian/Desktop/monitoring/implementation/highway-env-ai-server/fast/observations/crash.json");
+        new JSONFileReader("examples/monitoring/highwayAI/src/main/resources/crash.json");
 
     private String experimentName;
     private static final String RESULTS_FOLDER = "./monitoring";
@@ -92,76 +94,17 @@ public class AIMultipleLanes {
         double threshold = 0.0;
         DefaultMonitorBuilder defaultMonitorBuilder = new DefaultMonitorBuilder(EVOLUTION_SEQUENCE_SIZE, false);
 
-        runCrashExperiment(sequence, threshold, defaultMonitorBuilder); // done
-        runSafetyGapExperiment(sequence, threshold, defaultMonitorBuilder); // done
-        runDesiredSpeedExperiment(sequence, threshold, defaultMonitorBuilder);  // done, crashing scenario not interesting
-        runSpeedLimitExperiment(sequence, threshold, defaultMonitorBuilder); // done
-        runFreeWayExperiment(sequence, threshold, defaultMonitorBuilder); // done
+//        runCrashExperiment(sequence, threshold, defaultMonitorBuilder); // done
+//        runSafetyGapExperiment(sequence, threshold, defaultMonitorBuilder); // done
+        runNoSafetyGapImpliesCrashExperiment(sequence, threshold, defaultMonitorBuilder);
+//        runDesiredSpeedExperiment(sequence, threshold, defaultMonitorBuilder);  // done, crashing scenario not interesting
+//        runSpeedLimitExperiment(sequence, threshold, defaultMonitorBuilder); // done
+//        runFreeWayExperiment(sequence, threshold, defaultMonitorBuilder); // done
 
     }
 
 
 
-
-    private void runFreeWayExperiment(EvolutionSequence sequence, double threshold, DefaultMonitorBuilder defaultMonitorBuilder) {
-        // free way
-        // mu : dirac, centered around a state where ego car has free lane (i.e. no car overlaps with the space in front of the ego car)
-        DataStateFunction muFW = (rg, ds) -> {
-            int controlledVehicle = provider.getAIStates((int) ds.get(MonitoringAiState.DATASTATE_INDEX_FOR_TIMESTEP)).get(0).getControlledVehicleIndex();
-            List<DataStateUpdate> updates = new LinkedList<>();
-
-            for (int other = 0; other < observedCarCount; other++) {
-                // position of other is relative to ego's
-                double xOtherDistance = ds.get(xPosition[other]);
-                double yOtherDistance = ds.get(yPosition[other]);
-                if (other != controlledVehicle
-                    && 0 < xOtherDistance // If x is positive then other is ahead of ego
-                    && Math.abs(yOtherDistance) < VEHICLE_WIDTH // Other is in the way of ego if relative y pos of other is less VEHICLE_WIDTH
-                ) {
-                    // sign of yOtherDistance tells us where to move the blocking car
-                    if(yOtherDistance < 0){
-                        // if relative x position of other is negative, other is below ego's center, move other down
-                        updates.add(new DataStateUpdate(yPosition[other], yPosition[other] - VEHICLE_WIDTH));
-                    } else {
-                        // otherwise move other up
-                        updates.add(new DataStateUpdate(yPosition[other], yPosition[other] + VEHICLE_WIDTH));
-                    }
-                }
-            }
-            return ds.apply(updates);
-        };
-        // Penalty function is 0 iff there is no cars in front of ego.
-        // Otherwise, penalty is 1 minus normalized distance from ego to the closest car in front and in the same lane
-        DataStateExpression penaltyFW = (DataState ds) -> {
-            int controlledVehicle = provider.getAIStates((int) ds.get(MonitoringAiState.DATASTATE_INDEX_FOR_TIMESTEP)).get(0).getControlledVehicleIndex();
-            double xEgo = ds.get(xPosition[controlledVehicle]);
-            double yEgo = ds.get(yPosition[controlledVehicle]);
-            // initial value is maximum distance between ego and a car in front
-            double minXDistance = X_RANGE[1];
-            for (int other = 0; other < observedCarCount; other++) {
-                double xOtherDistance = ds.get(xPosition[other]);
-                double yOtherDistance = ds.get(yPosition[other]);
-                // other is in front of ego if relative x position of other is positive
-                if (other != controlledVehicle
-                        && 0 < xOtherDistance // If x is positive then other is ahead of ego
-                        && Math.abs(yOtherDistance) < VEHICLE_WIDTH // Other is in the way of ego if relative y pos of other is less VEHICLE_WIDTH
-                ) {
-                    if(xOtherDistance < minXDistance ){
-                        minXDistance = xOtherDistance;
-                    }
-                }
-            }
-            return 1 - (minXDistance / X_RANGE[1] );
-        };
-        TargetDisTLFormula atomicFW = new TargetDisTLFormula(muFW, penaltyFW, threshold);
-        UDisTLFormula eventuallyFW = new UnboundedUntiluDisTLFormula(
-                        new TrueDisTLFormula(),
-                        atomicFW
-                );
-//        UDisTLFormula alwaysFW = new AlwaysDisTLFormula(atomicFW, 0, 200);
-        DefaultUDisTLMonitor mFW = defaultMonitorBuilder.build(eventuallyFW);
-        printMonitoringSummary(sequence, mFW, STEPS_TO_SAMPLE, "mFWrS", System.out);
-    }
 
     private void runCrashExperiment(EvolutionSequence sequence, double threshold, DefaultMonitorBuilder defaultMonitorBuilder) {
         //crash
@@ -172,14 +115,91 @@ public class AIMultipleLanes {
         };
         // Penalizes when the controlled car crashes with the vehicle in front or behind
         DataStateExpression penaltyCrash = (ds) -> ds.get(crashes) > 0.0 ? 1.0 : 0.0;
-        BrinkDisTLFormula atomicCrash = new BrinkDisTLFormula(muCrash, penaltyCrash, threshold);
-        UDisTLFormula alwaysCrash = new NegationDisTLFormula(new UnboundedUntiluDisTLFormula(
-                new TrueDisTLFormula(),
-                new NegationDisTLFormula(
-                        atomicCrash
-                )));
+        BrinkDisTLFormula atomicNoCrash = new BrinkDisTLFormula(muCrash, penaltyCrash, threshold);
+
+//        UDisTLFormula alwaysCrash = new NegationDisTLFormula(new UnboundedUntiluDisTLFormula(
+//                new TrueDisTLFormula(),
+//                new NegationDisTLFormula(
+//                        atomicNoCrash
+//                )));
+        UDisTLFormula alwaysCrash = new UnboundedAlwaysuDisTLFormula(atomicNoCrash);
         DefaultUDisTLMonitor mCrash = defaultMonitorBuilder.build(alwaysCrash);
         printMonitoringSummary(sequence, mCrash, STEPS_TO_SAMPLE, "mCrash", System.out);
+    }
+
+    private void runNoSafetyGapImpliesCrashExperiment(EvolutionSequence sequence, double threshold, DefaultMonitorBuilder defaultMonitorBuilder) {
+        // safety gap
+        // mu : dirac around datastate where all cars on the same lane as ego are exactly at RSS Safety Gap distance
+        DataStateFunction muSG = (rg, ds) -> {
+            int controlledVehicle = provider.getAIStates((int) ds.get(MonitoringAiState.DATASTATE_INDEX_FOR_TIMESTEP)).get(0).getControlledVehicleIndex();
+            List<DataStateUpdate> updates = new LinkedList<>();
+            for (int other = 0; other < observedCarCount; other++) {
+                double otherY = ds.get(yPosition[other]);
+                // other is in the same lane as ego if other relative distance to ego's center is less than VEHICLE WIDTH
+                if (other != controlledVehicle && Math.abs(otherY) < VEHICLE_WIDTH) {
+                    double safetyGap = computeSafetyDistance(ds, controlledVehicle, other);
+                    updates.add(new DataStateUpdate(xPosition[other], safetyGap));
+                }
+            }
+            return ds.apply(updates);
+        };
+
+        // penalize if the distance to any vehicle in the same lane is less than safety gap
+        DataStateExpression penaltySG = (ds) -> {
+            int controlledVehicle = provider.getAIStates((int) ds.get(MonitoringAiState.DATASTATE_INDEX_FOR_TIMESTEP)).get(0).getControlledVehicleIndex();
+            for (int other = 0; other < observedCarCount; other++) {
+                if (other != controlledVehicle) {
+                    double vehicleDist = ds.get(xPosition[other]);
+                    double safetyGap = computeSafetyDistance(ds, controlledVehicle, other);
+                    if(ds.get(MonitoringAiState.DATASTATE_INDEX_FOR_CRASHES) != 0){
+                        vehicleDist = vehicleDist;
+                    }
+                    if (Math.abs(vehicleDist) <= VEHICLE_LENGTH + Math.abs(safetyGap)  && Math.abs(ds.get(yPosition[other])) < VEHICLE_WIDTH) {
+                        return 1.0;
+                    }
+                }
+            }
+            return 0.0;
+        };
+
+        // penalty is max of the value r of cars in the same lane as ego, where
+        // for each car, the value r is 1 minus the ratio of the x distance to the ego car and the safety gap they should have, clipped to [0,1]
+        DataStateExpression penaltySG2 = (ds) -> {
+            int controlledVehicle = provider.getAIStates((int) ds.get(MonitoringAiState.DATASTATE_INDEX_FOR_TIMESTEP)).get(0).getControlledVehicleIndex();
+            double maxPenalty = 0;
+            for (int other = 0; other < observedCarCount; other++) {
+                if (other != controlledVehicle) {
+                    double vehicleDist = ds.get(xPosition[other]);
+                    double safetyGap = computeSafetyDistance(ds, controlledVehicle, other);
+                    // if other is on the same lane as ego
+                    if (Math.abs(ds.get(yPosition[other])) < VEHICLE_WIDTH) {
+                        double ratio = Math.abs(vehicleDist) / (VEHICLE_LENGTH + Math.abs(safetyGap));
+                        double r = 1 - Math.min(ratio, 1);
+                        if(r > maxPenalty){
+                            maxPenalty = r;
+                        }
+                    }
+                }
+            }
+            return maxPenalty;
+        };
+
+        //crash
+        DataStateFunction muCrash = (rg, ds) -> {
+            List<DataStateUpdate> updates = new LinkedList<>();
+            updates.add(new DataStateUpdate(crashes, 1.0));
+            return ds.apply(updates);
+        };
+        // Penalizes when the controlled car crashes with the vehicle in front or behind
+        DataStateExpression penaltyCrash = (ds) -> ds.get(crashes) > 0.0 ? 1.0 : 0.0;
+        TargetDisTLFormula atomicCrash = new TargetDisTLFormula(muCrash, penaltyCrash, threshold);
+
+
+        BrinkDisTLFormula atomicNoSG = new BrinkDisTLFormula(muSG, penaltySG, threshold);
+        UDisTLFormula NoSGimpliesCrash = new UnboundedAlwaysuDisTLFormula(new DisjunctionDisTLFormula(atomicNoSG, new FalseDisTLFormula()));
+        DefaultUDisTLMonitor mSG = defaultMonitorBuilder.build(NoSGimpliesCrash);
+
+        printMonitoringSummary(sequence, mSG, STEPS_TO_SAMPLE, "mSG", System.out);
     }
 
     private void runSpeedLimitExperiment(EvolutionSequence sequence, double threshold, DefaultMonitorBuilder defaultMonitorBuilder) {
@@ -308,11 +328,74 @@ public class AIMultipleLanes {
 
 
         TargetDisTLFormula atomicSG = new TargetDisTLFormula(muSG, penaltySG2, threshold);
-        UDisTLFormula alwaysSG = new AlwaysDisTLFormula(atomicSG,0,200);
+        UDisTLFormula alwaysSG = new UnboundedAlwaysuDisTLFormula(atomicSG);
         DefaultUDisTLMonitor mSG = defaultMonitorBuilder.build(alwaysSG);
 
         printMonitoringSummary(sequence, mSG, STEPS_TO_SAMPLE, "mSG", System.out);
     }
+
+
+    private void runFreeWayExperiment(EvolutionSequence sequence, double threshold, DefaultMonitorBuilder defaultMonitorBuilder) {
+        // free way
+        // mu : dirac, centered around a state where ego car has free lane (i.e. no car overlaps with the space in front of the ego car)
+        DataStateFunction muFW = (rg, ds) -> {
+            int controlledVehicle = provider.getAIStates((int) ds.get(MonitoringAiState.DATASTATE_INDEX_FOR_TIMESTEP)).get(0).getControlledVehicleIndex();
+            List<DataStateUpdate> updates = new LinkedList<>();
+
+            for (int other = 0; other < observedCarCount; other++) {
+                // position of other is relative to ego's
+                double xOtherDistance = ds.get(xPosition[other]);
+                double yOtherDistance = ds.get(yPosition[other]);
+                if (other != controlledVehicle
+                        && 0 < xOtherDistance // If x is positive then other is ahead of ego
+                        && Math.abs(yOtherDistance) < VEHICLE_WIDTH // Other is in the way of ego if relative y pos of other is less VEHICLE_WIDTH
+                ) {
+                    // sign of yOtherDistance tells us where to move the blocking car
+                    if(yOtherDistance < 0){
+                        // if relative x position of other is negative, other is below ego's center, move other down
+                        updates.add(new DataStateUpdate(yPosition[other], yPosition[other] - VEHICLE_WIDTH));
+                    } else {
+                        // otherwise move other up
+                        updates.add(new DataStateUpdate(yPosition[other], yPosition[other] + VEHICLE_WIDTH));
+                    }
+                }
+            }
+            return ds.apply(updates);
+        };
+        // Penalty function is 0 iff there is no cars in front of ego.
+        // Otherwise, penalty is 1 minus normalized distance from ego to the closest car in front and in the same lane
+        DataStateExpression penaltyFW = (DataState ds) -> {
+            int controlledVehicle = provider.getAIStates((int) ds.get(MonitoringAiState.DATASTATE_INDEX_FOR_TIMESTEP)).get(0).getControlledVehicleIndex();
+            double xEgo = ds.get(xPosition[controlledVehicle]);
+            double yEgo = ds.get(yPosition[controlledVehicle]);
+            // initial value is maximum distance between ego and a car in front
+            double minXDistance = X_RANGE[1];
+            for (int other = 0; other < observedCarCount; other++) {
+                double xOtherDistance = ds.get(xPosition[other]);
+                double yOtherDistance = ds.get(yPosition[other]);
+                // other is in front of ego if relative x position of other is positive
+                if (other != controlledVehicle
+                        && 0 < xOtherDistance // If x is positive then other is ahead of ego
+                        && Math.abs(yOtherDistance) < VEHICLE_WIDTH // Other is in the way of ego if relative y pos of other is less VEHICLE_WIDTH
+                ) {
+                    if(xOtherDistance < minXDistance ){
+                        minXDistance = xOtherDistance;
+                    }
+                }
+            }
+            return 1 - (minXDistance / X_RANGE[1] );
+        };
+        TargetDisTLFormula atomicFW = new TargetDisTLFormula(muFW, penaltyFW, threshold);
+//        UDisTLFormula eventuallyFW = new UnboundedUntiluDisTLFormula(
+//                        new TrueDisTLFormula(),
+//                        atomicFW
+//                );
+        UDisTLFormula eventuallyFW = new UnboundedEventuallyuDisTLFormula(atomicFW);
+//        UDisTLFormula alwaysFW = new AlwaysDisTLFormula(atomicFW, 0, 200);
+        DefaultUDisTLMonitor mFW = defaultMonitorBuilder.build(eventuallyFW);
+        printMonitoringSummary(sequence, mFW, STEPS_TO_SAMPLE, "mFWrS", System.out);
+    }
+
 
     private double computeSafetyDistance(DataState ds, int ego, int other){
         double vehicleDist = ds.get(xPosition[other]);
