@@ -117,8 +117,7 @@ public class TwoLanesTwoCarsAttack {
     private static final int warning = 21;     
     private static final double DANGER = 1;     
     private static final double OK = 0;  
-    private static final double SAFETY_DIST = calculateRSSSafetyDistance(MY_INIT_SPEED, OTHER_INIT_SPEED);
-    private static final double IDS_THRESHOLD = 2 * TIMER * SAFETY_DIST;
+    private static final double IDS_THRESHOLD = calculateRSSSafetyDistance(MY_INIT_SPEED, OTHER_INIT_SPEED);
 
     private static final int NUMBER_OF_VARIABLES = 22;
 
@@ -734,6 +733,7 @@ public class TwoLanesTwoCarsAttack {
         registry.set("IDS",
                 Controller.ifThenElse(
                         DataState.lessOrEqualThan(s_dist, IDS_THRESHOLD)
+                                .and(DataState.equalsTo(my_lane, other_lane))
                                 .and(DataState.equalsTo(intention, FASTER)
                                         .or(DataState.equalsTo(intention, IDLE)
                                                 .and(DataState.greaterThan(s_my_speed, 0)))),
