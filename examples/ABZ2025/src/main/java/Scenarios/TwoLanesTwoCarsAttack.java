@@ -844,6 +844,13 @@ public class TwoLanesTwoCarsAttack {
         double my_new_timer = state.get(my_timer) - 1;
         updates.add(new DataStateUpdate(my_timer, my_new_timer));
 
+        // Update sensor variables when the controller is about to read them
+        if (my_new_timer == 0) {
+            updates.add(new DataStateUpdate(s_my_speed, my_new_speed));
+            updates.add(new DataStateUpdate(s_dist, new_dist));
+            updates.add(new DataStateUpdate(s_safety_gap, new_safety_gap));
+        }
+
         if(my_new_lane==other_new_lane && Math.abs(my_new_x-other_new_x)<= VEHICLE_LENGTH){
             updates.add(new DataStateUpdate(crash,1));
         } else {
@@ -980,6 +987,13 @@ public class TwoLanesTwoCarsAttack {
 
         double my_new_timer = state.get(my_timer) - 1;
         updates.add(new DataStateUpdate(my_timer, my_new_timer));
+
+        // Update sensor variables when the controller is about to read them
+        if (my_new_timer == 0) {
+            updates.add(new DataStateUpdate(s_my_speed, my_new_speed));
+            updates.add(new DataStateUpdate(s_dist, new_dist));
+            updates.add(new DataStateUpdate(s_safety_gap, new_safety_gap));
+        }
 
         if(my_new_lane==other_new_lane && Math.abs(my_new_x-other_new_x)<= VEHICLE_LENGTH){
             updates.add(new DataStateUpdate(crash,1));
@@ -1145,6 +1159,13 @@ public class TwoLanesTwoCarsAttack {
 
         double my_new_timer = state.get(my_timer) - 1;
         updates.add(new DataStateUpdate(my_timer, my_new_timer));
+
+        // Update sensor variables when the controller is about to read them
+        if (my_new_timer == 0) {
+            updates.add(new DataStateUpdate(s_my_speed, my_new_speed));
+            updates.add(new DataStateUpdate(s_dist, new_dist));
+            updates.add(new DataStateUpdate(s_safety_gap, new_safety_gap));
+        }
 
         if(my_new_lane==other_new_lane && Math.abs(my_new_x-other_new_x)<= VEHICLE_LENGTH){
             updates.add(new DataStateUpdate(crash,1));
