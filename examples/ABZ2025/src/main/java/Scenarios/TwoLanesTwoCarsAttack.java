@@ -26,6 +26,7 @@ import stark.*;
 import stark.controller.ControllerRegistry;
 import stark.controller.ExecController;
 import stark.controller.Controller;
+import stark.controller.ParallelController;
 import stark.distance.AtomicDistanceExpression;
 import stark.distance.DistanceExpression;
 import stark.distance.MaxIntervalDistanceExpression;
@@ -113,7 +114,12 @@ public class TwoLanesTwoCarsAttack {
     private static final int s_dist = 20;       // sensed distance (mirrors dist)
     private static final int s_safety_gap = 21; // sensed RSS gap (derived from s_my_speed and s_dist)
 
-    private static final int NUMBER_OF_VARIABLES = 22;
+    // IDS variable
+    private static final int warning = 22;     
+    private static final double DANGER = 1;     
+    private static final double OK = 0;  
+
+    private static final int NUMBER_OF_VARIABLES = 23;
 
     // POSSIBLE CONTROLLER ACTIONS
     private static final double FASTER = 1;
@@ -566,6 +572,8 @@ public class TwoLanesTwoCarsAttack {
         values.put(s_dist, values.get(dist));
         values.put(s_safety_gap, initialSafetyGap);
 
+        values.put(warning, OK);
+
         return new DataState(NUMBER_OF_VARIABLES, i -> values.getOrDefault(i, Double.NaN));
     }
 
@@ -707,7 +715,19 @@ public class TwoLanesTwoCarsAttack {
                 )
         );
 
-        return new ExecController(registry.reference("Control"));
+        // IDS: monitors sensed values and triggers warning if danger detected
+        registry.set("IDS",
+                Controller.ifThenElse(
+                        DataState.lessOrEqualThan(s_dist, s_safety_gap)
+                                .and(DataState.equalsTo(intention, FASTER)
+                                        .or(DataState.equalsTo(intention, IDLE)
+                                                .and(DataState.greaterThan(s_my_speed, 0)))),
+                        Controller.doAction(DataStateUpdate.set(warning, DANGER), registry.reference("IDS")),
+                        Controller.doAction(DataStateUpdate.set(warning, OK), registry.reference("IDS"))
+                )
+        );
+
+        return new ParallelController(registry.reference("Control"), registry.reference("IDS"));
     }
 
     // ENVIRONMENT FUNCTION FOR SCENARIO 1
