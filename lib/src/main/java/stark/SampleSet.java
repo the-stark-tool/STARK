@@ -214,8 +214,13 @@ public class SampleSet<T extends SystemState> {
      * @return the distance between this sample set and <code>other</code> computed according to
      * the function <code>f</code>.
      */
+//    public synchronized double distanceGeq(DataStateExpression f, SampleSet<T> other) {
+//        return distance(f, (v1,v2) -> Math.max(0, v1-v2), other);
+//    }
+
+    // LAST MINUTE FIX : Hardcode metric that is symmetric
     public synchronized double distanceGeq(DataStateExpression f, SampleSet<T> other) {
-        return distance(f, (v1,v2) -> Math.max(0, v1-v2), other);
+        return distance(f, (v1,v2) -> Math.abs(v1-v2), other);
     }
 
     public synchronized double distanceGeq(Penalty rho, SampleSet<T> other, int step) {

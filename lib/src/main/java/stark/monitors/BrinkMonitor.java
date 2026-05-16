@@ -70,7 +70,7 @@ public class BrinkMonitor extends DefaultUDisTLMonitor {
 
         SampleSet<PerceivedSystemState> muSample;
         if (formula.getSampledDistribution().size() == 0) {
-            muSample = sample.replica(sampleSize).applyDistribution(rg, mu, parallel);
+            muSample = sample.replica(1).applyDistribution(rg, mu, parallel); // VALE: Making k=sample size breaks things not sure why? target is fine
         } else {
             // Turn system states into perceived system states
             muSample = new SampleSet<>(
@@ -79,4 +79,5 @@ public class BrinkMonitor extends DefaultUDisTLMonitor {
         return rho.map(dataStateExpression -> muSample.distanceGeq(dataStateExpression, sample) - q
         ).orElseGet(() -> muSample.distanceGeq(P, sample, semanticsEvaluationStep)) - q;
     }
+
 }
