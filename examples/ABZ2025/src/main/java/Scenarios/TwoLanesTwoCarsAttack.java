@@ -590,7 +590,7 @@ public class TwoLanesTwoCarsAttack {
                 Controller.ifThenElse(
                         DataState.equalsTo(my_lane,1),
                         Controller.ifThenElse(
-                                (rg, ds) -> ds.get(dist) > ds.get(safety_gap),
+                                (rg, ds) -> ds.get(s_dist) > ds.get(s_safety_gap),
                                 Controller.doAction( // LANE_RIGHT
                                         (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_move, LANE_RIGHT), new DataStateUpdate(my_timer, TIMER)),
                                         registry.reference("Moving_right")
@@ -611,7 +611,7 @@ public class TwoLanesTwoCarsAttack {
                                         Controller.ifThenElse(
                                                 DataState.equalsTo(other_lane,1),
                                                 Controller.ifThenElse(
-                                                        (rg, ds) -> ds.get(dist) == ds.get(safety_gap),
+                                                        (rg, ds) -> ds.get(s_dist) == ds.get(s_safety_gap),
                                                         Controller.doAction( // IDLE
                                                                 (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_timer, TIMER)),
                                                                 registry.reference("Idling")
@@ -629,7 +629,7 @@ public class TwoLanesTwoCarsAttack {
                                 )
                         ),
                         Controller.ifThenElse(
-                                (rg,ds) -> ds.get(dist) > ds.get(safety_gap) || ds.get(my_position) == 1,
+                                (rg,ds) -> ds.get(s_dist) > ds.get(s_safety_gap) || ds.get(my_position) == 1,
                                 Controller.doAction( // FASTER
                                         (rg, ds) -> List.of(new DataStateUpdate(intention, FASTER), new DataStateUpdate(my_timer, TIMER)),
                                         registry.reference("Idling")
@@ -637,7 +637,7 @@ public class TwoLanesTwoCarsAttack {
                                 Controller.ifThenElse(
                                         DataState.equalsTo(other_lane,0),
                                         Controller.ifThenElse(
-                                                (rg,ds) -> ds.get(dist) > ds.get(safety_gap)*0.8,
+                                                (rg,ds) -> ds.get(s_dist) > ds.get(s_safety_gap)*0.8,
                                                 Controller.doAction( // LANE_LEFT
                                                         (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_move,LANE_LEFT), new DataStateUpdate(my_timer, TIMER)),
                                                         registry.reference("Moving_left")
@@ -669,13 +669,13 @@ public class TwoLanesTwoCarsAttack {
                         DataState.greaterThan(my_timer,0),
                         Controller.doTick(registry.reference("Moving_right")),
                         Controller.ifThenElse(
-                                (rg,ds) -> ds.get(my_position) == 1 || ds.get(dist) > ds.get(safety_gap),
+                                (rg,ds) -> ds.get(my_position) == 1 || ds.get(s_dist) > ds.get(s_safety_gap),
                                 Controller.doAction( // FASTER
                                         (rg, ds) -> List.of(new DataStateUpdate(intention, FASTER), new DataStateUpdate(my_move,0), new DataStateUpdate(my_lane,0), new DataStateUpdate(my_timer, TIMER)),
                                         registry.reference("Idling")
                                 ),
                                 Controller.ifThenElse(
-                                        (rg,ds) -> ds.get(dist) == ds.get(safety_gap),
+                                        (rg,ds) -> ds.get(s_dist) == ds.get(s_safety_gap),
                                         Controller.doAction( // IDLE
                                         (rg,ds)-> List.of(new DataStateUpdate(intention,IDLE), new DataStateUpdate(my_move,0), new DataStateUpdate(my_lane,0), new DataStateUpdate(my_timer, TIMER)),
                                         registry.reference("Idling")
