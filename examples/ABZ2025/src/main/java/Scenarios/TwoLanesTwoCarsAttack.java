@@ -68,6 +68,10 @@ public class TwoLanesTwoCarsAttack {
     private static final double DIST_OFFSET = VEHICLE_LENGTH*VEHICLE_WIDTH;
     private static final int H = 300;
 
+    // Coordinated sensor attack parameters
+    private static final double MAX_SPEED_OFFSET = 0.5;  // attacker can reduce sensed speed by up to 30%
+    private static final double MAX_DIST_OFFSET = 1.5;   // attacker can inflate sensed distance by up to 50%
+
 
     // INITIAL VALUES PER SCENARIO
     private static final double MY_INIT_SPEED = 15;
@@ -172,6 +176,9 @@ public class TwoLanesTwoCarsAttack {
 
             System.out.println("Simulation of single perturbed behaviour in scenario: "+SCENARIO);
             printLData(rand, L, F, get_reckless_driver(), system, H, 1);
+
+            System.out.println("Simulation of single SENSOR ATTACK behaviour in scenario: "+SCENARIO);
+            printLData(rand, L, F, get_coordinated_sensor_attack(), system, H, 1);
 
             // trajectories
 
@@ -479,6 +486,52 @@ public class TwoLanesTwoCarsAttack {
 
             System.out.println("Evaluation of SO robustness in Scenario "+SCENARIO+" with response time "+ TIMER +": "+SO);
 
+
+            // ============================================================
+            // EVALUATION OF COORDINATED SENSOR ATTACK
+            // ============================================================
+            System.out.println("\n--- Coordinated Sensor Attack Evaluation ---");
+
+            // Build distance expressions using the attack perturbation
+            DistanceExpression attack_crash_speed = new AtomicDistanceExpression(TwoLanesTwoCarsAttack::rho_si, (v1, v2) -> Math.abs(v1 - v2));
+            DistanceExpression attack_crash      = new AtomicDistanceExpression(TwoLanesTwoCarsAttack::rho_crash, (v1, v2) -> Math.abs(v1 - v2));
+
+            DistanceExpression attack_max_si    = new MaxIntervalDistanceExpression(attack_crash_speed, 0, H);
+            DistanceExpression attack_max_crash = new MaxIntervalDistanceExpression(attack_crash, 0, H);
+
+            // Build robustness formulas using get_coordinated_sensor_attack() instead of get_reckless_driver()
+            RobustnessFormula attack_phi_si = new AtomicRobustnessFormula(
+                    get_coordinated_sensor_attack(),
+                    attack_max_si,
+                    RelationOperator.LESS_OR_EQUAL_THAN,
+                    eta
+            );
+
+            RobustnessFormula attack_phi_crash = new AtomicRobustnessFormula(
+                    get_coordinated_sensor_attack(),
+                    attack_max_crash,
+                    RelationOperator.LESS_OR_EQUAL_THAN,
+                    eta
+            );
+
+            RobustnessFormula attack_phi_combined = new ConjunctionRobustnessFormula(attack_phi_si, attack_phi_crash);
+
+            RobustnessFormula attack_phi_SAF = new AlwaysRobustnessFormula(
+                    attack_phi_combined,
+                    0,
+                    100
+            );
+
+            // Three-valued evaluation at multiple steps
+            for (int i = 0; i < 10; i++) {
+                TruthValues value = new ThreeValuedSemanticsVisitor(rand, 50, 1.96).eval(attack_phi_combined).eval(PERTURBATION_SIZE, i, sequence);
+                System.out.println("Evaluation of attack_phi_combined at step " + i + ": " + value);
+            }
+
+            // Final boolean SAF evaluation under the sensor attack
+            Boolean attack_SAF = new BooleanSemanticsVisitor().eval(attack_phi_SAF).eval(PERTURBATION_SIZE, 0, sequence);
+            System.out.println("Evaluation of SAF robustness against SENSOR ATTACK in Scenario " + SCENARIO + " with response time " + TIMER + ": " + attack_SAF);
+        
         }
         catch (RuntimeException e) {
             e.printStackTrace();
@@ -1266,6 +1319,37 @@ public class TwoLanesTwoCarsAttack {
         } else {
             updates.add(new DataStateUpdate(dist,state.get(dist)+rg.nextDouble()*DIST_OFFSET));
         }
+        return state.apply(updates);
+    }
+
+    // COORDINATED SENSOR ATTACK
+
+    // schedules when and how often the attack fires
+    private static Perturbation get_coordinated_sensor_attack(){
+        return new AfterPerturbation(5, new IterativePerturbation(50, new AtomicPerturbation((int)(TIMER - 1), TwoLanesTwoCarsAttack::coordinated_sensor_attack)));
+    }
+
+    // Spoofs s_my_speed (low) and s_dist (high) in a coordinated way
+    // to fool both the controller (s_dist > sensedSafetyGap) and the IDS (s_dist > IDS_THRESHOLD)
+    private static DataState coordinated_sensor_attack(RandomGenerator rg, DataState state){
+        List<DataStateUpdate> updates = new LinkedList<>();
+
+        // Fake speed: reduce sensed speed (controller will compute a smaller safety gap)
+        // double speed_offset = state.get(my_speed) * MAX_SPEED_OFFSET * rg.nextDouble();
+        // double fake_speed = Math.max(0, state.get(my_speed) - speed_offset);
+
+        double fake_speed = 5;
+
+        // Fake distance: inflate sensed distance (controller thinks it has more room, IDS thinks all is safe)
+        // double dist_offset = state.get(dist) * MAX_DIST_OFFSET * rg.nextDouble();
+        // double fake_dist = state.get(dist) + dist_offset;
+
+        double fake_dist = 1000;
+
+        // Write the two sensor variables together (the "coordinated" part)
+        updates.add(new DataStateUpdate(s_my_speed, fake_speed));
+        updates.add(new DataStateUpdate(s_dist, fake_dist));
+
         return state.apply(updates);
     }
 
