@@ -33,9 +33,11 @@ import java.util.OptionalInt;
 public class UnboundedAlwaysuDisTLFormula implements UDisTLFormula {
 
     private final UDisTLFormula formula;
+    private final int from;
 
-    public UnboundedAlwaysuDisTLFormula(UDisTLFormula formula) {
+    public UnboundedAlwaysuDisTLFormula(UDisTLFormula formula, int from) {
         this.formula = formula;
+        this.from = from;
     }
 
     public UDisTLFormula getFormula() {
@@ -45,13 +47,13 @@ public class UnboundedAlwaysuDisTLFormula implements UDisTLFormula {
     @Override
     public <T> T build(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
         NegationDisTLFormula equivalent = new NegationDisTLFormula(
-                new UnboundedUntiluDisTLFormula(new TrueDisTLFormula(), new NegationDisTLFormula(formula)));
+                new UnboundedUntiluDisTLFormula(new TrueDisTLFormula(), new NegationDisTLFormula(formula), this.from));
         return visitor.buildNegation(equivalent, semanticsEvaluationTimestep);
     }
 
     @Override
     public int getFES() {
-        return formula.getFES();
+        return formula.getFES() + from;
     }
 
     @Override

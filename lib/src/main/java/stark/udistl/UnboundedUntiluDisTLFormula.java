@@ -32,10 +32,12 @@ public class UnboundedUntiluDisTLFormula implements UDisTLFormula {
 
     private final UDisTLFormula rightFormula;
     private final UDisTLFormula leftFormula;
+    private final int from;
 
-    public UnboundedUntiluDisTLFormula(UDisTLFormula leftFormula, UDisTLFormula rightFormula) {
+    public UnboundedUntiluDisTLFormula(UDisTLFormula leftFormula, UDisTLFormula rightFormula, int from) {
         this.leftFormula = leftFormula;
         this.rightFormula = rightFormula;
+        this.from = from;
     }
 
     public UDisTLFormula getRightFormula() {
@@ -46,6 +48,10 @@ public class UnboundedUntiluDisTLFormula implements UDisTLFormula {
         return leftFormula;
     }
 
+    public int getfrom() {
+        return from;
+    }
+
     @Override
     public <T> T build(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
         return visitor.buildUnboundedUntil(this, semanticsEvaluationTimestep);
@@ -53,7 +59,7 @@ public class UnboundedUntiluDisTLFormula implements UDisTLFormula {
 
     @Override
     public int getFES() {
-        return Math.max(leftFormula.getFES(), rightFormula.getFES());
+        return Math.max(leftFormula.getFES(), rightFormula.getFES()) + from;
     }
 
     @Override

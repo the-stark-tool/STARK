@@ -121,9 +121,9 @@ class DefaultUnboundedMacrosMonitorTest {
         DefaultMonitorBuilder defaultMonitorBuilder = new DefaultMonitorBuilder(SAMPLE_SIZE, false);
 
 
-        UDisTLFormula phi = new UnboundedAlwaysuDisTLFormula(atomic);
+        UDisTLFormula phi = new UnboundedAlwaysuDisTLFormula(atomic, 0);
         UDisTLFormula phiMacro = new NegationDisTLFormula(
-                new UnboundedUntiluDisTLFormula(new TrueDisTLFormula(), new NegationDisTLFormula(atomic)));
+                new UnboundedUntiluDisTLFormula(new TrueDisTLFormula(), new NegationDisTLFormula(atomic), 0));
 
         DefaultUDisTLMonitor m = defaultMonitorBuilder.build(phi, semanticsEvalTimestep);
         m.setRandomGeneratorSeed(seed);
@@ -167,8 +167,8 @@ class DefaultUnboundedMacrosMonitorTest {
         DefaultMonitorBuilder defaultMonitorBuilder = new DefaultMonitorBuilder(SAMPLE_SIZE, false);
 
 
-        UDisTLFormula phi = new UnboundedEventuallyuDisTLFormula(atomic);
-        UDisTLFormula phiMacro = new UnboundedUntiluDisTLFormula(new TrueDisTLFormula(), atomic);
+        UDisTLFormula phi = new UnboundedEventuallyuDisTLFormula(atomic, 0);
+        UDisTLFormula phiMacro = new UnboundedUntiluDisTLFormula(new TrueDisTLFormula(), atomic, 0);
 
         DefaultUDisTLMonitor m = defaultMonitorBuilder.build(phi, semanticsEvalTimestep);
         m.setRandomGeneratorSeed(seed);
@@ -218,7 +218,7 @@ class DefaultUnboundedMacrosMonitorTest {
         UDisTLFormula phiMacro = new NegationDisTLFormula(
                 new UnboundedUntiluDisTLFormula(
                         new NegationDisTLFormula(left),
-                        new NegationDisTLFormula(right)));
+                        new NegationDisTLFormula(right),0));
 
         DefaultUDisTLMonitor m = defaultMonitorBuilder.build(phi, semanticsEvalTimestep);
         m.setRandomGeneratorSeed(seed);

@@ -33,10 +33,12 @@ public class UnboundedReleaseuDisTLFormula implements UDisTLFormula {
 
     private final UDisTLFormula rightFormula;
     private final UDisTLFormula leftFormula;
+    private final int from;
 
-    public UnboundedReleaseuDisTLFormula(UDisTLFormula leftFormula, UDisTLFormula rightFormula) {
+    public UnboundedReleaseuDisTLFormula(UDisTLFormula leftFormula, UDisTLFormula rightFormula, int from) {
         this.leftFormula = leftFormula;
         this.rightFormula = rightFormula;
+        this.from = from;
     }
 
     public UDisTLFormula getRightFormula() {
@@ -49,14 +51,14 @@ public class UnboundedReleaseuDisTLFormula implements UDisTLFormula {
 
     @Override
     public <T> T build(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
-        NegationDisTLFormula equivalent = new NegationDisTLFormula(
-                new UnboundedUntiluDisTLFormula(new NegationDisTLFormula(leftFormula), new NegationDisTLFormula(rightFormula)));
-        return visitor.buildNegation(equivalent, semanticsEvaluationTimestep);
+        UDisTLFormula equivalent = new NegationDisTLFormula(
+                new UnboundedUntiluDisTLFormula(new NegationDisTLFormula(leftFormula), new NegationDisTLFormula(rightFormula), from));
+        return visitor.build(equivalent, semanticsEvaluationTimestep);
     }
 
     @Override
     public int getFES() {
-        return Math.max(leftFormula.getFES(), rightFormula.getFES());
+        return Math.max(leftFormula.getFES(), rightFormula.getFES()) + from;
     }
 
     @Override
