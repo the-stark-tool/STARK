@@ -4,16 +4,16 @@ The folder `./src/main/resources/` contains two video replays of the autonomous 
 
 ## Playing the videos
 
-GitHub supports embedded playback directly in the browser. Simply click the video files:
+Yo can also find the videos by clicking the video files:
 
-- [`short.mp4`](../../../src/main/resources/short.mp4)
-- [`long.mp4`](../../../src/main/resources/long.mp4)
-
-You can also clone the repository and play them locally with any standard media player.
+- [`short.mp4`](./src/main/resources/short.mp4)
+- [`long.mp4`](./src/main/resources/long.mp4)
 
 ## Videos
 
 ### `short.mp4`
+
+<video src='https://github.com/the-stark-tool/STARK/raw/refs/heads/monitoringHighway/examples/monitoring/highwayAI/src/main/resources/long.mp4' width=180/>
 
 Simulation controlled by the RL agent **short**, which was trained for a shorter amount of time.
 
