@@ -112,14 +112,15 @@ public class TwoLanesTwoCarsAttack {
     // Sensor variables (sensed layer for the cyber-physical attack model)
     private static final int s_my_speed = 19;   // sensed own speed (mirrors my_speed)
     private static final int s_dist = 20;       // sensed distance (mirrors dist)
-    private static final int s_safety_gap = 21; // sensed RSS gap (derived from s_my_speed and s_dist)
 
     // IDS variable
-    private static final int warning = 22;     
+    private static final int warning = 21;     
     private static final double DANGER = 1;     
     private static final double OK = 0;  
+    private static final double SAFETY_DIST = calculateRSSSafetyDistance(MY_INIT_SPEED, OTHER_INIT_SPEED);
+    private static final double IDS_THRESHOLD = 2 * TIMER * SAFETY_DIST;
 
-    private static final int NUMBER_OF_VARIABLES = 23;
+    private static final int NUMBER_OF_VARIABLES = 22;
 
     // POSSIBLE CONTROLLER ACTIONS
     private static final double FASTER = 1;
@@ -570,7 +571,6 @@ public class TwoLanesTwoCarsAttack {
         // Initialize sensor variables to match physical values
         values.put(s_my_speed, MY_INIT_SPEED);
         values.put(s_dist, values.get(dist));
-        values.put(s_safety_gap, initialSafetyGap);
 
         values.put(warning, OK);
 
@@ -587,6 +587,15 @@ public class TwoLanesTwoCarsAttack {
         return rssSafetyDistance + VEHICLE_LENGTH;
     }
 
+    // computes RSS gap from the controller's perspective (using sensed speed)
+    private static double sensedSafetyGap(DataState ds){
+        if (ds.get(my_position) == -1) {
+            return calculateRSSSafetyDistance(ds.get(s_my_speed), ds.get(other_speed));
+        } else {
+            return calculateRSSSafetyDistance(ds.get(other_speed), ds.get(s_my_speed));
+        }
+    }
+
     private Controller getController(){
         ControllerRegistry registry = new ControllerRegistry();
 
@@ -596,9 +605,15 @@ public class TwoLanesTwoCarsAttack {
                         Controller.doTick(registry.reference("Controller")
                         ),
                 Controller.ifThenElse(
+                        DataState.equalsTo(warning, DANGER),
+                        Controller.doAction( // IDS triggered: emergency brake
+                                (rg, ds) -> List.of(new DataStateUpdate(intention, SLOWER), new DataStateUpdate(my_timer, TIMER)),
+                                registry.reference("Idling")
+                        ),
+                Controller.ifThenElse(
                         DataState.equalsTo(my_lane,1),
                         Controller.ifThenElse(
-                                (rg, ds) -> ds.get(s_dist) > ds.get(s_safety_gap),
+                                (rg, ds) -> ds.get(s_dist) > sensedSafetyGap(ds),
                                 Controller.doAction( // LANE_RIGHT
                                         (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_move, LANE_RIGHT), new DataStateUpdate(my_timer, TIMER)),
                                         registry.reference("Moving_right")
@@ -619,7 +634,7 @@ public class TwoLanesTwoCarsAttack {
                                         Controller.ifThenElse(
                                                 DataState.equalsTo(other_lane,1),
                                                 Controller.ifThenElse(
-                                                        (rg, ds) -> ds.get(s_dist) == ds.get(s_safety_gap),
+                                                        (rg, ds) -> ds.get(s_dist) == sensedSafetyGap(ds),
                                                         Controller.doAction( // IDLE
                                                                 (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_timer, TIMER)),
                                                                 registry.reference("Idling")
@@ -637,7 +652,7 @@ public class TwoLanesTwoCarsAttack {
                                 )
                         ),
                         Controller.ifThenElse(
-                                (rg,ds) -> ds.get(s_dist) > ds.get(s_safety_gap) || ds.get(my_position) == 1,
+                                (rg,ds) -> ds.get(s_dist) > sensedSafetyGap(ds) || ds.get(my_position) == 1,
                                 Controller.doAction( // FASTER
                                         (rg, ds) -> List.of(new DataStateUpdate(intention, FASTER), new DataStateUpdate(my_timer, TIMER)),
                                         registry.reference("Idling")
@@ -645,7 +660,7 @@ public class TwoLanesTwoCarsAttack {
                                 Controller.ifThenElse(
                                         DataState.equalsTo(other_lane,0),
                                         Controller.ifThenElse(
-                                                (rg,ds) -> ds.get(s_dist) > ds.get(s_safety_gap)*0.8,
+                                                (rg,ds) -> ds.get(s_dist) > sensedSafetyGap(ds)*0.8,
                                                 Controller.doAction( // LANE_LEFT
                                                         (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_move,LANE_LEFT), new DataStateUpdate(my_timer, TIMER)),
                                                         registry.reference("Moving_left")
@@ -661,7 +676,7 @@ public class TwoLanesTwoCarsAttack {
                                         )
                                 )
                         )
-                ))
+                )))
         );
 
         registry.set("Idling",
@@ -677,13 +692,13 @@ public class TwoLanesTwoCarsAttack {
                         DataState.greaterThan(my_timer,0),
                         Controller.doTick(registry.reference("Moving_right")),
                         Controller.ifThenElse(
-                                (rg,ds) -> ds.get(my_position) == 1 || ds.get(s_dist) > ds.get(s_safety_gap),
+                                (rg,ds) -> ds.get(my_position) == 1 || ds.get(s_dist) > sensedSafetyGap(ds),
                                 Controller.doAction( // FASTER
                                         (rg, ds) -> List.of(new DataStateUpdate(intention, FASTER), new DataStateUpdate(my_move,0), new DataStateUpdate(my_lane,0), new DataStateUpdate(my_timer, TIMER)),
                                         registry.reference("Idling")
                                 ),
                                 Controller.ifThenElse(
-                                        (rg,ds) -> ds.get(s_dist) == ds.get(s_safety_gap),
+                                        (rg,ds) -> ds.get(s_dist) == sensedSafetyGap(ds),
                                         Controller.doAction( // IDLE
                                         (rg,ds)-> List.of(new DataStateUpdate(intention,IDLE), new DataStateUpdate(my_move,0), new DataStateUpdate(my_lane,0), new DataStateUpdate(my_timer, TIMER)),
                                         registry.reference("Idling")
@@ -718,7 +733,7 @@ public class TwoLanesTwoCarsAttack {
         // IDS: monitors sensed values and triggers warning if danger detected
         registry.set("IDS",
                 Controller.ifThenElse(
-                        DataState.lessOrEqualThan(s_dist, s_safety_gap)
+                        DataState.lessOrEqualThan(s_dist, IDS_THRESHOLD)
                                 .and(DataState.equalsTo(intention, FASTER)
                                         .or(DataState.equalsTo(intention, IDLE)
                                                 .and(DataState.greaterThan(s_my_speed, 0)))),
@@ -868,7 +883,6 @@ public class TwoLanesTwoCarsAttack {
         if (my_new_timer == 0) {
             updates.add(new DataStateUpdate(s_my_speed, my_new_speed));
             updates.add(new DataStateUpdate(s_dist, new_dist));
-            updates.add(new DataStateUpdate(s_safety_gap, new_safety_gap));
         }
 
         if(my_new_lane==other_new_lane && Math.abs(my_new_x-other_new_x)<= VEHICLE_LENGTH){
@@ -1012,7 +1026,6 @@ public class TwoLanesTwoCarsAttack {
         if (my_new_timer == 0) {
             updates.add(new DataStateUpdate(s_my_speed, my_new_speed));
             updates.add(new DataStateUpdate(s_dist, new_dist));
-            updates.add(new DataStateUpdate(s_safety_gap, new_safety_gap));
         }
 
         if(my_new_lane==other_new_lane && Math.abs(my_new_x-other_new_x)<= VEHICLE_LENGTH){
@@ -1184,7 +1197,6 @@ public class TwoLanesTwoCarsAttack {
         if (my_new_timer == 0) {
             updates.add(new DataStateUpdate(s_my_speed, my_new_speed));
             updates.add(new DataStateUpdate(s_dist, new_dist));
-            updates.add(new DataStateUpdate(s_safety_gap, new_safety_gap));
         }
 
         if(my_new_lane==other_new_lane && Math.abs(my_new_x-other_new_x)<= VEHICLE_LENGTH){
