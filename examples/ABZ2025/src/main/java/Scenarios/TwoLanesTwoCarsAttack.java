@@ -108,7 +108,12 @@ public class TwoLanesTwoCarsAttack {
     private static final int safety_gap = 17;
     private static final int crash = 18;
 
-    private static final int NUMBER_OF_VARIABLES = 19;
+    // Sensor variables (sensed layer for the cyber-physical attack model)
+    private static final int s_my_speed = 19;   // sensed own speed (mirrors my_speed)
+    private static final int s_dist = 20;       // sensed distance (mirrors dist)
+    private static final int s_safety_gap = 21; // sensed RSS gap (derived from s_my_speed and s_dist)
+
+    private static final int NUMBER_OF_VARIABLES = 22;
 
     // POSSIBLE CONTROLLER ACTIONS
     private static final double FASTER = 1;
