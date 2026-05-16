@@ -561,6 +561,11 @@ public class TwoLanesTwoCarsAttack {
         values.put(safety_gap, initialSafetyGap);
         values.put(crash,0.0);
 
+        // Initialize sensor variables to match physical values
+        values.put(s_my_speed, MY_INIT_SPEED);
+        values.put(s_dist, values.get(dist));
+        values.put(s_safety_gap, initialSafetyGap);
+
         return new DataState(NUMBER_OF_VARIABLES, i -> values.getOrDefault(i, Double.NaN));
     }
 
