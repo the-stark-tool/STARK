@@ -6,8 +6,8 @@ The folder `./src/main/resources/` contains two video replays of the autonomous 
 
 GitHub supports embedded playback directly in the browser. Simply click the video files:
 
-- [`short.mp4`](./src/main/resources/short.mp4)
-- [`long.mp4`](./src/main/resources/short.mp4)
+- [`short.mp4`](../../../src/main/resources/short.mp4)
+- [`long.mp4`](../../../src/main/resources/long.mp4)
 
 You can also clone the repository and play them locally with any standard media player.
 
@@ -17,7 +17,7 @@ You can also clone the repository and play them locally with any standard media 
 
 Simulation controlled by the RL agent **short**, which was trained for a shorter amount of time.
 
-In this scenario, the ego vehicle initially drives on a free lane, but later performs an unsafe lane change behind a slower vehicle. It narrowly avoids a first collision by changing lanes again, but eventually crashes into another vehicle from behind.
+In this scenario, the ego vehicle initially drives on a free lane, but later performs an unsafe lane change behind a slower vehicle. It narrowly avoids a first collision by changing lanes again, but eventually crashes into oncoming traffic.
 
 This simulation showcases:
 - unsafe lane changes,
@@ -31,7 +31,7 @@ This simulation showcases:
 
 Simulation controlled by the RL agent **long**, which was trained three times longer than **short**.
 
-Here, the ego vehicle starts behind traffic and gradually approaches slower vehicles ahead. Instead of performing risky manoeuvres, it eventually adapts its speed and maintains a safer following distance for the remainder of the simulation.
+Here, the ego vehicle starts behind traffic and gradually approaches slower vehicles ahead. Instead of performing risky manoeuvres, it eventually adapts its speed and maintains a safer following distance.
 
 This simulation showcases:
 - smoother longitudinal control,
