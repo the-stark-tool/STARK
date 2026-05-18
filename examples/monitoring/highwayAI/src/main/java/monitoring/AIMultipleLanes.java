@@ -61,7 +61,6 @@ public class AIMultipleLanes {
     private static final int STEPS_TO_SAMPLE = 160;
     private static final int EVOLUTION_SEQUENCE_SIZE = 100;
 
-    //    private static MonitoringAIStateProvider provider = new HTTPConnector("http://127.0.0.1:6000", EVOLUTION_SEQUENCE_SIZE);
     private static final MonitoringAIStateProvider provider =
             new JSONFileReader("examples/monitoring/highwayAI/src/main/resources/short.json");
 //    new JSONFileReader("examples/monitoring/highwayAI/src/main/resources/long.json");
@@ -103,17 +102,15 @@ public class AIMultipleLanes {
     private void run() {
         EvolutionSequence sequence = new EvolutionSequence(new SilentMonitor("AIMultipleLanes"), new DefaultRandomGenerator(), readInitialState(), EVOLUTION_SEQUENCE_SIZE);
 
-        experimentName = "test1";
         double threshold = 0.0;
         DefaultMonitorBuilder builder = new DefaultMonitorBuilder(EVOLUTION_SEQUENCE_SIZE, false);
 
-//        runCrashExperiment(sequence, threshold, builder); // done
-//        runSafetyGapExperiment(sequence, threshold, builder); // done
-//        run5CarsExperiment(sequence, threshold, builder);
+        runCrashExperiment(sequence, threshold, builder);
+        runSafetyGapExperiment(sequence, threshold, builder);
+        run5CarsExperiment(sequence, threshold, builder);
         run5CarsImpliesNoCrashExperiment(sequence, threshold, builder);
-//        runDesiredSpeedExperiment(sequence, threshold, builder);  // done, crashing scenario not interesting
-//        runSpeedLimitExperiment(sequence, threshold, builder); // done
-//        runSpeedLimitUntilFreeLaneExperiment(sequence, threshold, builder); // done
+        runDesiredSpeedExperiment(sequence, threshold, builder);
+        runSpeedLimitUntilFreeLaneExperiment(sequence, threshold, builder);
 
     }
 
@@ -364,28 +361,13 @@ public class AIMultipleLanes {
         TargetDisTLFormula atomicFW = new TargetDisTLFormula(createMuFW(), createPenaltyFW(), threshold);
         TargetDisTLFormula atomicSpeedLimit = new TargetDisTLFormula(createMuSpeedLimit(SPEED_LIMIT, SPEED_LOWERBOUND, s, decay), createPenaltySpeedLimit(SPEED_LIMIT), threshold);
 
-//        UDisTLFormula formula = new UnboundedUntiluDisTLFormula(atomicSpeedLimit, atomicFW, 0);
-//        UDisTLFormula formula = new UnboundedAlwaysuDisTLFormula(new UnboundedUntiluDisTLFormula(atomicSpeedLimit, atomicFW, 0), 0);
         UDisTLFormula formula = new UnboundedReleaseuDisTLFormula(new UnboundedAlwaysuDisTLFormula(atomicSpeedLimit,0), atomicFW,0);
 
         DefaultUDisTLMonitor mRelease = builder.build(formula);
-//        printMonitorEval(sequence, mFW, STEPS_TO_SAMPLE, "sl U fl",OUTPUT);
-//        printStepwiseMonitorEval(sequence, atomicFW, builder, STEPS_TO_SAMPLE, "stepwise fl", OUTPUT);
-//        printStepwiseMonitorEval(sequence, atomicSpeedLimit, builder, STEPS_TO_SAMPLE, "stepwise sl", OUTPUT);
+        printMonitorEval(sequence, mRelease, STEPS_TO_SAMPLE, "sl U fl",OUTPUT);
+        printStepwiseMonitorEval(sequence, atomicFW, builder, STEPS_TO_SAMPLE, "stepwise fl", OUTPUT);
+        printStepwiseMonitorEval(sequence, atomicSpeedLimit, builder, STEPS_TO_SAMPLE, "stepwise sl", OUTPUT);
 
-        PrintWriter writer = new PrintWriter(OUTPUT);
-        writer.println("t,(G sl) R fl,stepwise fl,stepwise sl");
-        for (int i = 0; i < STEPS_TO_SAMPLE; i++) {
-            SampleSet<PerceivedSystemState> distribution =
-                    sequence.getAsPerceivedSystemStates(i);
-            OptionalDouble monitorEval = mRelease.evalNext(distribution);
-            OptionalDouble fl = builder.build(atomicFW, 0).evalNext(distribution);
-            OptionalDouble sl = builder.build(atomicSpeedLimit, 0).evalNext(distribution);
-
-            writer.println(String.format(Locale.GERMAN, "%d\t%.6f\t%.6f\t%.6f", i, monitorEval.getAsDouble(), fl.getAsDouble(), sl.getAsDouble()));
-
-            writer.flush();
-        }
     }
 
 
@@ -544,20 +526,6 @@ public class AIMultipleLanes {
 
             writer.flush();
         }
-    }
-
-    private double minimumSG(DataState ds) {
-        double minSG = 10000;
-        for (int other = 0; other < observedCarCount; other++) {
-            if (other != 0) {
-                double distY = ds.get(yPosition[other]);
-                double safetyGap = computeSafetyDistance(ds, 0, other);
-                if (safetyGap < minSG && Math.abs(distY) < VEHICLE_WIDTH) {
-                    minSG = safetyGap;
-                }
-            }
-        }
-        return minSG;
     }
 
     private static double calculateRSSSafetyDistanceFormula(double responseTime, double rearVehicleSpeed, double frontVehicleSpeed){
