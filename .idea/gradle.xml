@@ -19,6 +19,7 @@
             <option value="$PROJECT_DIR$/examples/engine" />
             <option value="$PROJECT_DIR$/examples/envzompr" />
             <option value="$PROJECT_DIR$/examples/lotka" />
+            <option value="$PROJECT_DIR$/examples/mechanicallungventilator" />
             <option value="$PROJECT_DIR$/examples/monitoring" />
             <option value="$PROJECT_DIR$/examples/monitoring/basic" />
             <option value="$PROJECT_DIR$/examples/multipleSclerosis" />
