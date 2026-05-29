@@ -68,9 +68,9 @@ public class TwoLanesTwoCarsAttack {
     private static final double DIST_OFFSET = VEHICLE_LENGTH*VEHICLE_WIDTH;
     private static final int H = 300;
 
-    // Coordinated sensor attack parameters
-    private static final double MAX_SPEED_OFFSET = 0.5;  // attacker can reduce sensed speed by up to 30%
-    private static final double MAX_DIST_OFFSET = 1.5;   // attacker can inflate sensed distance by up to 50%
+    // Coordinated sensor attack intensities to test
+    private static final double[] SPEED_OFFSETS = {0.3, 0.5, 0.7, 1.0};
+    private static final double[] DIST_OFFSETS = {0.5, 1.0, 1.5, 2.0, 3.0};
 
 
     // INITIAL VALUES PER SCENARIO
@@ -176,9 +176,6 @@ public class TwoLanesTwoCarsAttack {
 
             System.out.println("Simulation of single perturbed behaviour in scenario: "+SCENARIO);
             printLData(rand, L, F, get_reckless_driver(), system, H, 1);
-
-            System.out.println("Simulation of single SENSOR ATTACK behaviour in scenario: "+SCENARIO);
-            printLData(rand, L, F, get_coordinated_sensor_attack(), system, H, 1);
 
             // trajectories
 
@@ -488,49 +485,47 @@ public class TwoLanesTwoCarsAttack {
 
 
             // ============================================================
-            // EVALUATION OF COORDINATED SENSOR ATTACK
+            // EVALUATION OF COORDINATED SENSOR ATTACK (multiple intensities)
             // ============================================================
             System.out.println("\n--- Coordinated Sensor Attack Evaluation ---");
+            System.out.println("speed_offset | dist_offset | attack_SAF");
+            System.out.println("-------------|-------------|----------");
 
-            // Build distance expressions using the attack perturbation
-            DistanceExpression attack_crash_speed = new AtomicDistanceExpression(TwoLanesTwoCarsAttack::rho_si, (v1, v2) -> Math.abs(v1 - v2));
-            DistanceExpression attack_crash      = new AtomicDistanceExpression(TwoLanesTwoCarsAttack::rho_crash, (v1, v2) -> Math.abs(v1 - v2));
+            for (double speedOff : SPEED_OFFSETS) {
+                for (double distOff : DIST_OFFSETS) {
 
-            DistanceExpression attack_max_si    = new MaxIntervalDistanceExpression(attack_crash_speed, 0, H);
-            DistanceExpression attack_max_crash = new MaxIntervalDistanceExpression(attack_crash, 0, H);
+                    DistanceExpression a_crash_speed = new AtomicDistanceExpression(TwoLanesTwoCarsAttack::rho_si, (v1, v2) -> Math.abs(v1 - v2));
+                    DistanceExpression a_crash = new AtomicDistanceExpression(TwoLanesTwoCarsAttack::rho_crash, (v1, v2) -> Math.abs(v1 - v2));
 
-            // Build robustness formulas using get_coordinated_sensor_attack() instead of get_reckless_driver()
-            RobustnessFormula attack_phi_si = new AtomicRobustnessFormula(
-                    get_coordinated_sensor_attack(),
-                    attack_max_si,
-                    RelationOperator.LESS_OR_EQUAL_THAN,
-                    eta
-            );
+                    DistanceExpression a_max_si = new MaxIntervalDistanceExpression(a_crash_speed, 0, H);
+                    DistanceExpression a_max_crash = new MaxIntervalDistanceExpression(a_crash, 0, H);
 
-            RobustnessFormula attack_phi_crash = new AtomicRobustnessFormula(
-                    get_coordinated_sensor_attack(),
-                    attack_max_crash,
-                    RelationOperator.LESS_OR_EQUAL_THAN,
-                    eta
-            );
+                    RobustnessFormula a_phi_si = new AtomicRobustnessFormula(
+                            get_coordinated_sensor_attack(speedOff, distOff),
+                            a_max_si,
+                            RelationOperator.LESS_OR_EQUAL_THAN,
+                            eta
+                    );
 
-            RobustnessFormula attack_phi_combined = new ConjunctionRobustnessFormula(attack_phi_si, attack_phi_crash);
+                    RobustnessFormula a_phi_crash = new AtomicRobustnessFormula(
+                            get_coordinated_sensor_attack(speedOff, distOff),
+                            a_max_crash,
+                            RelationOperator.LESS_OR_EQUAL_THAN,
+                            eta
+                    );
 
-            RobustnessFormula attack_phi_SAF = new AlwaysRobustnessFormula(
-                    attack_phi_combined,
-                    0,
-                    100
-            );
+                    RobustnessFormula a_phi_combined = new ConjunctionRobustnessFormula(a_phi_si, a_phi_crash);
 
-            // Three-valued evaluation at multiple steps
-            for (int i = 0; i < 10; i++) {
-                TruthValues value = new ThreeValuedSemanticsVisitor(rand, 50, 1.96).eval(attack_phi_combined).eval(PERTURBATION_SIZE, i, sequence);
-                System.out.println("Evaluation of attack_phi_combined at step " + i + ": " + value);
+                    RobustnessFormula a_phi_SAF = new AlwaysRobustnessFormula(
+                            a_phi_combined,
+                            0,
+                            100
+                    );
+
+                    Boolean attack_SAF = new BooleanSemanticsVisitor().eval(a_phi_SAF).eval(PERTURBATION_SIZE, 0, sequence);
+                    System.out.printf("       %.1f   |       %.1f   | %s%n", speedOff, distOff, attack_SAF);
+                }
             }
-
-            // Final boolean SAF evaluation under the sensor attack
-            Boolean attack_SAF = new BooleanSemanticsVisitor().eval(attack_phi_SAF).eval(PERTURBATION_SIZE, 0, sequence);
-            System.out.println("Evaluation of SAF robustness against SENSOR ATTACK in Scenario " + SCENARIO + " with response time " + TIMER + ": " + attack_SAF);
         
         }
         catch (RuntimeException e) {
@@ -1325,28 +1320,23 @@ public class TwoLanesTwoCarsAttack {
     // COORDINATED SENSOR ATTACK
 
     // schedules when and how often the attack fires
-    private static Perturbation get_coordinated_sensor_attack(){
-        return new AfterPerturbation(5, new IterativePerturbation(50, new AtomicPerturbation((int)(TIMER - 1), TwoLanesTwoCarsAttack::coordinated_sensor_attack)));
+    private static Perturbation get_coordinated_sensor_attack(double speedOffset, double distOffset){
+        return new AfterPerturbation(5, new IterativePerturbation(50, new AtomicPerturbation((int)(TIMER - 1),
+            (rg, state) -> coordinated_sensor_attack(rg, state, speedOffset, distOffset))));
     }
 
     // Spoofs s_my_speed (low) and s_dist (high) in a coordinated way
     // to fool both the controller (s_dist > sensedSafetyGap) and the IDS (s_dist > IDS_THRESHOLD)
-    private static DataState coordinated_sensor_attack(RandomGenerator rg, DataState state){
+    private static DataState coordinated_sensor_attack(RandomGenerator rg, DataState state, double speedOffset, double distOffset){
         List<DataStateUpdate> updates = new LinkedList<>();
 
-        // Fake speed: reduce sensed speed (controller will compute a smaller safety gap)
-        // double speed_offset = state.get(my_speed) * MAX_SPEED_OFFSET * rg.nextDouble();
-        // double fake_speed = Math.max(0, state.get(my_speed) - speed_offset);
+        // Fake speed: reduce by speedOffset fraction (e.g., 0.5 means reduce speed by 50%)
+        double fake_speed = Math.max(0, state.get(my_speed) * (1 - speedOffset));
 
-        double fake_speed = 5;
+        // Fake distance: inflate by distOffset fraction (e.g., 1.5 means inflate distance by 150%)
+        double fake_dist = state.get(dist) * (1 + distOffset);
 
-        // Fake distance: inflate sensed distance (controller thinks it has more room, IDS thinks all is safe)
-        // double dist_offset = state.get(dist) * MAX_DIST_OFFSET * rg.nextDouble();
-        // double fake_dist = state.get(dist) + dist_offset;
-
-        double fake_dist = 1000;
-
-        // Write the two sensor variables together (the "coordinated" part)
+        // Write the two sensor variables together
         updates.add(new DataStateUpdate(s_my_speed, fake_speed));
         updates.add(new DataStateUpdate(s_dist, fake_dist));
 
