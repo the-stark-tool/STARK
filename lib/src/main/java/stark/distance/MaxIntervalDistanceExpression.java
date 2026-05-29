@@ -48,7 +48,7 @@ public final class MaxIntervalDistanceExpression implements DistanceExpression {
      */
     public MaxIntervalDistanceExpression(DistanceExpression expression, int from, int to) {
         this.expression = Objects.requireNonNull(expression);
-        if ((from<0)||(to<0)||(from>=to)) {
+        if ((from<0)||(to<0)||(from>to)) {
             throw new IllegalArgumentException();
         }
         this.from = from;
@@ -69,7 +69,11 @@ public final class MaxIntervalDistanceExpression implements DistanceExpression {
         if (step<0) {
             throw new IllegalArgumentException();
         }
-        return IntStream.range(from+step, to+step).parallel().mapToDouble(i -> expression.compute(i, seq1, seq2)).max().orElse(Double.NaN);
+        if (from == to) {
+            return expression.compute(from+step, seq1, seq2);
+        } else {
+            return IntStream.range(from+step, to+step).parallel().mapToDouble(i -> expression.compute(i, seq1, seq2)).max().orElse(Double.NaN);
+        }
     }
 
     /**

@@ -49,7 +49,7 @@ public final class MinIntervalDistanceExpression implements DistanceExpression {
      */
     public MinIntervalDistanceExpression(DistanceExpression expression, int from, int to) {
         this.expression = Objects.requireNonNull(expression);
-        if ((from<0)||(to<0)||(from>=to)) {
+        if ((from<0)||(to<0)||(from>to)) {
             throw new IllegalArgumentException();
         }
         this.from = from;
@@ -69,6 +69,9 @@ public final class MinIntervalDistanceExpression implements DistanceExpression {
     public double compute(int step, EvolutionSequence seq1, EvolutionSequence seq2) {
         if (step<0) {
             throw new IllegalArgumentException();
+        }
+        if (from == to) {
+            return expression.compute(from+step, seq1, seq2);
         }
         return IntStream.range(from+step, to+step)
                 .sequential()
