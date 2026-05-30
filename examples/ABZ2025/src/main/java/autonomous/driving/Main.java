@@ -56,9 +56,18 @@ public class Main {
     */
 
     // TWO LANES TWO VEHICLES - ATTACK VERSION
+    // public static void main(String[] args) throws IOException{
+    //     try{
+    //         new TwoLanesTwoCarsAttack();
+    //     } catch (RuntimeException e) {
+    //         e.printStackTrace();
+    //     }
+    // }
+
+    // TWO LANES TWO VEHICLES - LiDAR ATTACK VERSION
     public static void main(String[] args) throws IOException{
         try{
-            new TwoLanesTwoCarsAttack();
+            new TwoLanesTwoCarsLiDARAttack();
         } catch (RuntimeException e) {
             e.printStackTrace();
         }
