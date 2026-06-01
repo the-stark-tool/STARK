@@ -63,14 +63,4 @@ public class Main {
     //         e.printStackTrace();
     //     }
     // }
-
-    // TWO LANES TWO VEHICLES - LiDAR ATTACK VERSION
-    public static void main(String[] args) throws IOException{
-        try{
-            new TwoLanesTwoCarsLiDARAttack();
-        } catch (RuntimeException e) {
-            e.printStackTrace();
-        }
-    }
-
 }
