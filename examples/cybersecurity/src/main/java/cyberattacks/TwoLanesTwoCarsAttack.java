@@ -68,8 +68,10 @@ public class TwoLanesTwoCarsAttack {
     private static final int H = 300;
 
     // Coordinated sensor attack intensities to test
-    private static final double[] SPEED_OFFSETS = {0.3, 0.5, 0.7, 1.0};
-    private static final double[] DIST_OFFSETS = {0.5, 1.0, 1.5, 2.0, 3.0};
+    // private static final double[] SPEED_OFFSETS = {0.3, 0.5, 0.7, 1.0};
+    // private static final double[] DIST_OFFSETS = {0, 0.5, 1.0, 1.5, 2.0, 3.0};
+    private static final double[] SPEED_OFFSETS = {0.50, 0.52, 0.54, 0.56, 0.58, 0.60, 0.62, 0.64, 0.66, 0.68, 0.70, 1.0};
+    private static final double[] DIST_OFFSETS = {0.0, 1.5, 3.0, 50.0, 1000.0};
 
 
     // INITIAL VALUES PER SCENARIO
@@ -120,7 +122,7 @@ public class TwoLanesTwoCarsAttack {
     private static final int warning = 21;
     private static final double DANGER = 1;
     private static final double OK = 0;
-    private static final double IDS_THRESHOLD = 0.2 * Math.abs(OTHER_INIT_X_1 - MY_INIT_X_1);
+    private static final double IDS_THRESHOLD =  127; // 0.2 * Math.abs(OTHER_INIT_X_1 - MY_INIT_X_1);
 
     private static final int NUMBER_OF_VARIABLES = 22;
 
@@ -135,7 +137,7 @@ public class TwoLanesTwoCarsAttack {
         try {
             int EVOLUTION_SEQUENCE_SIZE = 10;
             int PERTURBATION_SIZE = 10;
-            int EXTRA_SIZE = 1000;
+            int EXTRA_SIZE = 100;
 
             RandomGenerator rand = new DefaultRandomGenerator();
             DataState state = getInitialState();
@@ -487,8 +489,8 @@ public class TwoLanesTwoCarsAttack {
             // EVALUATION OF COORDINATED SENSOR ATTACK (multiple intensities)
             // ============================================================
             System.out.println("\n--- Coordinated Sensor Attack Evaluation ---");
-            System.out.println("speed_offset | dist_offset | SAF   | IDS   | min_dist");
-            System.out.println("-------------|-------------|-------|-------|----------");
+            System.out.println("speed_offset | dist_offset | SAF   | IDS   | safe_OT | unsafe_OT | same_lane_crash");
+            System.out.println("-------------|-------------|-------|-------|---------|-----------|----------------");   
 
             for (double speedOff : SPEED_OFFSETS) {
                 for (double distOff : DIST_OFFSETS) {
@@ -523,23 +525,38 @@ public class TwoLanesTwoCarsAttack {
 
                     Boolean attack_SAF = new BooleanSemanticsVisitor().eval(a_phi_SAF).eval(PERTURBATION_SIZE, 0, sequence);
 
-                    // Diagnostic: run one sample trajectory to check IDS and min distance
+                    // Diagnostic: run multiple trajectories to check IDS and crash count
+                    int diagRuns = 100;
+                    int safeOvertakes = 0;
+                    int unsafeOvertakes = 0;
+                    int sameLaneCrashes = 0;
+                    boolean idsTriggered = false;
+
                     ArrayList<DataStateExpression> diagF = new ArrayList<>();
                     diagF.add(ds -> ds.get(warning));
-                    diagF.add(ds -> ds.get(dist));
+                    diagF.add(ds -> ds.get(18));
+                    diagF.add(ds -> ds.get(my_lane));
 
-                    double[][] diagData = SystemState.sample(rand, diagF, get_coordinated_sensor_attack(speedOff, distOff), system, H, 1);
-
-                    boolean idsTriggered = false;
-                    double minDist = Double.MAX_VALUE;
-
-                    for (int i = 0; i < diagData.length; i++) {
-                        if (diagData[i][0] == 1.0) idsTriggered = true;
-                        if (diagData[i][1] < minDist) minDist = diagData[i][1];
+                    for (int run = 0; run < diagRuns; run++) {
+                        double[][] diagData = SystemState.sample(rand, diagF, get_coordinated_sensor_attack(speedOff, distOff), system, H, 1);
+                        boolean crashed = false;
+                        boolean overtook = false;
+                        for (int i = 0; i < diagData.length; i++) {
+                            if (diagData[i][0] == 1.0) idsTriggered = true;
+                            if (diagData[i][1] == 1.0) crashed = true;
+                            if (diagData[i][2] == 1.0) overtook = true;
+                        }
+                        // for (int i = 0; i < Math.min(diagData.length, 100); i++) {  // only check first 100 steps
+                        //     if (diagData[i][0] == 1.0) idsTriggered = true;
+                        // }
+                        if (crashed && overtook) unsafeOvertakes++;
+                        else if (crashed) sameLaneCrashes++;
+                        else if (overtook) safeOvertakes++;
                     }
 
-                    System.out.printf("       %.1f   |       %.1f   | %-5s | %-5s | %.1f%n",
-                            speedOff, distOff, attack_SAF, idsTriggered, minDist);
+                    System.out.printf("       %.2f  |       %.1f   | %-5s | %-5s | %3d/%-3d | %3d/%-3d   | %3d/%-3d%n",
+                        speedOff, distOff, attack_SAF, idsTriggered, 
+                        safeOvertakes, diagRuns, unsafeOvertakes, diagRuns, sameLaneCrashes, diagRuns);
                 }
             }
 
@@ -797,7 +814,8 @@ public class TwoLanesTwoCarsAttack {
         registry.set("IDS",
                 Controller.ifThenElse(
                         DataState.lessOrEqualThan(s_dist, IDS_THRESHOLD)
-                                .and(DataState.equalsTo(my_lane, other_lane))
+                                .and(DataState.equalsTo(my_lane, 0).and(DataState.equalsTo(other_lane, 0))
+                                    .or(DataState.equalsTo(my_lane, 1).and(DataState.equalsTo(other_lane, 1))))
                                 .and(DataState.equalsTo(intention, FASTER)
                                         .or(DataState.equalsTo(intention, IDLE)
                                                 .and(DataState.greaterThan(s_my_speed, 0)))),
@@ -909,7 +927,7 @@ public class TwoLanesTwoCarsAttack {
         updates.add(new DataStateUpdate(other_timer,other_new_timer));
         updates.add(new DataStateUpdate(other_move,other_new_move));
 
-        double other_new_speed = Math.min(Math.max(0, state.get(other_speed) + other_new_acc), MAX_SPEED-5);
+        double other_new_speed = Math.min(Math.max(0, state.get(other_speed) + other_new_acc), MAX_SPEED-20);
 
         double other_travel_x = (other_new_acc/2 + other_new_speed)*Math.cos((Math.PI/9)*other_new_move);
         double other_new_x = state.get(other_x) + other_travel_x;
@@ -1337,8 +1355,11 @@ public class TwoLanesTwoCarsAttack {
 
     // schedules when and how often the attack fires
     private static Perturbation get_coordinated_sensor_attack(double speedOffset, double distOffset){
-        return new AfterPerturbation(5, new IterativePerturbation(50, new AtomicPerturbation((int)(TIMER - 1),
-                (rg, state) -> coordinated_sensor_attack(rg, state, speedOffset, distOffset))));
+        // return new AfterPerturbation(0, new IterativePerturbation(50, new AtomicPerturbation((int)(TIMER - 1),
+        //         (rg, state) -> coordinated_sensor_attack(rg, state, speedOffset, distOffset))));
+
+        return new AfterPerturbation(0, new IterativePerturbation(100, new AtomicPerturbation(0,
+            (rg, state) -> coordinated_sensor_attack(rg, state, speedOffset, distOffset))));
     }
 
     // Spoofs s_my_speed (low) and s_dist (high) in a coordinated way
@@ -1375,7 +1396,7 @@ public class TwoLanesTwoCarsAttack {
     }
 
     public static double rho_r2l(DataState state){
-        if (state.get(my_lane)>6 || state.get(my_lane)<2){
+        if (state.get(my_y)>6 || state.get(my_y)<2){
             return 1;
         } else {
             return 0;
