@@ -20,7 +20,7 @@
  * limitations under the License.
  */
 
-package Scenarios;
+package cyberattacks;
 
 import stark.*;
 import stark.controller.ControllerRegistry;
@@ -247,7 +247,7 @@ public class TwoLanesTwoCarsLiDARAttack {
             if (attackEnabled) {
                 EvolutionSequence perturbedSequence = sequence.apply(getConfiguredLidarAttack(), 0, PERTURBATION_SIZE);
 
-                DistanceExpression crash_speed = new AtomicDistanceExpression(TwoLanesTwoCarsLiDarAttack::rho_si,
+                DistanceExpression crash_speed = new AtomicDistanceExpression(TwoLanesTwoCarsLiDARAttack::rho_si,
                         (v1, v2) -> Math.abs(v1 - v2));
 
                 double[][] direct_evaluation_crash_speed = new double[H][1];
@@ -258,7 +258,7 @@ public class TwoLanesTwoCarsLiDARAttack {
 
                 double eta = 0.01;
 
-                DistanceExpression crash = new AtomicDistanceExpression(TwoLanesTwoCarsLiDarAttack::rho_crash,
+                DistanceExpression crash = new AtomicDistanceExpression(TwoLanesTwoCarsLiDARAttack::rho_crash,
                         (v1, v2) -> Math.abs(v1 - v2));
 
                 DistanceExpression max_si = new MaxIntervalDistanceExpression(
@@ -315,7 +315,7 @@ public class TwoLanesTwoCarsLiDARAttack {
 
                 // don't go off-road
 
-                DistanceExpression atomic_r2l = new AtomicDistanceExpression(TwoLanesTwoCarsLiDarAttack::rho_r2l,
+                DistanceExpression atomic_r2l = new AtomicDistanceExpression(TwoLanesTwoCarsLiDARAttack::rho_r2l,
                         (v1, v2) -> Math.abs(v1 - v2));
 
                 RobustnessFormula phi_R2L = new AlwaysRobustnessFormula(
@@ -334,7 +334,7 @@ public class TwoLanesTwoCarsLiDARAttack {
 
                 // keep it right
 
-                DistanceExpression atomic_kir = new AtomicDistanceExpression(TwoLanesTwoCarsLiDarAttack::rho_kir,
+                DistanceExpression atomic_kir = new AtomicDistanceExpression(TwoLanesTwoCarsLiDARAttack::rho_kir,
                         (v1, v2) -> Math.abs(v1 - v2));
 
                 RobustnessFormula phi_KIR = new AlwaysRobustnessFormula(
@@ -352,7 +352,7 @@ public class TwoLanesTwoCarsLiDARAttack {
                         + attackName + " with response time " + TIMER + ": " + KIR);
 
                 DistanceExpression max_so = new MaxIntervalDistanceExpression(
-                        new AtomicDistanceExpression(TwoLanesTwoCarsLiDarAttack::rho_so, (v1, v2) -> Math.abs(v1 - v2)),
+                        new AtomicDistanceExpression(TwoLanesTwoCarsLiDARAttack::rho_so, (v1, v2) -> Math.abs(v1 - v2)),
                         0,
                         300);
 
@@ -381,7 +381,7 @@ public class TwoLanesTwoCarsLiDARAttack {
     }
 
     public static void main(String[] args) throws IOException {
-        new TwoLanesTwoCarsLiDarAttack();
+        new TwoLanesTwoCarsLiDARAttack();
     }
 
     // INITIAL DATA STATE

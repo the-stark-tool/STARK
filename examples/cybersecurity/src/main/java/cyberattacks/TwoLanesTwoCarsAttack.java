@@ -77,7 +77,7 @@ public class TwoLanesTwoCarsAttack {
     private static final double OTHER_INIT_SPEED = 15;
     private static final double MY_INIT_X_1 = 0;
     private static final double MY_INIT_Y_1 = 2;
-    private static final double OTHER_INIT_X_1 = 150;
+    private static final double OTHER_INIT_X_1 = 500;
     private static final double OTHER_INIT_Y_1 = 2;
     private static final double MY_INIT_X_2 = 50;
     private static final double MY_INIT_Y_2 = 6;
@@ -120,7 +120,7 @@ public class TwoLanesTwoCarsAttack {
     private static final int warning = 21;
     private static final double DANGER = 1;
     private static final double OK = 0;
-    private static final double IDS_THRESHOLD = calculateRSSSafetyDistance(MY_INIT_SPEED, OTHER_INIT_SPEED);
+    private static final double IDS_THRESHOLD = 0.2 * Math.abs(OTHER_INIT_X_1 - MY_INIT_X_1);
 
     private static final int NUMBER_OF_VARIABLES = 22;
 
@@ -487,8 +487,8 @@ public class TwoLanesTwoCarsAttack {
             // EVALUATION OF COORDINATED SENSOR ATTACK (multiple intensities)
             // ============================================================
             System.out.println("\n--- Coordinated Sensor Attack Evaluation ---");
-            System.out.println("speed_offset | dist_offset | attack_SAF");
-            System.out.println("-------------|-------------|----------");
+            System.out.println("speed_offset | dist_offset | SAF   | IDS   | min_dist");
+            System.out.println("-------------|-------------|-------|-------|----------");
 
             for (double speedOff : SPEED_OFFSETS) {
                 for (double distOff : DIST_OFFSETS) {
@@ -522,7 +522,24 @@ public class TwoLanesTwoCarsAttack {
                     );
 
                     Boolean attack_SAF = new BooleanSemanticsVisitor().eval(a_phi_SAF).eval(PERTURBATION_SIZE, 0, sequence);
-                    System.out.printf("       %.1f   |       %.1f   | %s%n", speedOff, distOff, attack_SAF);
+
+                    // Diagnostic: run one sample trajectory to check IDS and min distance
+                    ArrayList<DataStateExpression> diagF = new ArrayList<>();
+                    diagF.add(ds -> ds.get(warning));
+                    diagF.add(ds -> ds.get(dist));
+
+                    double[][] diagData = SystemState.sample(rand, diagF, get_coordinated_sensor_attack(speedOff, distOff), system, H, 1);
+
+                    boolean idsTriggered = false;
+                    double minDist = Double.MAX_VALUE;
+
+                    for (int i = 0; i < diagData.length; i++) {
+                        if (diagData[i][0] == 1.0) idsTriggered = true;
+                        if (diagData[i][1] < minDist) minDist = diagData[i][1];
+                    }
+
+                    System.out.printf("       %.1f   |       %.1f   | %-5s | %-5s | %.1f%n",
+                            speedOff, distOff, attack_SAF, idsTriggered, minDist);
                 }
             }
 
@@ -1406,7 +1423,6 @@ public class TwoLanesTwoCarsAttack {
             System.out.printf("%f\n", data[i][data[i].length -1]);
         }
     }
-
 
 }
 
