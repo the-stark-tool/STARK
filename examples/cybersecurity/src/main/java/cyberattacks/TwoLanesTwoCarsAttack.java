@@ -68,10 +68,9 @@ public class TwoLanesTwoCarsAttack {
     private static final int H = 300;
 
     // Coordinated sensor attack intensities to test
-    // private static final double[] SPEED_OFFSETS = {0.3, 0.5, 0.7, 1.0};
-    // private static final double[] DIST_OFFSETS = {0, 0.5, 1.0, 1.5, 2.0, 3.0};
-    private static final double[] SPEED_OFFSETS = {0.50, 0.52, 0.54, 0.56, 0.58, 0.60, 0.62, 0.64, 0.66, 0.68, 0.70, 1.0};
-    private static final double[] DIST_OFFSETS = {0.0, 1.5, 3.0, 50.0, 1000.0};
+    private static final double[] SPEED_OFFSETS = {0.00, 0.10, 0.20, 0.30, 0.40, 0.50, 0.52, 0.54, 0.56, 0.58, 0.60, 0.62, 0.64, 0.66, 0.68, 0.70, 0.80, 0.90, 1.0};
+    private static final double[] DIST_OFFSETS = {0.00, 0.10, 0.20, 0.30, 0.50, 0.75, 1.00, 1.50, 3.0, 5.0, 10.0, 15.0, 20.0, 30.0};
+    
 
 
     // INITIAL VALUES PER SCENARIO
@@ -79,7 +78,7 @@ public class TwoLanesTwoCarsAttack {
     private static final double OTHER_INIT_SPEED = 15;
     private static final double MY_INIT_X_1 = 0;
     private static final double MY_INIT_Y_1 = 2;
-    private static final double OTHER_INIT_X_1 = 500;
+    private static final double OTHER_INIT_X_1 = 800;
     private static final double OTHER_INIT_Y_1 = 2;
     private static final double MY_INIT_X_2 = 50;
     private static final double MY_INIT_Y_2 = 6;
@@ -122,7 +121,7 @@ public class TwoLanesTwoCarsAttack {
     private static final int warning = 21;
     private static final double DANGER = 1;
     private static final double OK = 0;
-    private static final double IDS_THRESHOLD =  127; // 0.2 * Math.abs(OTHER_INIT_X_1 - MY_INIT_X_1);
+    private static final double IDS_THRESHOLD = 387; 
 
     private static final int NUMBER_OF_VARIABLES = 22;
 
@@ -135,8 +134,8 @@ public class TwoLanesTwoCarsAttack {
 
     public TwoLanesTwoCarsAttack() throws IOException{
         try {
-            int EVOLUTION_SEQUENCE_SIZE = 10;
-            int PERTURBATION_SIZE = 10;
+            int EVOLUTION_SEQUENCE_SIZE = 100;
+            int PERTURBATION_SIZE = 100;
             int EXTRA_SIZE = 100;
 
             RandomGenerator rand = new DefaultRandomGenerator();
@@ -484,6 +483,7 @@ public class TwoLanesTwoCarsAttack {
 
             System.out.println("Evaluation of SO robustness in Scenario "+SCENARIO+" with response time "+ TIMER +": "+SO);
 
+            // === EVALUATION LOOP (skipped) ===
 
             // ============================================================
             // EVALUATION OF COORDINATED SENSOR ATTACK (multiple intensities)
