@@ -65,7 +65,7 @@ public class TwoLanesTwoCarsAttack {
     private static final double SLOW_OFFSET = 2;
     private static final double IDLE_OFFSET = 0.4;
     private static final double DIST_OFFSET = VEHICLE_LENGTH*VEHICLE_WIDTH;
-    private static final int H = 300;
+    private static final int H = 150;
 
     // Coordinated sensor attack intensities to test
     private static final double[] SPEED_OFFSETS = {0.00, 0.10, 0.20, 0.30, 0.40, 0.50, 0.52, 0.54, 0.56, 0.58, 0.60, 0.62, 0.64, 0.66, 0.68, 0.70, 0.80, 0.90, 1.0};
@@ -134,9 +134,9 @@ public class TwoLanesTwoCarsAttack {
 
     public TwoLanesTwoCarsAttack() throws IOException{
         try {
-            int EVOLUTION_SEQUENCE_SIZE = 100;
-            int PERTURBATION_SIZE = 100;
-            int EXTRA_SIZE = 100;
+            int EVOLUTION_SEQUENCE_SIZE = 10;
+            int PERTURBATION_SIZE = 10;
+            int EXTRA_SIZE = 100000;
 
             RandomGenerator rand = new DefaultRandomGenerator();
             DataState state = getInitialState();
@@ -489,8 +489,8 @@ public class TwoLanesTwoCarsAttack {
             // EVALUATION OF COORDINATED SENSOR ATTACK (multiple intensities)
             // ============================================================
             System.out.println("\n--- Coordinated Sensor Attack Evaluation ---");
-            System.out.println("speed_offset | dist_offset | SAF   | IDS   | safe_OT | unsafe_OT | same_lane_crash");
-            System.out.println("-------------|-------------|-------|-------|---------|-----------|----------------");   
+            System.out.println("speed_offset | dist_offset | SAF   | IDS   | safe_OT | unsafe_OT | same_lane_crash | teleport");
+            System.out.println("-------------|-------------|-------|-------|---------|-----------|-----------------|----------");
 
             for (double speedOff : SPEED_OFFSETS) {
                 for (double distOff : DIST_OFFSETS) {
@@ -526,37 +526,44 @@ public class TwoLanesTwoCarsAttack {
                     Boolean attack_SAF = new BooleanSemanticsVisitor().eval(a_phi_SAF).eval(PERTURBATION_SIZE, 0, sequence);
 
                     // Diagnostic: run multiple trajectories to check IDS and crash count
-                    int diagRuns = 100;
+                    int diagRuns = 500;
                     int safeOvertakes = 0;
                     int unsafeOvertakes = 0;
                     int sameLaneCrashes = 0;
+                    int teleportCount = 0;
                     boolean idsTriggered = false;
 
                     ArrayList<DataStateExpression> diagF = new ArrayList<>();
                     diagF.add(ds -> ds.get(warning));
                     diagF.add(ds -> ds.get(18));
                     diagF.add(ds -> ds.get(my_lane));
+                    diagF.add(ds -> ds.get(my_position));
 
                     for (int run = 0; run < diagRuns; run++) {
                         double[][] diagData = SystemState.sample(rand, diagF, get_coordinated_sensor_attack(speedOff, distOff), system, H, 1);
                         boolean crashed = false;
                         boolean overtook = false;
+                        boolean passedInSameLane = false;
+                        boolean wasBehind = true;
                         for (int i = 0; i < diagData.length; i++) {
                             if (diagData[i][0] == 1.0) idsTriggered = true;
                             if (diagData[i][1] == 1.0) crashed = true;
                             if (diagData[i][2] == 1.0) overtook = true;
+                            if (diagData[i][3] == 1.0 && wasBehind && !overtook) {
+                                passedInSameLane = true;
+                            }
+                            if (diagData[i][3] == -1.0) wasBehind = true;
+                            if (diagData[i][3] == 1.0) wasBehind = false;
                         }
-                        // for (int i = 0; i < Math.min(diagData.length, 100); i++) {  // only check first 100 steps
-                        //     if (diagData[i][0] == 1.0) idsTriggered = true;
-                        // }
                         if (crashed && overtook) unsafeOvertakes++;
                         else if (crashed) sameLaneCrashes++;
                         else if (overtook) safeOvertakes++;
+                        if (passedInSameLane && !crashed) teleportCount++;
                     }
 
-                    System.out.printf("       %.2f  |       %.1f   | %-5s | %-5s | %3d/%-3d | %3d/%-3d   | %3d/%-3d%n",
-                        speedOff, distOff, attack_SAF, idsTriggered, 
-                        safeOvertakes, diagRuns, unsafeOvertakes, diagRuns, sameLaneCrashes, diagRuns);
+                    System.out.printf("       %.2f  |       %.1f   | %-5s | %-5s | %3d/%-3d | %3d/%-3d   | %3d/%-3d         | %3d/%-3d%n",
+                        speedOff, distOff, attack_SAF, idsTriggered,
+                        safeOvertakes, diagRuns, unsafeOvertakes, diagRuns, sameLaneCrashes, diagRuns, teleportCount, diagRuns);
                 }
             }
 
