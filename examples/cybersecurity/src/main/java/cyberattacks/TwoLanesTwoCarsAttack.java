@@ -136,7 +136,7 @@ public class TwoLanesTwoCarsAttack {
         try {
             int EVOLUTION_SEQUENCE_SIZE = 10;
             int PERTURBATION_SIZE = 10;
-            int EXTRA_SIZE = 100000;
+            int EXTRA_SIZE = 1000;
 
             RandomGenerator rand = new DefaultRandomGenerator();
             DataState state = getInitialState();
@@ -524,6 +524,7 @@ public class TwoLanesTwoCarsAttack {
                     );
 
                     Boolean attack_SAF = new BooleanSemanticsVisitor().eval(a_phi_SAF).eval(PERTURBATION_SIZE, 0, sequence);
+
 
                     // Diagnostic: run multiple trajectories to check IDS and crash count
                     int diagRuns = 500;
