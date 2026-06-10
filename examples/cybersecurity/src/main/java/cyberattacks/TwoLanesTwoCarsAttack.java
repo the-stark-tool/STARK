@@ -65,12 +65,14 @@ public class TwoLanesTwoCarsAttack {
     private static final double SLOW_OFFSET = 2;
     private static final double IDLE_OFFSET = 0.4;
     private static final double DIST_OFFSET = VEHICLE_LENGTH*VEHICLE_WIDTH;
-    private static final int H = 150;
+    private static final int H = 300;
 
     // Coordinated sensor attack intensities to test
     private static final double[] SPEED_OFFSETS = {0.00, 0.10, 0.20, 0.30, 0.40, 0.50, 0.52, 0.54, 0.56, 0.58, 0.60, 0.62, 0.64, 0.66, 0.68, 0.70, 0.80, 0.90, 1.0};
     private static final double[] DIST_OFFSETS = {0.00, 0.10, 0.20, 0.30, 0.50, 0.75, 1.00, 1.50, 3.0, 5.0, 10.0, 15.0, 20.0, 30.0};
-    
+    private static final double[] OTHER_MAX_SPEEDS = {35, 30, 25, 20};
+
+    private static double OTHER_MAX_SPEED = 20;
 
 
     // INITIAL VALUES PER SCENARIO
@@ -144,11 +146,11 @@ public class TwoLanesTwoCarsAttack {
             ControlledSystem system;
 
             if(SCENARIO==1) {
-                system = new ControlledSystem(getController(), (rg, ds) -> ds.apply(getEnvironmentUpdates_1(rg, ds)), state);
+                system = new ControlledSystem(getController(IDS_THRESHOLD), (rg, ds) -> ds.apply(getEnvironmentUpdates_1(rg, ds)), state);
             } else if (SCENARIO==2) {
-                system = new ControlledSystem(getController(), (rg, ds) -> ds.apply(getEnvironmentUpdates_2(rg, ds)), state);
+                system = new ControlledSystem(getController(IDS_THRESHOLD), (rg, ds) -> ds.apply(getEnvironmentUpdates_2(rg, ds)), state);
             }else{
-                system = new ControlledSystem(getController(), (rg, ds) -> ds.apply(getEnvironmentUpdates_3(rg, ds)), state);
+                system = new ControlledSystem(getController(IDS_THRESHOLD), (rg, ds) -> ds.apply(getEnvironmentUpdates_3(rg, ds)), state);
             }
 
             EvolutionSequence sequence = new EvolutionSequence(rand, rg -> system, EVOLUTION_SEQUENCE_SIZE);
@@ -483,90 +485,110 @@ public class TwoLanesTwoCarsAttack {
 
             System.out.println("Evaluation of SO robustness in Scenario "+SCENARIO+" with response time "+ TIMER +": "+SO);
 
-            // === EVALUATION LOOP (skipped) ===
-
             // ============================================================
-            // EVALUATION OF COORDINATED SENSOR ATTACK (multiple intensities)
+            // OTHER MAX SPEED LOOP
             // ============================================================
-            System.out.println("\n--- Coordinated Sensor Attack Evaluation ---");
-            System.out.println("speed_offset | dist_offset | SAF   | IDS   | safe_OT | unsafe_OT | same_lane_crash | teleport");
-            System.out.println("-------------|-------------|-------|-------|---------|-----------|-----------------|----------");
 
-            for (double speedOff : SPEED_OFFSETS) {
-                for (double distOff : DIST_OFFSETS) {
+            for (double otherMaxSpeed : OTHER_MAX_SPEEDS) {
+                OTHER_MAX_SPEED = otherMaxSpeed;
+                double idsThreshold = calculateRSSSafetyDistance(MAX_SPEED, otherMaxSpeed);
 
-                    DistanceExpression a_crash_speed = new AtomicDistanceExpression(TwoLanesTwoCarsAttack::rho_si, (v1, v2) -> Math.abs(v1 - v2));
-                    DistanceExpression a_crash = new AtomicDistanceExpression(TwoLanesTwoCarsAttack::rho_crash, (v1, v2) -> Math.abs(v1 - v2));
+                System.out.println("\n========================================");
+                System.out.println("=== OTHER MAX SPEED: " + otherMaxSpeed + " | IDS: " + idsThreshold + " ===");
+                System.out.println("========================================");
 
-                    DistanceExpression a_max_si = new MaxIntervalDistanceExpression(a_crash_speed, 0, H);
-                    DistanceExpression a_max_crash = new MaxIntervalDistanceExpression(a_crash, 0, H);
-
-                    RobustnessFormula a_phi_si = new AtomicRobustnessFormula(
-                            get_coordinated_sensor_attack(speedOff, distOff),
-                            a_max_si,
-                            RelationOperator.LESS_OR_EQUAL_THAN,
-                            eta
-                    );
-
-                    RobustnessFormula a_phi_crash = new AtomicRobustnessFormula(
-                            get_coordinated_sensor_attack(speedOff, distOff),
-                            a_max_crash,
-                            RelationOperator.LESS_OR_EQUAL_THAN,
-                            eta
-                    );
-
-                    RobustnessFormula a_phi_combined = new ConjunctionRobustnessFormula(a_phi_si, a_phi_crash);
-
-                    RobustnessFormula a_phi_SAF = new AlwaysRobustnessFormula(
-                            a_phi_combined,
-                            0,
-                            100
-                    );
-
-                    Boolean attack_SAF = new BooleanSemanticsVisitor().eval(a_phi_SAF).eval(PERTURBATION_SIZE, 0, sequence);
-
-
-                    // Diagnostic: run multiple trajectories to check IDS and crash count
-                    int diagRuns = 500;
-                    int safeOvertakes = 0;
-                    int unsafeOvertakes = 0;
-                    int sameLaneCrashes = 0;
-                    int teleportCount = 0;
-                    boolean idsTriggered = false;
-
-                    ArrayList<DataStateExpression> diagF = new ArrayList<>();
-                    diagF.add(ds -> ds.get(warning));
-                    diagF.add(ds -> ds.get(18));
-                    diagF.add(ds -> ds.get(my_lane));
-                    diagF.add(ds -> ds.get(my_position));
-
-                    for (int run = 0; run < diagRuns; run++) {
-                        double[][] diagData = SystemState.sample(rand, diagF, get_coordinated_sensor_attack(speedOff, distOff), system, H, 1);
-                        boolean crashed = false;
-                        boolean overtook = false;
-                        boolean passedInSameLane = false;
-                        boolean wasBehind = true;
-                        for (int i = 0; i < diagData.length; i++) {
-                            if (diagData[i][0] == 1.0) idsTriggered = true;
-                            if (diagData[i][1] == 1.0) crashed = true;
-                            if (diagData[i][2] == 1.0) overtook = true;
-                            if (diagData[i][3] == 1.0 && wasBehind && !overtook) {
-                                passedInSameLane = true;
-                            }
-                            if (diagData[i][3] == -1.0) wasBehind = true;
-                            if (diagData[i][3] == 1.0) wasBehind = false;
-                        }
-                        if (crashed && overtook) unsafeOvertakes++;
-                        else if (crashed) sameLaneCrashes++;
-                        else if (overtook) safeOvertakes++;
-                        if (passedInSameLane && !crashed) teleportCount++;
-                    }
-
-                    System.out.printf("       %.2f  |       %.1f   | %-5s | %-5s | %3d/%-3d | %3d/%-3d   | %3d/%-3d         | %3d/%-3d%n",
-                        speedOff, distOff, attack_SAF, idsTriggered,
-                        safeOvertakes, diagRuns, unsafeOvertakes, diagRuns, sameLaneCrashes, diagRuns, teleportCount, diagRuns);
+                ControlledSystem attackSystem;
+                if(SCENARIO==1) {
+                    attackSystem = new ControlledSystem(getController(idsThreshold), (rg, ds) -> ds.apply(getEnvironmentUpdates_1(rg, ds)), state);
+                } else if (SCENARIO==2) {
+                    attackSystem = new ControlledSystem(getController(idsThreshold), (rg, ds) -> ds.apply(getEnvironmentUpdates_2(rg, ds)), state);
+                } else {
+                    attackSystem = new ControlledSystem(getController(idsThreshold), (rg, ds) -> ds.apply(getEnvironmentUpdates_3(rg, ds)), state);
                 }
-            }
+
+
+                final ControlledSystem finalAttackSystem = attackSystem;
+                EvolutionSequence attackSequence = new EvolutionSequence(rand, rg -> finalAttackSystem, EVOLUTION_SEQUENCE_SIZE);
+
+                System.out.println("\n--- Coordinated Sensor Attack Evaluation ---");
+                System.out.println("speed_offset | dist_offset | SAF   | IDS   | safe_OT | unsafe_OT | same_lane_crash | teleport");
+                System.out.println("-------------|-------------|-------|-------|---------|-----------|-----------------|----------");
+
+                for (double speedOff : SPEED_OFFSETS) {
+                    for (double distOff : DIST_OFFSETS) {
+
+                        DistanceExpression a_crash_speed = new AtomicDistanceExpression(TwoLanesTwoCarsAttack::rho_si, (v1, v2) -> Math.abs(v1 - v2));
+                        DistanceExpression a_crash = new AtomicDistanceExpression(TwoLanesTwoCarsAttack::rho_crash, (v1, v2) -> Math.abs(v1 - v2));
+
+                        DistanceExpression a_max_si = new MaxIntervalDistanceExpression(a_crash_speed, 0, H);
+                        DistanceExpression a_max_crash = new MaxIntervalDistanceExpression(a_crash, 0, H);
+
+                        RobustnessFormula a_phi_si = new AtomicRobustnessFormula(
+                                get_coordinated_sensor_attack(speedOff, distOff),
+                                a_max_si,
+                                RelationOperator.LESS_OR_EQUAL_THAN,
+                                eta
+                        );
+
+                        RobustnessFormula a_phi_crash = new AtomicRobustnessFormula(
+                                get_coordinated_sensor_attack(speedOff, distOff),
+                                a_max_crash,
+                                RelationOperator.LESS_OR_EQUAL_THAN,
+                                eta
+                        );
+
+                        RobustnessFormula a_phi_combined = new ConjunctionRobustnessFormula(a_phi_si, a_phi_crash);
+
+                        RobustnessFormula a_phi_SAF = new AlwaysRobustnessFormula(
+                                a_phi_combined,
+                                0,
+                                100
+                        );
+
+                        Boolean attack_SAF = new BooleanSemanticsVisitor().eval(a_phi_SAF).eval(PERTURBATION_SIZE, 0, attackSequence);
+
+                        // Diagnostic: run multiple trajectories to check IDS and crash count
+                        int diagRuns = 500;
+                        int safeOvertakes = 0;
+                        int unsafeOvertakes = 0;
+                        int sameLaneCrashes = 0;
+                        int teleportCount = 0;
+                        boolean idsTriggered = false;
+
+                        ArrayList<DataStateExpression> diagF = new ArrayList<>();
+                        diagF.add(ds -> ds.get(warning));
+                        diagF.add(ds -> ds.get(18));
+                        diagF.add(ds -> ds.get(my_lane));
+                        diagF.add(ds -> ds.get(my_position));
+
+                        for (int run = 0; run < diagRuns; run++) {
+                            double[][] diagData = SystemState.sample(rand, diagF, get_coordinated_sensor_attack(speedOff, distOff), attackSystem, H, 1);
+                            boolean crashed = false;
+                            boolean overtook = false;
+                            boolean passedInSameLane = false;
+                            boolean wasBehind = true;
+                            for (int i = 0; i < diagData.length; i++) {
+                                if (diagData[i][0] == 1.0) idsTriggered = true;
+                                if (diagData[i][1] == 1.0) crashed = true;
+                                if (diagData[i][2] == 1.0) overtook = true;
+                                if (diagData[i][3] == 1.0 && wasBehind && !overtook) {
+                                    passedInSameLane = true;
+                                }
+                                if (diagData[i][3] == -1.0) wasBehind = true;
+                                if (diagData[i][3] == 1.0) wasBehind = false;
+                            }
+                            if (crashed && overtook) unsafeOvertakes++;
+                            else if (crashed) sameLaneCrashes++;
+                            else if (overtook) safeOvertakes++;
+                            if (passedInSameLane && !crashed) teleportCount++;
+                        }
+
+                        System.out.printf("       %.2f  |       %.1f   | %-5s | %-5s | %3d/%-3d | %3d/%-3d   | %3d/%-3d         | %3d/%-3d%n",
+                            speedOff, distOff, attack_SAF, idsTriggered,
+                            safeOvertakes, diagRuns, unsafeOvertakes, diagRuns, sameLaneCrashes, diagRuns, teleportCount, diagRuns);
+                    }
+                }
+            } // end OTHER_MAX_SPEEDS loop
 
         }
         catch (RuntimeException e) {
@@ -684,7 +706,7 @@ public class TwoLanesTwoCarsAttack {
         }
     }
 
-    private Controller getController(){
+    private Controller getController(double idsThreshold){
         ControllerRegistry registry = new ControllerRegistry();
 
         registry.set("Control",
@@ -821,7 +843,7 @@ public class TwoLanesTwoCarsAttack {
         // IDS: monitors sensed values and triggers warning if danger detected
         registry.set("IDS",
                 Controller.ifThenElse(
-                        DataState.lessOrEqualThan(s_dist, IDS_THRESHOLD)
+                        DataState.lessOrEqualThan(s_dist, idsThreshold)
                                 .and(DataState.equalsTo(my_lane, 0).and(DataState.equalsTo(other_lane, 0))
                                     .or(DataState.equalsTo(my_lane, 1).and(DataState.equalsTo(other_lane, 1))))
                                 .and(DataState.equalsTo(intention, FASTER)
@@ -935,7 +957,7 @@ public class TwoLanesTwoCarsAttack {
         updates.add(new DataStateUpdate(other_timer,other_new_timer));
         updates.add(new DataStateUpdate(other_move,other_new_move));
 
-        double other_new_speed = Math.min(Math.max(0, state.get(other_speed) + other_new_acc), MAX_SPEED-20);
+        double other_new_speed = Math.min(Math.max(0, state.get(other_speed) + other_new_acc), OTHER_MAX_SPEED);
 
         double other_travel_x = (other_new_acc/2 + other_new_speed)*Math.cos((Math.PI/9)*other_new_move);
         double other_new_x = state.get(other_x) + other_travel_x;
