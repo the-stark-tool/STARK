@@ -1,0 +1,68 @@
+# run from anywhere; resolves STARK root two levels up from this justfile
+stark_root := justfile_directory() / ".." / ".."
+
+# Run brake-checker scenario (t=0 to TIME_HORIZON), outputs to generated_files/brake-checker-*/
+run-brake-checker:
+    cd {{stark_root}} && ./gradlew :examples:two_lanes_merge:run --args="brake-checker"
+
+# Run no-merger scenario (eta 0.0 to 1.0), outputs to generated_files/no-merger-*/
+run-no-merger:
+    cd {{stark_root}} && ./gradlew :examples:two_lanes_merge:run --args="no-merger"
+
+# Run reckless-merger scenario, outputs to generated_files/reckless-merger/
+run-reckless-merger:
+    cd {{stark_root}} && ./gradlew :examples:two_lanes_merge:run --args="reckless-merger"
+
+# Visualize initial state (2D snapshot of t=0), e.g.: just graph-init-datastate no-merger-0.5 -s
+graph-init-datastate SCENARIO *FLAGS:
+    cd scripts && uv run scripts/graph-init-datastate.py {{SCENARIO}} {{FLAGS}}
+
+# Visualize 3D trajectory (x, y, time axes), e.g.: just graph-traj brake-checker-40 -v -saf
+graph-traj SCENARIO *FLAGS:
+    cd scripts && uv run scripts/play-trajectory.py {{SCENARIO}} {{FLAGS}}
+
+# Play animated trajectory, e.g.: just play-traj reckless-merger -s
+play-traj SCENARIO *FLAGS:
+    cd scripts && uv run play-trajectory.py {{SCENARIO}} {{FLAGS}}
+
+# Show detailed usage, flags, and examples for all recipes
+help:
+    @echo "=== BEP Scenario Runner ==="
+    @echo ""
+    @echo "Run scenarios (generates files in generated_files/<scenario>/):"
+    @echo "  just run-no-merger        Run no-merger scenario (eta 0.0 to 1.0)"
+    @echo "  just run-brake-checker    Run brake-checker scenario (t=0 to TIME_HORIZON)"
+    @echo "  just run-reckless-merger  Run reckless-merger scenario"
+    @echo ""
+    @echo "Generated scenario folders:"
+    @echo "  no-merger-0.0 .. no-merger-1.0   (one per eta value)"
+    @echo "  brake-checker-0, -10, -20 ...    (one per perturbation timestep)"
+    @echo "  reckless-merger"
+    @echo ""
+    @echo "Each scenario folder contains:"
+    @echo "  safety/                  saf.csv, tar.csv, sil.csv (always)"
+    @echo "  sampled_trajectories/    sampled trajectory CSVs (always)"
+    @echo "  violating_trajectories/  saf/ tar/ sil/  (only if violations found)"
+    @echo ""
+    @echo "Flags for visualization recipes:"
+    @echo "  -s         use sampled trajectories"
+    @echo "  -v -saf    use violating safety trajectories"
+    @echo "  -v -tar    use violating target trajectories"
+    @echo "  -v -sil    use violating silence trajectories"
+    @echo ""
+    @echo "Visualize initial state (2D snapshot of t=0):"
+    @echo "  Usage:    just graph-init-datastate <scenario> <flags>"
+    @echo "  Examples: just graph-init-datastate no-merger-0.5 -s"
+    @echo "            just graph-init-datastate brake-checker-20 -v -tar"
+    @echo ""
+    @echo "Visualize 3D trajectory (x, y, time axes):"
+    @echo "  Usage:    just graph-traj <scenario> <flags>"
+    @echo "  Examples: just graph-traj brake-checker-40 -v -saf"
+    @echo "            just graph-traj no-merger-1.0 -s"
+    @echo ""
+    @echo "Play animated trajectory:"
+    @echo "  Usage:    just play-traj <scenario> <flags>"
+    @echo "  Examples: just play-traj reckless-merger -s"
+    @echo "            just play-traj no-merger-0.0 -v -sil"
+    @echo ""
+    @echo "Tip: run 'just --list' for a one-line summary of every recipe."
