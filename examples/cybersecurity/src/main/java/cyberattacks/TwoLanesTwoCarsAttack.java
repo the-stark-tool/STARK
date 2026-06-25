@@ -136,9 +136,9 @@ public class TwoLanesTwoCarsAttack {
 
     public TwoLanesTwoCarsAttack() throws IOException{
         try {
-            int EVOLUTION_SEQUENCE_SIZE = 10;
-            int PERTURBATION_SIZE = 10;
-            int EXTRA_SIZE = 1000;
+            int EVOLUTION_SEQUENCE_SIZE = 100;
+            int PERTURBATION_SIZE = 100;
+            int EXTRA_SIZE = 10000;
 
             RandomGenerator rand = new DefaultRandomGenerator();
             DataState state = getInitialState();
@@ -489,6 +489,12 @@ public class TwoLanesTwoCarsAttack {
             // OTHER MAX SPEED LOOP
             // ============================================================
 
+            double FIXED_SPEED_OFF = 0.60;
+            double FIXED_DIST_OFF  = 1.50;
+
+            DistanceExpression d_si = new AtomicDistanceExpression(
+                    TwoLanesTwoCarsAttack::rho_si, (v1, v2) -> Math.abs(v1 - v2));
+
             for (double otherMaxSpeed : OTHER_MAX_SPEEDS) {
                 OTHER_MAX_SPEED = otherMaxSpeed;
                 double idsThreshold = calculateRSSSafetyDistance(MAX_SPEED, otherMaxSpeed);
@@ -509,6 +515,29 @@ public class TwoLanesTwoCarsAttack {
 
                 final ControlledSystem finalAttackSystem = attackSystem;
                 EvolutionSequence attackSequence = new EvolutionSequence(rand, rg -> finalAttackSystem, EVOLUTION_SEQUENCE_SIZE);
+
+                // ============================================================
+                // STEPWISE DISTANCE vs TIME at fixed offset (speed 0.6, dist 1.5)
+                // ============================================================
+                double FIXED_SPEED = 0.50;
+                double FIXED_DIST  = 0.30;
+
+                DistanceExpression d_si2 = new AtomicDistanceExpression(
+                        TwoLanesTwoCarsAttack::rho_si, (v1, v2) -> Math.abs(v1 - v2));
+
+                EvolutionSequence S2 = attackSequence.apply(
+                        get_coordinated_sensor_attack(FIXED_SPEED, FIXED_DIST), 0, PERTURBATION_SIZE);
+
+                double[][] curve = new double[H][1];
+                for (int i = 0; i < H; i++) {
+                    curve[i][0] = d_si2.compute(i, attackSequence, S2);
+                }
+
+                Util.writeToCSV("./dist_curve_maxspeed" + (int) otherMaxSpeed
+                        + "_s050_d030_scen" + SCENARIO + ".csv", curve);
+
+                System.out.println("Wrote distance curve for OTHER_MAX_SPEED=" + otherMaxSpeed);
+                // ============================================================
 
                 System.out.println("\n--- Coordinated Sensor Attack Evaluation ---");
                 System.out.println("speed_offset | dist_offset | SAF   | IDS   | safe_OT | unsafe_OT | same_lane_crash | teleport");
@@ -1385,12 +1414,9 @@ public class TwoLanesTwoCarsAttack {
 
     // schedules when and how often the attack fires
     private static Perturbation get_coordinated_sensor_attack(double speedOffset, double distOffset){
-        // return new AfterPerturbation(0, new IterativePerturbation(50, new AtomicPerturbation((int)(TIMER - 1),
-        //         (rg, state) -> coordinated_sensor_attack(rg, state, speedOffset, distOffset))));
-
-        return new AfterPerturbation(0, new IterativePerturbation(100, new AtomicPerturbation(0,
+    return new AfterPerturbation(0, new IterativePerturbation(H, new AtomicPerturbation(0,
             (rg, state) -> coordinated_sensor_attack(rg, state, speedOffset, distOffset))));
-    }
+    }   
 
     // Spoofs s_my_speed (low) and s_dist (high) in a coordinated way
     // to fool both the controller (s_dist > sensedSafetyGap) and the IDS (s_dist > IDS_THRESHOLD)
