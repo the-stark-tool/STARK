@@ -32,7 +32,6 @@ import stark.distance.MaxIntervalDistanceExpression;
 import stark.ds.DataState;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateUpdate;
-
 import stark.ds.RelationOperator;
 import stark.perturbation.AfterPerturbation;
 import stark.perturbation.AtomicPerturbation;
@@ -50,15 +49,11 @@ import java.util.*;
 import java.util.function.Supplier;
 
 /**
- * Scenario where two cars (my and other) drive on a highway with two lanes.
- * Only my_car is managed by the controller.
- *
- * This attack variant keeps the original scenario 1 machinery and replaces the
- * external world perturbation with a configurable LiDAR perturbation.
+ * Two-lane, two-car scenario with configurable LiDAR attacks.
  */
 public class TwoLanesTwoCarsLiDARAttack {
 
-    private static final int SCENARIO = 1; // Attack variant keeps only scenario 1 from TwoLanesTwoCars
+    private static final int SCENARIO = 1;
 
     // VEHICLE DIMENSIONS
     private static final double VEHICLE_LENGTH = 5;
@@ -77,17 +72,16 @@ public class TwoLanesTwoCarsLiDARAttack {
 
     // LIDAR ATTACK CONFIGURATION
     public enum AttackType {
-        NONE,      // no perturbation is applied to the distance reading
-        DAZZLE,    // distance readings are perturbed by bounded random noise
-        BLACKOUT   // distance reading is frozen at the value seen when the attack starts
+        NONE,
+        DAZZLE,
+        BLACKOUT
     }
 
-    private static final AttackType ATTACK_TYPE = AttackType.DAZZLE; // Set to NONE, DAZZLE or BLACKOUT
+    private static final AttackType ATTACK_TYPE = AttackType.DAZZLE;
     private static final int ATTACK_START_STEP = 1;
     private static final int DAZZLE_DURATION = 300;
 
-    // When ATTACK_TYPE is DAZZLE the simulation is repeated for every noise level
-    // listed below, each in its own dazzle_<pct> output directory.
+    // Dazzle noise levels, expressed as percentages.
     private static final int[] DAZZLE_PERCENTAGES = {
             5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100
     };
@@ -167,7 +161,7 @@ public class TwoLanesTwoCarsLiDARAttack {
             System.out.println("Simulation of single nominal behaviour in scenario: " + SCENARIO);
             printLData(rand, L, F, system, H, 1);
 
-            // trajectories
+            // Nominal trajectories
 
             double[][] my_trajectory = new double[H][2];
             double[][] other_trajectory = new double[H][2];
@@ -194,7 +188,7 @@ public class TwoLanesTwoCarsLiDARAttack {
             Util.writeToCSV("./my_extra_trajectory.csv", my_extra_trajectory);
             Util.writeToCSV("./other_extra_trajectory.csv", other_extra_trajectory);
 
-            // animation data
+            // Animation data
 
             ArrayList<String> L_animation = new ArrayList<>();
             L_animation.add("my_x");
@@ -218,15 +212,11 @@ public class TwoLanesTwoCarsLiDARAttack {
             F_animation.add(ds -> ds.get(safety_gap));
             F_animation.add(ds -> ds.get(crash));
 
-            // Nominal distribution sample, written once and reused across every
-            // attack-level run via Files.copy below.
+            // Nominal distribution sample reused by every attack run.
             writeRunsToCSV(rand, L_animation, F_animation, null, system, H,
                     EVOLUTION_SEQUENCE_SIZE, "nominal", "./runs_nominal.csv");
 
-            // Branch on attack type:
-            //   NONE     -> just dump simulation_data.csv with no attack and finish
-            //   BLACKOUT -> run the helper once, output to root
-            //   DAZZLE   -> sweep across DAZZLE_PERCENTAGES, each in its own dazzle_<pct> dir
+            // Run the selected attack configuration.
             if (ATTACK_TYPE == AttackType.NONE) {
                 writeSimulationToCSV(rand, L_animation, F_animation, null, system, H, "./simulation_data.csv");
                 System.out.println("ATTACK_TYPE is NONE; only nominal trajectory data was generated.");
@@ -253,7 +243,6 @@ public class TwoLanesTwoCarsLiDARAttack {
             e.printStackTrace();
         }
     }
-
 
     public static void main(String[] args) throws IOException {
         new TwoLanesTwoCarsLiDARAttack();
@@ -301,7 +290,7 @@ public class TwoLanesTwoCarsLiDARAttack {
         return new DataState(NUMBER_OF_VARIABLES, i -> values.getOrDefault(i, Double.NaN));
     }
 
-    // FORMULA FOR RSS GAP
+    // RSS safety distance
     private static double calculateRSSSafetyDistance(double rearVehicleSpeed, double frontVehicleSpeed) {
         double d1 = TIMER * rearVehicleSpeed;
         double d2 = 0.5 * MAX_ACCELERATION * TIMER * TIMER;
@@ -310,6 +299,7 @@ public class TwoLanesTwoCarsLiDARAttack {
         double rssSafetyDistance = Math.max(d1 + d2 + d3 + d4, 0);
         return rssSafetyDistance + VEHICLE_LENGTH;
     }
+
     private Controller getController() {
         ControllerRegistry registry = new ControllerRegistry();
 
@@ -438,7 +428,7 @@ public class TwoLanesTwoCarsLiDARAttack {
         return new ExecController(registry.reference("Control"));
     }
 
-    // ENVIRONMENT FUNCTION FOR SCENARIO 1
+    // Environment dynamics
 
     public static List<DataStateUpdate> getEnvironmentUpdates_1(RandomGenerator rg, DataState state) {
         List<DataStateUpdate> updates = new LinkedList<>();
@@ -572,19 +562,16 @@ public class TwoLanesTwoCarsLiDARAttack {
         double my_new_timer = state.get(my_timer) - 1;
         updates.add(new DataStateUpdate(my_timer, my_new_timer));
 
-        // same lane proximity crash: both cars in the same lane and within one vehicle length on x
+        // Detect same-lane and lane-change collisions.
         if (my_new_lane == other_new_lane && Math.abs(my_new_x - other_new_x) <= VEHICLE_LENGTH) {
             updates.add(new DataStateUpdate(crash, 1));
         } else {
-            // mid-lane-change crash: cars in different lanes but bounding boxes overlap in x and y
+
             if (my_new_lane != other_new_lane && Math.abs(my_new_x - other_new_x) <= VEHICLE_LENGTH
                     && Math.abs(my_new_y - other_new_y) <= VEHICLE_WIDTH) {
                 updates.add(new DataStateUpdate(crash, 1));
             } else {
-                // pass-through crash: ego car was moving fast enough between steps that it skipped
-                // over the other car without landing inside the |dx| <= VEHICLE_LENGTH window.
-                // Detect this by checking whether my_position flipped (ego went from behind to ahead,
-                // or vice versa) while both cars stayed in the same lane at both step boundaries.
+
                 if (state.get(my_position) != my_new_position
                         && state.get(my_lane) == state.get(other_lane)
                         && my_new_lane == other_new_lane) {
@@ -595,7 +582,7 @@ public class TwoLanesTwoCarsLiDARAttack {
         return updates;
     }
 
-    // LIDAR LASER ATTACK PERTURBATIONS
+    // LiDAR attacks
 
     private static Perturbation getLidarDazzleAttack(double noiseLevel) {
         return new AfterPerturbation(ATTACK_START_STEP,
@@ -613,7 +600,7 @@ public class TwoLanesTwoCarsLiDARAttack {
     }
 
     private static Perturbation getLidarBlackoutAttack() {
-        // the captured reading is held across invocations; -1 marks "not yet captured"
+        // Capture the first distance reading after the attack begins.
         final double[] frozen = { -1.0 };
 
         return new AfterPerturbation(ATTACK_START_STEP,
@@ -672,16 +659,12 @@ public class TwoLanesTwoCarsLiDARAttack {
     }
 
     public static double rho_dd(DataState state) {
-        // Penalty measures how much of the maximum theoretical distance the ego car
-        // has actually covered. Under attack this typically shrinks because the car
-        // gets stuck behind the other vehicle instead of accelerating to MAX_SPEED.
-        // The Wasserstein distance between the nominal and attacked distributions of
-        // this value at the end of the run gives the "delayed distance" robustness.
+        // Fraction of the maximum theoretical distance covered by the ego car.
         return state.get(my_x) / (MAX_SPEED * H);
     }
 
 
-    // Utility methods
+    // Output utilities
 
     private static String getAttackLabel(int step) {
         if (ATTACK_TYPE == AttackType.NONE || step < ATTACK_START_STEP) {
@@ -750,18 +733,7 @@ public class TwoLanesTwoCarsLiDARAttack {
         }
     }
 
-    // Samples `numRuns` independent simulations and writes them to a long-format CSV
-    // (one row per (run, step) pair). When `perturbation` is non-null the perturbation
-    // is applied to each run; `conditionLabel` becomes the value of the trailing
-    // `condition` column so the Python plotter can distinguish nominal from attacked
-    // when both files are loaded together. SystemState.sample(...,size) returns an
-    // *averaged* trajectory across `size` runs, so we call it `numRuns` times with
-    // size=1 to retain per-run data.
-    // Runs all per-attack work for one configured perturbation and writes every output
-    // CSV to {@code outputDir}. The {@code attackFactory} produces a fresh perturbation on
-    // every call (necessary for blackout since each instance carries its own frozen-reading
-    // state). Used both for the single-shot BLACKOUT path and for each iteration of the
-    // DAZZLE parameter sweep.
+    // Run one attack configuration and write its outputs.
     private void runOneAttackLevel(
             RandomGenerator rand,
             ControlledSystem system,
@@ -782,7 +754,7 @@ public class TwoLanesTwoCarsLiDARAttack {
         System.out.println("Simulation of single behaviour under LiDAR " + attackName + " in scenario: " + SCENARIO);
         printLData(rand, L, F, attackFactory.get(), system, H, 1);
 
-        // perturbed extra trajectory
+        // Perturbed trajectory distribution
 
         double[][] my_extra_trajectory_p = new double[H][2];
         double[][] other_extra_trajectory_p = new double[H][2];
@@ -799,12 +771,12 @@ public class TwoLanesTwoCarsLiDARAttack {
         Util.writeToCSV(outputDir + "my_extra_trajectory_" + attackName + ".csv", my_extra_trajectory_p);
         Util.writeToCSV(outputDir + "other_extra_trajectory_" + attackName + ".csv", other_extra_trajectory_p);
 
-        // animation data: simulation_data.csv (with attack column) for the per-step animation
+        // Per-step animation data
 
         writeSimulationToCSV(rand, L_animation, F_animation,
                 attackFactory.get(), system, H, outputDir + "simulation_data.csv");
 
-        // distribution sampling: copy the shared nominal CSV in and sample the attacked one
+        // Per-run distribution data
 
         java.nio.file.Path nominalSrc = Paths.get("./runs_nominal.csv");
         java.nio.file.Path nominalDst = Paths.get(outputDir + "runs_nominal.csv");
@@ -814,7 +786,7 @@ public class TwoLanesTwoCarsLiDARAttack {
         writeRunsToCSV(rand, L_animation, F_animation, attackFactory.get(), system, H,
                 PERTURBATION_SIZE, attackName, outputDir + "runs_attacked.csv");
 
-        // VERIFICATION
+        // Verification
 
         EvolutionSequence perturbedSequence = sequence.apply(attackFactory.get(), 0, PERTURBATION_SIZE);
 
@@ -884,7 +856,7 @@ public class TwoLanesTwoCarsLiDARAttack {
         System.out.println("Evaluation of SAF robustness in Scenario " + SCENARIO + " under LiDAR "
                 + attackName + " with response time " + TIMER + ": " + SAF);
 
-        // don't go off-road
+        // Do not go off-road
 
         DistanceExpression atomic_r2l = new AtomicDistanceExpression(TwoLanesTwoCarsLiDARAttack::rho_r2l,
                 (v1, v2) -> Math.abs(v1 - v2));
@@ -903,7 +875,7 @@ public class TwoLanesTwoCarsLiDARAttack {
         System.out.println("Evaluation of R2L robustness in Scenario " + SCENARIO + " under LiDAR "
                 + attackName + " with response time " + TIMER + ": " + R2L);
 
-        // // keep it right
+        // Keep it right
 
         DistanceExpression atomic_kir = new AtomicDistanceExpression(TwoLanesTwoCarsLiDARAttack::rho_kir,
                 (v1, v2) -> Math.abs(v1 - v2));
@@ -936,14 +908,14 @@ public class TwoLanesTwoCarsLiDARAttack {
                 0,
                 200);
 
-        // safe overtake
+        // Safe overtake
 
         Boolean SO = new BooleanSemanticsVisitor().eval(phi_SO).eval(PERTURBATION_SIZE, 0, sequence);
 
         System.out.println("Evaluation of SO robustness in Scenario " + SCENARIO + " under LiDAR "
                 + attackName + " with response time " + TIMER + ": " + SO);
 
-        // delayed distance: how much progress the ego car loses under attack.
+        // Delayed distance
 
         double eta_dd = 0.01;
 
@@ -966,11 +938,10 @@ public class TwoLanesTwoCarsLiDARAttack {
         System.out.println("Evaluation of DD robustness in Scenario " + SCENARIO + " under LiDAR "
                 + attackName + " with response time " + TIMER + ": " + DD);
 
-        // crash count: how many of PERTURBATION_SIZE perturbed runs end in a crash?
+        // Crash count
 
         ArrayList<DataStateExpression> crashProbe = new ArrayList<>();
-        // The local DistanceExpression named `crash_expr` above does not shadow the
-        // class-field `crash` index, but we qualify with the class name for clarity.
+
         crashProbe.add(ds -> ds.get(TwoLanesTwoCarsLiDARAttack.crash));
         int crashCount = 0;
         for (int r = 0; r < PERTURBATION_SIZE; r++) {
