@@ -1,10 +1,19 @@
-"""Render a STARK two-car simulation CSV as an MP4 animation.
+"""
+render_mp4.py
+
+Renders an MP4 of the STARK two-car simulation, mirroring the layout of the
+terminal animation in animate_simulation.py. All 300 simulation steps are
+compressed into desired duration of playback.
 
 Requires:
     pip install pillow imageio imageio-ffmpeg
 
 Usage:
     python render_mp4.py [csv_path] [output_path]
+
+Defaults:
+    csv_path = simulation_data.csv
+    output_path = simulation.mp4
 """
 
 import os
@@ -14,8 +23,15 @@ import imageio.v2 as imageio
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from animate_simulation import TOTAL_DURATION, compute_viewport, load_data, render_frame
+# The frame text builder still lives in animate_simulation
+from animate_simulation import (
+    load_data,
+    compute_viewport,
+    render_frame as _render_frame_ansi,
+    TOTAL_DURATION,
+)
 
+# Image configuration
 FONT_SIZE = 16
 LINE_SPACING = 4
 PAD_X = 20
@@ -27,119 +43,111 @@ BLACKOUT_COLOR = (255, 70, 70)
 DIM_COLOR = (110, 110, 130)
 
 
-def find_monospace_font(size: int) -> ImageFont.ImageFont:
-    """Return a commonly available monospace font, with a PIL fallback."""
+def find_monospace_font(size: int) -> ImageFont.FreeTypeFont:
+    """Try common monospace fonts across platforms. Falls back to default."""
     candidates = [
-        "Consolas.ttf",
+        "Consolas.ttf",          # Windows
         "consola.ttf",
-        "DejaVuSansMono.ttf",
-        "Menlo.ttc",
+        "DejaVuSansMono.ttf",    # Linux
+        "Menlo.ttc",             # macOS
         "Courier New.ttf",
         "cour.ttf",
     ]
-    for candidate in candidates:
+    for name in candidates:
         try:
-            return ImageFont.truetype(candidate, size)
-        except OSError:
+            return ImageFont.truetype(name, size)
+        except (OSError, IOError):
             continue
-
-    print("Warning: no TrueType monospace font found; using the PIL default font.")
+    print("Warning: no TTF monospace font found, using PIL default (may render small)")
     return ImageFont.load_default()
 
 
 def strip_ansi(text: str) -> str:
-    """Remove ANSI SGR escape sequences from one rendered terminal line."""
-    characters = []
-    index = 0
-    while index < len(text):
-        if text[index] == "\033":
-            while index < len(text) and text[index] != "m":
-                index += 1
-            index += 1
+    """Remove ANSI escape sequences for plain text rendering."""
+    out = []
+    i = 0
+    while i < len(text):
+        if text[i] == "\033":
+            # Skip until 'm' (end of SGR sequence)
+            while i < len(text) and text[i] != "m":
+                i += 1
+            i += 1  # skip the 'm' itself
         else:
-            characters.append(text[index])
-            index += 1
-    return "".join(characters)
+            out.append(text[i])
+            i += 1
+    return "".join(out)
 
 
-def color_for_line(line: str) -> tuple[int, int, int]:
-    """Select the output colour for a line mentioning the active attack."""
-    if "[DAZZLE]" in line:
+def color_for_line(plain_line: str):
+    """Map a status line to a color based on which attack it refers to."""
+    if "[DAZZLE]" in plain_line:
         return DAZZLE_COLOR
-    if "[BLACKOUT]" in line:
+    if "[BLACKOUT]" in plain_line:
         return BLACKOUT_COLOR
-    if "(none - LiDAR clean)" in line:
+    if "(none - LiDAR clean)" in plain_line:
         return DIM_COLOR
     return FG_COLOR
 
 
-def render_image_frame(
-        row: dict,
-        total_steps: int,
-        view_left: float,
-        view_right: float,
-        font: ImageFont.ImageFont,
-) -> Image.Image:
-    """Render one terminal frame to an RGB image."""
-    lines = [
-        strip_ansi(line)
-        for line in render_frame(row, total_steps, view_left, view_right).split("\n")
-    ]
+def render_image_frame(row: dict, total_steps: int, view_left: float, view_right: float, font) -> Image.Image:
+    # Build the same ASCII frame the terminal version uses, then strip ANSI
+    ansi_frame = _render_frame_ansi(row, total_steps, view_left, view_right)
+    lines = [strip_ansi(line) for line in ansi_frame.split("\n")]
 
-    character_box = font.getbbox("M")
-    line_height = character_box[3] - character_box[1] + LINE_SPACING
-    width = max(font.getbbox(line)[2] for line in lines) + 2 * PAD_X
+    # Measure once using the widest line to set canvas size
+    bbox = font.getbbox("M")
+    char_h = bbox[3] - bbox[1]
+    line_height = char_h + LINE_SPACING
+
+    width = max(font.getbbox(l)[2] for l in lines) + 2 * PAD_X
     height = line_height * len(lines) + 2 * PAD_Y
 
-    image = Image.new("RGB", (width, height), BG_COLOR)
-    draw = ImageDraw.Draw(image)
-    for index, line in enumerate(lines):
-        draw.text((PAD_X, PAD_Y + index * line_height), line, fill=color_for_line(line), font=font)
+    img = Image.new("RGB", (width, height), BG_COLOR)
+    draw = ImageDraw.Draw(img)
 
-    return image
+    for idx, line in enumerate(lines):
+        y = PAD_Y + idx * line_height
+        color = color_for_line(line)
+        draw.text((PAD_X, y), line, fill=color, font=font)
 
-
-def pad_frame(image: Image.Image, width: int, height: int) -> Image.Image:
-    """Pad a frame to the locked video dimensions without cropping content."""
-    if image.size == (width, height):
-        return image
-
-    padded = Image.new("RGB", (width, height), BG_COLOR)
-    padded.paste(image, (0, 0))
-    return padded
+    return img
 
 
 def build_mp4(csv_path: str, output_path: str) -> None:
-    """Render the simulation CSV into an H.264-compatible MP4 file."""
     rows = load_data(csv_path)
-    if not rows:
-        raise ValueError(f"No simulation rows found in {csv_path}")
-
     total_steps = len(rows)
     view_left, view_right = compute_viewport(rows)
     fps = total_steps / TOTAL_DURATION
+    print(f"Rendering {total_steps} frames at {fps:.1f} fps "
+          f"({TOTAL_DURATION:.0f}s total)...")
+
     font = find_monospace_font(FONT_SIZE)
 
-    first_frame = render_image_frame(rows[0], total_steps, view_left, view_right, font)
-    width, height = first_frame.size
+    # Render the first frame to lock in dimensions. MP4 (H.264) requires
+    # even width and height, so round up if needed.
+    first = render_image_frame(rows[0], total_steps, view_left, view_right, font)
+    width, height = first.size
     width += width % 2
     height += height % 2
 
-    print(f"Rendering {total_steps} frames at {fps:.1f} fps ({TOTAL_DURATION:.0f}s total)...")
     writer = imageio.get_writer(
         output_path,
         fps=fps,
         codec="libx264",
-        quality=8,
-        pixelformat="yuv420p",
-        macro_block_size=1,
+        quality=8,            # 1 (worst) .. 10 (best). 8 is high-quality
+        pixelformat="yuv420p", # broadest player compatibility
+        macro_block_size=1,    # don't auto-resize to multiples of 16
     )
     try:
-        for index, row in enumerate(rows):
-            frame = render_image_frame(row, total_steps, view_left, view_right, font)
-            writer.append_data(np.asarray(pad_frame(frame, width, height)))
-            if (index + 1) % 30 == 0:
-                print(f"  ...rendered {index + 1} / {total_steps}")
+        for i, row in enumerate(rows):
+            img = render_image_frame(row, total_steps, view_left, view_right, font)
+            if img.size != (width, height):
+                # Pad to the locked-in even dimensions
+                padded = img.crop((0, 0, width, height))
+                img = padded
+            writer.append_data(np.asarray(img))
+            if (i + 1) % 30 == 0:
+                print(f"  ...rendered {i + 1} / {total_steps}")
     finally:
         writer.close()
 
@@ -147,14 +155,10 @@ def build_mp4(csv_path: str, output_path: str) -> None:
     print(f"Wrote {output_path} ({size_mb:.2f} MB)")
 
 
-def main() -> None:
+if __name__ == "__main__":
     csv_path = sys.argv[1] if len(sys.argv) > 1 else "simulation_data.csv"
     output_path = sys.argv[2] if len(sys.argv) > 2 else "simulation.mp4"
     if not os.path.exists(csv_path):
-        raise SystemExit(f"Error: file not found: {csv_path}")
-
+        print(f"Error: file not found: {csv_path}")
+        sys.exit(1)
     build_mp4(csv_path, output_path)
-
-
-if __name__ == "__main__":
-    main()
