@@ -903,7 +903,7 @@ public class TwoLanesTwoCarsLiDARAttack {
         System.out.println("Evaluation of R2L robustness in Scenario " + SCENARIO + " under LiDAR "
                 + attackName + " with response time " + TIMER + ": " + R2L);
 
-        // keep it right
+        // // keep it right
 
         DistanceExpression atomic_kir = new AtomicDistanceExpression(TwoLanesTwoCarsLiDARAttack::rho_kir,
                 (v1, v2) -> Math.abs(v1 - v2));
@@ -945,7 +945,7 @@ public class TwoLanesTwoCarsLiDARAttack {
 
         // delayed distance: how much progress the ego car loses under attack.
 
-        double eta_dd = 0.05;
+        double eta_dd = 0.01;
 
         DistanceExpression atomic_dd = new AtomicDistanceExpression(TwoLanesTwoCarsLiDARAttack::rho_dd,
                 (v1, v2) -> Math.abs(v1 - v2));
