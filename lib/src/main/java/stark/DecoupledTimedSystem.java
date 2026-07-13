@@ -30,12 +30,10 @@ import stark.ds.DataStateExpression;
 import stark.ds.DataStateFunction;
 import org.apache.commons.math3.random.RandomGenerator;
 
-import java.sql.Time;
-
 /**
  * Represents a system controlled by controller.
  */
-public class TimedSystem implements SystemState {
+public class DecoupledTimedSystem implements SystemState {
 
     private final Controller controller;
     private final DataStateFunction environment;
@@ -48,7 +46,7 @@ public class TimedSystem implements SystemState {
      * @param environment environment
      * @param state current data state.
      */
-    public TimedSystem(Controller controller, DataStateFunction environment, DataState state, DataStateExpression generateNextTime) {
+    public DecoupledTimedSystem(Controller controller, DataStateFunction environment, DataState state, DataStateExpression generateNextTime) {
         this.controller = controller;
         this.environment = environment;
         this.state = state;
@@ -62,29 +60,36 @@ public class TimedSystem implements SystemState {
 
 
 
-    public TimedSystem sampleNextMicro(RandomGenerator rg){
-        EffectStep<Controller> step = controller.next(rg, state);
+    public DecoupledTimedSystem sampleNextMicro(RandomGenerator rg, double sumT){
         int c_step = state.getStep();
-        DataState newState = environment.apply(rg, state.apply(step.effect()));
-        newState.setStep(c_step+1);
-        return new TimedSystem(step.next(), environment, newState, generateNextTime);
+        if(sumT < this.getDataState().getCtrlStep() + this.getDataState().getCtrlGranularity()){
+            DataState newState = environment.apply(rg, state);
+            newState.setStep(c_step + 1);
+            return new DecoupledTimedSystem(controller, environment, newState, generateNextTime);
+        }
+        else {
+            EffectStep<Controller> step = controller.next(rg, state);
+            DataState newState = environment.apply(rg, state.apply(step.effect()));
+            newState.setStep(c_step + 1);
+            return new DecoupledTimedSystem(step.next(), environment, newState, generateNextTime);
+        }
     }
 
     @Override
     public SystemState sampleNext(RandomGenerator rg) {
-        TimedSystem next = new TimedSystem(this.controller,this.environment,this.state,this.generateNextTime);
+        DecoupledTimedSystem next = new DecoupledTimedSystem(this.controller,this.environment,this.state,this.generateNextTime);
         DataState ds = next.getDataState();
         double t = next.generateNextTime.eval(ds);
         double sum_t = t + ds.getTimeReal();
         while(sum_t < ds.getTimeStep() + ds.getGranularity()){
-            next = next.sampleNextMicro(rg);
+            next = next.sampleNextMicro(rg,sum_t);
             ds = next.getDataState();
             ds.setTimeDelta(t);
             ds.setTimeReal(t + ds.getTimeReal());
             t = next.generateNextTime.eval(ds);
             sum_t = sum_t + t;
         }
-        next = next.sampleNextMicro(rg);
+        next = next.sampleNextMicro(rg,sum_t);
         ds = next.getDataState();
         ds.setTimeDelta(t);
         ds.setTimeReal(t + ds.getTimeReal());
@@ -99,7 +104,7 @@ public class TimedSystem implements SystemState {
         while(!condition.eval(ds)) {
             result = result.sampleNext(rg);
             ds = result.getDataState();
-            }
+        }
         return result;
     }
 

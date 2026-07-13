@@ -95,6 +95,8 @@ public class Main {
     private static final double h = 5.0; // hill coefficient
     private static final double delta_t = Math.pow(10,-4); //
     private static final double jumps = 1;
+    private static final double ctrl_step = 0;
+    private static final double ctrl_gran = 0.5;
 
     public static void main(String[] args) throws IOException {
         try {
@@ -104,13 +106,13 @@ public class Main {
             /*
             Two systems are created, one is healthy (alphaR = alphaRH = 1.0), the other is unhealthy (alphaR = alphaRH = 0.25)
              */
-            DataState stateH = getInitialState(jumps, 0.0, 0.0, delta_t, alphaRH, 1.0);
-            DataState stateS = getInitialState(jumps, 0.0, 0.0, delta_t, alphaRS, 1.0);
+            DataState stateH = getInitialState(jumps, 0.0, 0.0, delta_t, ctrl_step, ctrl_gran, alphaRH, 1.0);
+            DataState stateS = getInitialState(jumps, 0.0, 0.0, delta_t, ctrl_step, ctrl_gran, alphaRS, 1.0);
             RandomGenerator rand = new DefaultRandomGenerator();
-            TimedSystem systemH1 = new TimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,1)), stateH, ds -> ds.getTimeDelta());
-            TimedSystem systemH5 = new TimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,5)), stateH, ds -> ds.getTimeDelta());
-            TimedSystem systemS1 = new TimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,1)), stateS, ds -> ds.getTimeDelta());
-            TimedSystem systemS5 = new TimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,5)), stateS, ds -> ds.getTimeDelta());
+            DecoupledTimedSystem systemH1 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,1)), stateH, ds -> ds.getTimeDelta());
+            DecoupledTimedSystem systemH5 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,5)), stateH, ds -> ds.getTimeDelta());
+            DecoupledTimedSystem systemS1 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,1)), stateS, ds -> ds.getTimeDelta());
+            DecoupledTimedSystem systemS5 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,5)), stateS, ds -> ds.getTimeDelta());
 
             int size = 100;
             int size_sim = 100;
@@ -397,7 +399,6 @@ public class Main {
 
             Util.writeToCSV("./multipleSclerosisOdeMonitoredValues.csv", resultsOfMonitoring);
 
-            
 
 
 
@@ -405,14 +406,28 @@ public class Main {
 
 
 
-            } catch(RuntimeException e){
-                e.printStackTrace();
-            }
 
+        } catch(RuntimeException e){
+            e.printStackTrace();
         }
 
+    }
+
     public static Controller getController() {
-        return new NilController();
+        ControllerRegistry registry = new ControllerRegistry();
+
+        registry.set("Ctrl",
+                Controller.ifThenElse(
+                        (rg,ds)-> ds.get(ratioER)>10,
+                        Controller.doAction(
+                                (rg,ds)->List.of(new DataStateUpdate(R,ds.get(E)*0.1)),
+                                registry.reference("Ctrl")
+                        ),
+                        Controller.doTick(registry.reference("Ctrl"))
+                )
+                );
+
+        return new ExecController(registry.reference("Ctrl"));
     }
 
 
@@ -421,7 +436,7 @@ public class Main {
 
 
 
-    public static DataState getInitialState(double gran, double Tstep, double Ttot, double Tshift, double alphaR_value, double uncertainty_value) {
+    public static DataState getInitialState(double gran, double Tstep, double Ttot, double Tshift, double step_ctrl, double gran_ctrl, double alphaR_value, double uncertainty_value) {
         Map<Integer, Double> values = new HashMap<>();
 
         values.put(E, Einit);
@@ -443,7 +458,7 @@ public class Main {
         values.put(timer, 0.0);
         values.put(alphaR,alphaR_value);
         values.put(uncertainty,uncertainty_value);
-        return new DataState(NUMBER_OF_VARIABLES, i -> values.getOrDefault(i, Double.NaN), gran, Tstep, Ttot, Tshift);
+        return new DataState(NUMBER_OF_VARIABLES, i -> values.getOrDefault(i, Double.NaN), gran, Tstep, Ttot, Tshift, step_ctrl, gran_ctrl);
     }
 
 

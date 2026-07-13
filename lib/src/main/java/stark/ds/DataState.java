@@ -40,6 +40,8 @@ public class DataState {
     private double granularity = 1.0;
     private double timeReal = 0.0;
     private double timeDelta = 0.0;
+    private double ctrl_timeStep = 0.0;
+    private double ctrl_granularity = 1.0;
 
 
     private int step = 0;
@@ -83,6 +85,29 @@ public class DataState {
         this.timeReal = Treal;
         this.timeDelta = Tdelta;
     }
+
+    /**
+     * Creates a new data state with the given values, including time variables. All the cells in the data state can assume values
+     * in the interval [{@link Double#NEGATIVE_INFINITY}, {@link Double#POSITIVE_INFINITY}].
+     *
+     * @param data values in the data state;
+     * @param gran granularity value;
+     * @param Tstep initial time step value;
+     * @param Treal initial real time value;
+     * @param Tdelta initial value for time delta;
+     * @param obs_ctrl initial value for controller time step;
+     * @param gran_ctrl granularity on controller's actions.
+     */
+    public DataState(double[] data, double gran, double Tstep, double Treal, double Tdelta, double obs_ctrl, double gran_ctrl) {
+        this(IntStream.range(0, data.length).mapToObj(i -> new DataRange()).toArray(DataRange[]::new), data);
+        this.granularity = gran;
+        this.timeStep = Tstep;
+        this.timeReal = Treal;
+        this.timeDelta = Tdelta;
+        this.ctrl_timeStep = obs_ctrl;
+        this.ctrl_granularity = gran_ctrl;
+    }
+
 
     /**
      * Creates a new data state with the given values, including time variables. All the cells in the data state can assume values
@@ -160,6 +185,33 @@ public class DataState {
     }
 
     /**
+     * Creates a new data state with the given number of cells. Values in the data state are initialised by
+     * assigning to the cell in position <code>i</code> the value <code>initFunction.applyAsDouble(i)</code>.
+     * Time variables are initialised individually.
+     * All the cells in the data state can assume values in the interval
+     * [{@link Double#NEGATIVE_INFINITY}, {@link Double#POSITIVE_INFINITY}].
+     *
+     * @param size number of cells in the data state.
+     * @param initFunction function used to initialise the values.
+     * @param gran initial granularity value.
+     * @param Tstep initial time step value.
+     * @param Treal initial real time value.
+     * @param Tdelta initial value for time delta;
+     * @param obs_ctrl initial value for controller time step;
+     * @param gran_ctrl granularity on controller's actions.
+     */
+    public DataState(int size, IntToDoubleFunction initFunction, double gran, double Tstep, double Treal, double Tdelta, double obs_ctrl, double gran_ctrl) {
+        this(DataRange.getDefaultRangeArray(size), initFunction);
+        this.granularity = gran;
+        this.timeStep = Tstep;
+        this.timeReal = Treal;
+        this.timeDelta = Tdelta;
+        this.ctrl_timeStep = obs_ctrl;
+        this.ctrl_granularity = gran_ctrl;
+    }
+
+
+    /**
      * Creates a new data state with the <code>dataRanges.length</code> cells. Values in the data state are initialised by
      * assigning to the cell in position <code>i</code> the value <code>initFunction.applyAsDouble(i)</code>.
      * The cell in position <code>i</code> can assume values in the interval <code>dataRanges[i]</code>.
@@ -215,6 +267,32 @@ public class DataState {
     }
 
     /**
+     * Creates a new data state with the <code>dataRanges.length</code> cells. Values in the data state are initialised by
+     * assigning to the cell in position <code>i</code> the value <code>initFunction.applyAsDouble(i)</code>.
+     * The cell in position <code>i</code> can assume values in the interval <code>dataRanges[i]</code>.
+     * Time variables are initialised individually.
+     *
+     * @param initFunction function used to initialise the values.
+     * @param dataRanges data ranges of the cells.
+     * @param gran initial granularity value.
+     * @param Tstep initial time step value.
+     * @param Treal initial real time value.
+     * @param Tdelta initial value for time delta;
+     * @param obs_ctrl initial value for controller time step;
+     * @param gran_ctrl granularity on controller's actions.
+     */
+    public DataState(DataRange[] dataRanges, IntToDoubleFunction initFunction, double gran, double Tstep, double Treal, double Tdelta, double obs_ctrl, double gran_ctrl) {
+        this(dataRanges, IntStream.range(0, dataRanges.length).mapToDouble(initFunction).toArray());
+        this.granularity = gran;
+        this.timeStep = Tstep;
+        this.timeReal = Treal;
+        this.timeDelta = Tdelta;
+        this.ctrl_timeStep = obs_ctrl;
+        this.ctrl_granularity = gran_ctrl;
+    }
+
+
+    /**
      * Creates a new data state with <code>dataRanges.length</code> cells that are initialised with the given
      * values <code>data</code>. For any <code>i</code>, <code>dataRanges[i]</code> is the data range for the
      * cell in position <code>i</code>.
@@ -244,7 +322,7 @@ public class DataState {
      * @param gran initial granularity value.
      * @param Tstep initial time step value.
      * @param Treal initial real time value.
-     * @param Tdelta initial value for time delta.
+     * @param Tdelta initial value for time delta;
      * @throws IllegalArgumentException if <code>dataRanges.length != data.length</code>.
      */
     public DataState(DataRange[] dataRanges, double[] data, double gran, double Tstep, double Treal, double Tdelta) {
@@ -257,6 +335,35 @@ public class DataState {
         this.timeStep = Tstep;
         this.timeReal = Treal;
         this.timeDelta = Tdelta;
+    }
+
+    /**
+     * Creates a new data state with <code>dataRanges.length</code> cells that are initialised with the given
+     * values <code>data</code>. For any <code>i</code>, <code>dataRanges[i]</code> is the data range for the
+     * cell in position <code>i</code>.
+     *
+     * @param dataRanges data ranges for the cells in the created data state.
+     * @param data data state values.
+     * @param gran initial granularity value.
+     * @param Tstep initial time step value.
+     * @param Treal initial real time value.
+     * @param Tdelta initial value for time delta;
+     * @param obs_ctrl initial value for controller time step;
+     * @param gran_ctrl granularity on controller's actions.
+     * @throws IllegalArgumentException if <code>dataRanges.length != data.length</code>.
+     */
+    public DataState(DataRange[] dataRanges, double[] data, double gran, double Tstep, double Treal, double Tdelta, double obs_ctrl, double gran_ctrl) {
+        if (dataRanges.length != data.length) {
+            throw new IllegalArgumentException();
+        }
+        this.data = DataRange.apply(dataRanges, data);
+        this.dataRanges = dataRanges;
+        this.granularity = gran;
+        this.timeStep = Tstep;
+        this.timeReal = Treal;
+        this.timeDelta = Tdelta;
+        this.ctrl_timeStep = obs_ctrl;
+        this.ctrl_granularity = gran_ctrl;
     }
 
     /**
@@ -375,6 +482,12 @@ public class DataState {
     public double getTimeDelta(){
         return this.timeDelta;
     }
+    public double getCtrlGranularity(){
+        return this.ctrl_granularity;
+    }
+    public double getCtrlStep(){
+        return this.ctrl_timeStep;
+    }
 
     /**
      * Get the value of the current time step.
@@ -410,6 +523,12 @@ public class DataState {
     public void setTimeDelta(double t){
         this.timeDelta = t;
     }
+    public void setCtrlGranularity(double t){
+        this.ctrl_granularity = t;
+    }
+    public void setCtrlStep(double t){
+        this.ctrl_timeStep = t;
+    }
 
     /**
      * Set the value of the current time step.
@@ -444,6 +563,8 @@ public class DataState {
         newDataState.setTimeStep(this.getTimeStep());
         newDataState.setTimeReal(this.getTimeReal());
         newDataState.setTimeDelta(this.getTimeDelta());
+        newDataState.setCtrlGranularity(this.getCtrlGranularity());
+        newDataState.setCtrlStep(this.getCtrlStep());
         newDataState.setStep(this.getStep());
         return newDataState;
     }
