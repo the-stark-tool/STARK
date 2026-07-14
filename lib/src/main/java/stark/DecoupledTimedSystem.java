@@ -71,6 +71,7 @@ public class DecoupledTimedSystem implements SystemState {
             EffectStep<Controller> step = controller.next(rg, state);
             DataState newState = environment.apply(rg, state.apply(step.effect()));
             newState.setStep(c_step + 1);
+            newState.setCtrlStep(state.getCtrlStep()+state.getCtrlGranularity());
             return new DecoupledTimedSystem(step.next(), environment, newState, generateNextTime);
         }
     }

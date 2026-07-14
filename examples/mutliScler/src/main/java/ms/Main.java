@@ -63,8 +63,14 @@ public class Main {
     public static final int alphaR = 16; // Treg proliferation rate
     public static final int timer = 17;
     public static final int uncertainty = 18;
+    public static final int flag = 19;
+    public static final int flag2 = 20;
+    public static final int Rgen = 21;
+    public static final int wait_month = 22;
+    public static final int wait_week = 23;
 
-    private static final int NUMBER_OF_VARIABLES = 19;
+
+    private static final int NUMBER_OF_VARIABLES = 24;
 
 
     public static final double eta = 0.01; // initial value for v_eta
@@ -96,7 +102,7 @@ public class Main {
     private static final double delta_t = Math.pow(10,-4); //
     private static final double jumps = 1;
     private static final double ctrl_step = 0;
-    private static final double ctrl_gran = 0.5;
+    private static final double ctrl_gran = 15;
 
     public static void main(String[] args) throws IOException {
         try {
@@ -109,10 +115,10 @@ public class Main {
             DataState stateH = getInitialState(jumps, 0.0, 0.0, delta_t, ctrl_step, ctrl_gran, alphaRH, 1.0);
             DataState stateS = getInitialState(jumps, 0.0, 0.0, delta_t, ctrl_step, ctrl_gran, alphaRS, 1.0);
             RandomGenerator rand = new DefaultRandomGenerator();
-            DecoupledTimedSystem systemH1 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,1)), stateH, ds -> ds.getTimeDelta());
-            DecoupledTimedSystem systemH5 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,5)), stateH, ds -> ds.getTimeDelta());
-            DecoupledTimedSystem systemS1 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,1)), stateS, ds -> ds.getTimeDelta());
-            DecoupledTimedSystem systemS5 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,5)), stateS, ds -> ds.getTimeDelta());
+            DecoupledTimedSystem systemH1 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,1)), stateH, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemH5 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,5)), stateH, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemS1 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,1)), stateS, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemS5 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,5)), stateS, ds -> selectTime(rand,ds));
 
             int size = 100;
             int size_sim = 100;
@@ -129,63 +135,64 @@ public class Main {
              Rationale: A high level of the reversible damage impacts negatively on the short term quality of life.
              The healthy system is also simulated and the worst Teff/Treg ratio and reversible damage value exhibited by both systems are printed out.
              */
-            double maxRatioERH = 0.0;
-            double maxRatioERS = 0.0;
-            double maxRevDamageH = 0.0;
-            double maxRevDamageS = 0.0;
 
-            ArrayList<DataStateExpression> Fworst = new ArrayList<>();
-            Fworst.add(ds -> ds.get(E) / ds.get(R));
-            Fworst.add(ds -> ds.get(l));
+            //double maxRatioERH = 0.0;
+            //double maxRatioERS = 0.0;
+            //double maxRevDamageH = 0.0;
+            //double maxRevDamageS = 0.0;
 
-
-
-
-            double[][] ratio_E_R_rev_dam_max_H = SystemState.sample_max(rand, Fworst, systemH1, steps, size_sim);
-            for (int i = 0; i < ratio_E_R_rev_dam_max_H.length; i++) {
-                if (ratio_E_R_rev_dam_max_H[i][0] > maxRatioERH) {
-                    maxRatioERH = ratio_E_R_rev_dam_max_H[i][0];
-                }
-                if (ratio_E_R_rev_dam_max_H[i][1] > maxRevDamageH) {
-                    maxRevDamageH = ratio_E_R_rev_dam_max_H[i][1];
-                }
-            }
-            Util.writeToCSV("./multipleSclerosisOdeRatioERHealthy.csv", ratio_E_R_rev_dam_max_H);
-
-            double[][] ratio_E_R_rev_dam_max_S = SystemState.sample_max(rand, Fworst, systemS1, steps, size_sim);
-            for (int i = 0; i < ratio_E_R_rev_dam_max_S.length; i++) {
-                if (ratio_E_R_rev_dam_max_S[i][0] > maxRatioERS) {
-                    maxRatioERS = ratio_E_R_rev_dam_max_S[i][0];
-                }
-                if (ratio_E_R_rev_dam_max_S[i][1] > maxRevDamageS) {
-                    maxRevDamageS = ratio_E_R_rev_dam_max_S[i][1];
-                }
-            }
-            Util.writeToCSV("./multipleSclerosisOdeRatioERSick.csv", ratio_E_R_rev_dam_max_S);
-
-            System.out.println(" ");
-            System.out.println(" ");
-            System.out.println("Maximal Eff/Reg ratio exhibited by the healthy system in " + size_sim + " runs: " + maxRatioERH);
-            System.out.println(" ");
-            System.out.println(" ");
-            System.out.println("Maximal Eff/Reg ratio exhibited by the unhealthy system in " + size_sim + " runs: " + maxRatioERS);
-            System.out.println(" ");
-            System.out.println(" ");
-            System.out.println("Maximal rev. damage exhibited by the healthy system in " + size_sim + " runs: " + maxRevDamageH);
-            System.out.println(" ");
-            System.out.println(" ");
-            System.out.println("Maximal rev. damage exhibited by the unhealthy system in " + size_sim + " runs: " + maxRevDamageS);
-            System.out.println(" ");
-            System.out.println(" ");
-            System.out.println(" ");
-            System.out.println(" ");
+            //ArrayList<DataStateExpression> Fworst = new ArrayList<>();
+            //Fworst.add(ds -> ds.get(E) / ds.get(R));
+            //Fworst.add(ds -> ds.get(l));
 
 
 
-            final double maxRatioERHF = maxRatioERH;
-            final double maxRatioERSF = maxRatioERS;
-            final double maxRevDamageHF = maxRevDamageH;
-            final double maxRevDamageSF = maxRevDamageS;
+
+            //double[][] ratio_E_R_rev_dam_max_H = SystemState.sample_max(rand, Fworst, systemH1, steps, size_sim);
+            //for (int i = 0; i < ratio_E_R_rev_dam_max_H.length; i++) {
+            //    if (ratio_E_R_rev_dam_max_H[i][0] > maxRatioERH) {
+            //        maxRatioERH = ratio_E_R_rev_dam_max_H[i][0];
+            //    }
+            //    if (ratio_E_R_rev_dam_max_H[i][1] > maxRevDamageH) {
+            //        maxRevDamageH = ratio_E_R_rev_dam_max_H[i][1];
+            //    }
+            //}
+            //Util.writeToCSV("./multipleSclerosisOdeRatioERHealthy.csv", ratio_E_R_rev_dam_max_H);
+
+            //double[][] ratio_E_R_rev_dam_max_S = SystemState.sample_max(rand, Fworst, systemS1, steps, size_sim);
+            //for (int i = 0; i < ratio_E_R_rev_dam_max_S.length; i++) {
+            //    if (ratio_E_R_rev_dam_max_S[i][0] > maxRatioERS) {
+            //        maxRatioERS = ratio_E_R_rev_dam_max_S[i][0];
+            //    }
+            //    if (ratio_E_R_rev_dam_max_S[i][1] > maxRevDamageS) {
+            //        maxRevDamageS = ratio_E_R_rev_dam_max_S[i][1];
+            //    }
+            //}
+            //Util.writeToCSV("./multipleSclerosisOdeRatioERSick.csv", ratio_E_R_rev_dam_max_S);
+
+            //System.out.println(" ");
+            //System.out.println(" ");
+            //System.out.println("Maximal Eff/Reg ratio exhibited by the healthy system in " + size_sim + " runs: " + maxRatioERH);
+            //System.out.println(" ");
+            //System.out.println(" ");
+            //System.out.println("Maximal Eff/Reg ratio exhibited by the unhealthy system in " + size_sim + " runs: " + maxRatioERS);
+            //System.out.println(" ");
+            //System.out.println(" ");
+            //System.out.println("Maximal rev. damage exhibited by the healthy system in " + size_sim + " runs: " + maxRevDamageH);
+            //System.out.println(" ");
+            //System.out.println(" ");
+            //System.out.println("Maximal rev. damage exhibited by the unhealthy system in " + size_sim + " runs: " + maxRevDamageS);
+            //System.out.println(" ");
+            //System.out.println(" ");
+            //System.out.println(" ");
+            //System.out.println(" ");
+
+
+
+            //final double maxRatioERHF = maxRatioERH;
+            //final double maxRatioERSF = maxRatioERS;
+            //final double maxRevDamageHF = maxRevDamageH;
+            //final double maxRevDamageSF = maxRevDamageS;
 
 
 
@@ -205,10 +212,11 @@ public class Main {
             F.add(ds -> ds.get(l));
             F.add(ds -> ds.get(L));
             F.add(ds -> (ds.get(E) / ds.get(R)));
+            F.add(ds -> (ds.get(flag)));
+            F.add(ds -> (ds.get(flag2)));
+
 
             double[][] data_avgH = SystemState.sample(rand, F, systemH5, steps, size);
-            double[][] data_avgS = SystemState.sample(rand, F, systemS5, steps, size);
-
 
             System.out.println("Healthy systems: Average value for E, R, Er, Rr, l, L, E/R in " +size+ " runs "+ steps +" days ");
             for (int i = 0; i < data_avgH.length; i++) {
@@ -218,6 +226,8 @@ public class Main {
                 }
                 System.out.printf("%f\n", data_avgH[i][data_avgH[i].length - 1]);
             }
+
+            double[][] data_avgS = SystemState.sample(rand, F, systemS5, steps, size);
 
             System.out.println(" ");
             System.out.println(" ");
@@ -241,62 +251,66 @@ public class Main {
             An evolution sequence of the healthy system is generated in order to generate distributions of configurations that can be used as "targets"
              */
 
-            EvolutionSequence healthySeq = new EvolutionSequence(new DefaultRandomGenerator(), rg -> systemH1, size);
+            //EvolutionSequence healthySeq = new EvolutionSequence(new DefaultRandomGenerator(), rg -> systemH1, size);
 
             /*
             The DisTL formula ratioEffRegBounded is created.
             When evaluated on an evolution sequence S at a given step n, the formula evaluates how much the distribution reached by S at day n is close to a healthy distribution with respect to the value of the Eff/Reg ratio.
              */
 
-            SampleSet<SystemState> targetStateDistr = healthySeq.get(100);
-            DataStateExpression rho_eff_reg_ratio = ds -> Math.min(1.0, Math.max(0.0, ds.get(E) / ds.get(R) - maxRatioERHF) / maxRatioERSF);
-            DisTLFormula ratioEffRegBounded = new TargetDisTLFormula(targetStateDistr, rho_eff_reg_ratio, 0.1);
+            //SampleSet<SystemState> targetStateDistr = healthySeq.get(100);
+            //DataStateExpression rho_eff_reg_ratio = ds -> Math.min(1.0, Math.max(0.0, ds.get(E) / ds.get(R) - maxRatioERHF) / maxRatioERSF);
+            //DisTLFormula ratioEffRegBounded = new TargetDisTLFormula(targetStateDistr, rho_eff_reg_ratio, 0.1);
 
             /*
             The DisTL formula revDamageBounded is created.
             When evaluated on an evolution sequence S at a given step n, the formula evaluates how much the distribution reached by S at day n is close to a healthy distribution with respect to the value of the reversible damage.
              */
-            DataStateExpression rho_rev_dam = ds -> Math.min(1.0, Math.max(0.0, ds.get(l) - maxRevDamageHF) / maxRevDamageSF);
-            DisTLFormula revDamageBounded = new TargetDisTLFormula(targetStateDistr, rho_rev_dam, 0.1);
+
+            //DataStateExpression rho_rev_dam = ds -> Math.min(1.0, Math.max(0.0, ds.get(l) - maxRevDamageHF) / maxRevDamageSF);
+            //DisTLFormula revDamageBounded = new TargetDisTLFormula(targetStateDistr, rho_rev_dam, 0.1);
 
             /*
             The DisTL formulas alwaysRatioEffRegBounded / alwaysRevDamageBounded are the universal quantification over an interval of ratioEffRegBounded and revDamageBounded, respectively.
             */
-            DisTLFormula alwaysRatioEffRegBounded = new AlwaysDisTLFormula(ratioEffRegBounded, 0, 1999);
-            DisTLFormula alwaysRevDamageBounded = new AlwaysDisTLFormula(revDamageBounded, 0, 1999);
+
+            //DisTLFormula alwaysRatioEffRegBounded = new AlwaysDisTLFormula(ratioEffRegBounded, 0, 1999);
+            //DisTLFormula alwaysRevDamageBounded = new AlwaysDisTLFormula(revDamageBounded, 0, 1999);
 
 
             /*
             The DisTL formula recoveryRevDamage expresses the ability to remit in a suitable time interval
              */
-            DisTLFormula recoveryRevDamage = new EventuallyDisTLFormula(revDamageBounded,5,10);
+
+            //DisTLFormula recoveryRevDamage = new EventuallyDisTLFormula(revDamageBounded,5,10);
 
             /*
             The DisTL formula recoveryAfterRatioEffRegHigh expresses the ability to remit after a relapsing phase.
             The DisTL formula alwaysRecoveryAfterRatioEffRegHigh is the universal quantification over an interval of recoveryAfterRatioEffRegHigh.
              */
-            DisTLFormula recoveryAfterRatioEffRegHigh = new ImplicationDisTLFormula(new NegationDisTLFormula(ratioEffRegBounded),recoveryRevDamage);
-            DisTLFormula alwaysRecoveryAfterRatioEffRegHigh = new AlwaysDisTLFormula(recoveryAfterRatioEffRegHigh,0,1999);
+
+            //DisTLFormula recoveryAfterRatioEffRegHigh = new ImplicationDisTLFormula(new NegationDisTLFormula(ratioEffRegBounded),recoveryRevDamage);
+            //DisTLFormula alwaysRecoveryAfterRatioEffRegHigh = new AlwaysDisTLFormula(recoveryAfterRatioEffRegHigh,0,1999);
 
 
-            EvolutionSequence hSeq = new EvolutionSequence(new DefaultRandomGenerator(), rg -> systemH5, 10);
-            EvolutionSequence sSeq = new EvolutionSequence(new DefaultRandomGenerator(), rg -> systemS5, 10);
+            //EvolutionSequence hSeq = new EvolutionSequence(new DefaultRandomGenerator(), rg -> systemH5, 10);
+            //EvolutionSequence sSeq = new EvolutionSequence(new DefaultRandomGenerator(), rg -> systemS5, 10);
 
-            double v1 = new DoubleSemanticsVisitor().eval(alwaysRatioEffRegBounded).eval(1, 0, hSeq);
-            double v2 = new DoubleSemanticsVisitor().eval(alwaysRatioEffRegBounded).eval(1, 0, sSeq);
-            double v3 = new DoubleSemanticsVisitor().eval(alwaysRevDamageBounded).eval(1, 0, hSeq);
-            double v4 = new DoubleSemanticsVisitor().eval(alwaysRevDamageBounded).eval(1, 0, sSeq);
-            double v5 = new DoubleSemanticsVisitor().eval(alwaysRecoveryAfterRatioEffRegHigh).eval(1, 0, hSeq);
-            double v6 = new DoubleSemanticsVisitor().eval(alwaysRecoveryAfterRatioEffRegHigh).eval(1, 0, sSeq);
+            //double v1 = new DoubleSemanticsVisitor().eval(alwaysRatioEffRegBounded).eval(1, 0, hSeq);
+            //double v2 = new DoubleSemanticsVisitor().eval(alwaysRatioEffRegBounded).eval(1, 0, sSeq);
+            //double v3 = new DoubleSemanticsVisitor().eval(alwaysRevDamageBounded).eval(1, 0, hSeq);
+            //double v4 = new DoubleSemanticsVisitor().eval(alwaysRevDamageBounded).eval(1, 0, sSeq);
+            //double v5 = new DoubleSemanticsVisitor().eval(alwaysRecoveryAfterRatioEffRegHigh).eval(1, 0, hSeq);
+            //double v6 = new DoubleSemanticsVisitor().eval(alwaysRecoveryAfterRatioEffRegHigh).eval(1, 0, sSeq);
 
 
 
-            System.out.println("evaluation of alwaysRatioEffRegBounded, healthy system = " + v1);
-            System.out.println("evaluation of alwaysRatioEffRegBounded, unhealthy system = " + v2);
-            System.out.println("evaluation of alwaysRevDamageBounded, healthy system = " + v3);
-            System.out.println("evaluation of alwaysRevDamageBounded, unhealthy system = " + v4);
-            System.out.println("evaluation of alwaysRecoveryAfterRatioEffRegHigh, healthy system)= " + v5);
-            System.out.println("evaluation of alwaysRecoveryAfterRatioEffRegHigh, unhealthy system = " + v6);
+            //System.out.println("evaluation of alwaysRatioEffRegBounded, healthy system = " + v1);
+            //System.out.println("evaluation of alwaysRatioEffRegBounded, unhealthy system = " + v2);
+            //System.out.println("evaluation of alwaysRevDamageBounded, healthy system = " + v3);
+            //System.out.println("evaluation of alwaysRevDamageBounded, unhealthy system = " + v4);
+            //System.out.println("evaluation of alwaysRecoveryAfterRatioEffRegHigh, healthy system)= " + v5);
+            //System.out.println("evaluation of alwaysRecoveryAfterRatioEffRegHigh, unhealthy system = " + v6);
 
 
             /*
@@ -337,6 +351,7 @@ public class Main {
 
              */
 
+            /*
             DefaultMonitorBuilder defaultMonitorBuilder = new DefaultMonitorBuilder(size, false);
 
             DefaultUDisTLMonitor monitorEffReg = defaultMonitorBuilder.build(alwaysRatioEffRegBounded);
@@ -399,7 +414,7 @@ public class Main {
 
             Util.writeToCSV("./multipleSclerosisOdeMonitoredValues.csv", resultsOfMonitoring);
 
-
+            */
 
 
 
@@ -420,12 +435,16 @@ public class Main {
                 Controller.ifThenElse(
                         (rg,ds)-> ds.get(ratioER)>10,
                         Controller.doAction(
-                                (rg,ds)->List.of(new DataStateUpdate(R,ds.get(E)*0.1)),
+                                (rg,ds)->List.of(new DataStateUpdate(Rr,ds.get(Rr)+1000+(rg.nextDouble()*20-10)), new DataStateUpdate(flag,ds.get(flag)+1), new DataStateUpdate(flag2,ds.get(flag2)+1), new DataStateUpdate(wait_month,1)),
                                 registry.reference("Ctrl")
                         ),
-                        Controller.doTick(registry.reference("Ctrl"))
+                        //Controller.doTick(registry.reference("Ctrl"))
+                        Controller.doAction(
+                                (rg,ds)->List.of(new DataStateUpdate(flag2,ds.get(flag2)+1), new DataStateUpdate(wait_week,1)),
+                                registry.reference("Ctrl")
+                        )
                 )
-                );
+        );
 
         return new ExecController(registry.reference("Ctrl"));
     }
@@ -458,6 +477,11 @@ public class Main {
         values.put(timer, 0.0);
         values.put(alphaR,alphaR_value);
         values.put(uncertainty,uncertainty_value);
+        values.put(flag,0.0);
+        values.put(flag2,0.0);
+        values.put(Rgen,0.0);
+        values.put(wait_month,0.0);
+        values.put(wait_week,0.0);
         return new DataState(NUMBER_OF_VARIABLES, i -> values.getOrDefault(i, Double.NaN), gran, Tstep, Ttot, Tshift, step_ctrl, gran_ctrl);
     }
 
@@ -481,6 +505,8 @@ public class Main {
         double old_d2 = state.get(v_d2);
         double old_r = state.get(v_r);
         double old_alphaR = state.get(alphaR);
+
+
 
 
         double r1 = rg.nextDouble();
@@ -556,6 +582,17 @@ public class Main {
 
         return updates;
 
+    }
+
+    public static double selectTime(RandomGenerator rg, DataState ds){
+        if (ds.get(wait_month)==1){
+            ds.setCtrlGranularity(30);
+            ds.set(wait_month,0.0);
+        } else if (ds.get(wait_week)==1) {
+            ds.setCtrlGranularity(7);
+            ds.set(wait_week,0.0);
+        }
+        return ds.getTimeDelta();
     }
 
 
