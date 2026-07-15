@@ -33,12 +33,14 @@ import stark.distl.*;
 import stark.ds.DataState;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateUpdate;
+import stark.perturbation.Perturbation;
 import stark.robtl.*;
 import stark.monitors.DefaultMonitorBuilder;
 import stark.monitors.DefaultUDisTLMonitor;
 import stark.PerceivedSystemState;
 import org.apache.commons.math3.random.RandomGenerator;
 
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 
@@ -115,10 +117,11 @@ public class Main {
             DataState stateH = getInitialState(jumps, 0.0, 0.0, delta_t, ctrl_step, ctrl_gran, alphaRH, 1.0);
             DataState stateS = getInitialState(jumps, 0.0, 0.0, delta_t, ctrl_step, ctrl_gran, alphaRS, 1.0);
             RandomGenerator rand = new DefaultRandomGenerator();
-            DecoupledTimedSystem systemH1 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,1)), stateH, ds -> selectTime(rand,ds));
+            //DecoupledTimedSystem systemH1 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,1)), stateH, ds -> selectTime(rand,ds));
             DecoupledTimedSystem systemH5 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,5)), stateH, ds -> selectTime(rand,ds));
-            DecoupledTimedSystem systemS1 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,1)), stateS, ds -> selectTime(rand,ds));
+            //DecoupledTimedSystem systemS1 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,1)), stateS, ds -> selectTime(rand,ds));
             DecoupledTimedSystem systemS5 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,5)), stateS, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemS5uc = new DecoupledTimedSystem(new NilController(), (rg, ds) -> ds.apply(odeEnv(rg, ds,5)), stateS, ds -> selectTime(rand,ds));
 
             int size = 100;
             int size_sim = 100;
@@ -204,6 +207,18 @@ public class Main {
             These values are also registered in a csv file for plotting.
              */
 
+            ArrayList<String> LS = new ArrayList<>();
+            LS.add("E");
+            LS.add("R");
+            LS.add("Er");
+            LS.add("Rr");
+            LS.add("l");
+            LS.add("L");
+            LS.add("ratio");
+            //LS.add("interventions");
+            //LS.add("ctrl_steps");
+
+
             ArrayList<DataStateExpression> F = new ArrayList<>();
             F.add(ds -> ds.get(E));
             F.add(ds -> ds.get(R));
@@ -212,39 +227,47 @@ public class Main {
             F.add(ds -> ds.get(l));
             F.add(ds -> ds.get(L));
             F.add(ds -> (ds.get(E) / ds.get(R)));
-            F.add(ds -> (ds.get(flag)));
-            F.add(ds -> (ds.get(flag2)));
+            //F.add(ds -> (ds.get(flag)));
+            //F.add(ds -> (ds.get(flag2)));
 
 
-            double[][] data_avgH = SystemState.sample(rand, F, systemH5, steps, size);
+            //double[][] data_avgH = SystemState.sample(rand, F, systemH5, steps, size);
 
-            System.out.println("Healthy systems: Average value for E, R, Er, Rr, l, L, E/R in " +size+ " runs "+ steps +" days ");
-            for (int i = 0; i < data_avgH.length; i++) {
-                System.out.printf("%d>   ", i);
-                for (int j = 0; j < data_avgH[i].length - 1; j++) {
-                    System.out.printf("%f   ", data_avgH[i][j]);
-                }
-                System.out.printf("%f\n", data_avgH[i][data_avgH[i].length - 1]);
-            }
+            //System.out.println("Healthy systems: Average value for E, R, Er, Rr, l, L, E/R in " +size+ " runs "+ steps +" days ");
+            //for (int i = 0; i < data_avgH.length; i++) {
+            //    System.out.printf("%d>   ", i);
+            //    for (int j = 0; j < data_avgH[i].length - 1; j++) {
+            //        System.out.printf("%f   ", data_avgH[i][j]);
+            //    }
+            //    System.out.printf("%f\n", data_avgH[i][data_avgH[i].length - 1]);
+            //}
 
-            double[][] data_avgS = SystemState.sample(rand, F, systemS5, steps, size);
+            //double[][] data_avgS = SystemState.sample(rand, F, systemS5, steps, size);
 
-            System.out.println(" ");
-            System.out.println(" ");
-            System.out.println("Unhealthy systems: Average value for E, R, Er, Rr, l, L, E/R in " +size+ " runs "+ steps +" days ");
-            System.out.println(" ");
+            //System.out.println(" ");
+            //System.out.println(" ");
+            //System.out.println("Unhealthy systems: Average value for E, R, Er, Rr, l, L, E/R in " +size+ " runs "+ steps +" days ");
+            //System.out.println(" ");
 
-            for (int i = 0; i < data_avgS.length; i++) {
-                System.out.printf("%d>   ", i);
-                for (int j = 0; j < data_avgS[i].length - 1; j++) {
-                    System.out.printf("%f   ", data_avgS[i][j]);
-                }
-                System.out.printf("%f\n", data_avgS[i][data_avgS[i].length - 1]);
-            }
+            //for (int i = 0; i < data_avgS.length; i++) {
+            //    System.out.printf("%d>   ", i);
+            //    for (int j = 0; j < data_avgS[i].length - 1; j++) {
+            //        System.out.printf("%f   ", data_avgS[i][j]);
+            //    }
+            //    System.out.printf("%f\n", data_avgS[i][data_avgS[i].length - 1]);
+            //}
 
-            Util.writeToCSV("./multipleSclerosisOdeHealthy.csv", data_avgH);
-            Util.writeToCSV("./multipleSclerosisOdeSick.csv", data_avgS);
+            //Util.writeToCSV("./multipleSclerosisOdeHealthy.csv", data_avgH);
+            //Util.writeToCSV("./multipleSclerosisOdeSick.csv", data_avgS);
 
+            writeRunsToCSV(rand, LS, F, systemH5, 2000,
+                    100, "healthy", "./runs_ms_healthy.csv");
+
+            writeRunsToCSV(rand, LS, F, systemS5, 2000,
+                    100, "controlled", "./runs_ms_sick.csv");
+
+            writeRunsToCSV(rand, LS, F, systemS5uc, 2000,
+                    100, "uncontrolled", "./runs_ms_sickuc.csv");
 
 
             /*
@@ -596,5 +619,48 @@ public class Main {
     }
 
 
+    private static void writeRunsToCSV(RandomGenerator rg, ArrayList<String> labels,
+                                       ArrayList<DataStateExpression> F, SystemState s,
+                                       int steps, int numRuns, String conditionLabel, String path) throws IOException {
+        try (FileWriter fw = new FileWriter(path)) {
+            fw.write("run,step");
+            for (String label : labels) {
+                fw.write("," + label);
+            }
+            fw.write(",condition\n");
+            for (int r = 0; r < numRuns; r++) {
+                double[][] data = SystemState.sample(rg, F, s, steps, 1);
+                for (int i = 0; i < data.length; i++) {
+                    fw.write(r + "," + i);
+                    for (int j = 0; j < data[i].length; j++) {
+                        fw.write("," + String.format(Locale.US, "%f", data[i][j]));
+                    }
+                    fw.write("," + conditionLabel + "\n");
+                }
+            }
+        }
+    }
+
+    private static void writePRunsToCSV(RandomGenerator rg, ArrayList<String> labels,
+                                        ArrayList<DataStateExpression> F, Perturbation perturbation, SystemState s,
+                                        int steps, int numRuns, String conditionLabel, String path) throws IOException {
+        try (FileWriter fw = new FileWriter(path)) {
+            fw.write("run,step");
+            for (String label : labels) {
+                fw.write("," + label);
+            }
+            fw.write(",condition\n");
+            for (int r = 0; r < numRuns; r++) {
+                double[][] data = SystemState.sample(rg, F, perturbation, s, steps, 1);
+                for (int i = 0; i < data.length; i++) {
+                    fw.write(r + "," + i);
+                    for (int j = 0; j < data[i].length; j++) {
+                        fw.write("," + String.format(Locale.US, "%f", data[i][j]));
+                    }
+                    fw.write("," + conditionLabel + "\n");
+                }
+            }
+        }
+    }
 
 }
