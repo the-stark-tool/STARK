@@ -19,11 +19,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/*
-THIS CASE STUDY REQUIRES AN AI SERVER
-Set up and run the following project: https://github.com/the-stark-tool/highway-env-ai-server
- */
 package monitoring;
 
 import org.apache.commons.math3.random.RandomGenerator;
