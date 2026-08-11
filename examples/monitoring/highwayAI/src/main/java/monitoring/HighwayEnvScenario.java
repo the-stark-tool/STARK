@@ -41,7 +41,7 @@ import java.io.*;
 import java.util.*;
 import java.util.function.Function;
 
-public class AIMultipleLanes {
+public class HighwayEnvScenario {
     private static final double RESPONSE_TIME = 1.0/60.0; // 1 Hz
 
     // VEHICLE DIMENSIONS
@@ -58,32 +58,6 @@ public class AIMultipleLanes {
     public static final double[] X_RANGE  = {-1000.0, 1000.0};
     public static final double[] Y_RANGE  = {-12.0, 12.0};
 
-    private static final int STEPS_TO_SAMPLE = 160;
-    private static final int EVOLUTION_SEQUENCE_SIZE = 100;
-
-    private static final MonitoringAIStateProvider provider =
-            new JSONFileReader("examples/monitoring/highwayAI/src/main/resources/short.json");
-//    new JSONFileReader("examples/monitoring/highwayAI/src/main/resources/long.json");
-
-    private String experimentName;
-    private static final String RESULTS_FOLDER = "examples/monitoring/highwayAI/src/main/resources";
-
-    /**
-     * Set this to System.out to print to console, or to a FileOutputStream to write to a file.
-     * Example (file): OUTPUT = new FileOutputStream("results.txt");
-     * Example (console): OUTPUT = System.out;
-     */
-    private static final OutputStream OUTPUT = System.out;
-//    private static final OutputStream OUTPUT; // append mode
-//
-//    static {
-//        try {
-//            OUTPUT = new FileOutputStream(RESULTS_FOLDER + "/long_release.txt", true);
-//        } catch (FileNotFoundException e) {
-//            throw new RuntimeException(e);
-//        }
-//    }
-
     // DATASTATE INDEXES
     private int[] presence;
     private int[] xPosition;
@@ -94,27 +68,30 @@ public class AIMultipleLanes {
 
     private int observedCarCount;
 
+    // EXPERIMENTAL SETTINGS
+    private final OutputStream output; // append mode
+    private final MonitoringAIStateProvider provider;
+    private final int totalSteps;
+    private final double atomicOpThreshold;
 
-    public AIMultipleLanes() {
-        run();
+    private final EvolutionSequence sequence;
+    private final DefaultMonitorBuilder builder;
+
+    public HighwayEnvScenario(MonitoringAIStateProvider provider, int totalSteps, int sampleSize, String resultDestination) {
+        this.provider = provider;
+        this.totalSteps  = totalSteps;
+        try {
+            output = new FileOutputStream(resultDestination, true);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+        sequence = new EvolutionSequence(new SilentMonitor("AIMultipleLanes"), new DefaultRandomGenerator(), readInitialState(), sampleSize);
+        atomicOpThreshold = 0.0;
+        builder = new DefaultMonitorBuilder(sampleSize, false);
     }
 
-    private void run() {
-        EvolutionSequence sequence = new EvolutionSequence(new SilentMonitor("AIMultipleLanes"), new DefaultRandomGenerator(), readInitialState(), EVOLUTION_SEQUENCE_SIZE);
 
-        double threshold = 0.0;
-        DefaultMonitorBuilder builder = new DefaultMonitorBuilder(EVOLUTION_SEQUENCE_SIZE, false);
-
-        runCrashExperiment(sequence, threshold, builder);
-        runSafetyGapExperiment(sequence, threshold, builder);
-        run5CarsExperiment(sequence, threshold, builder);
-        run5CarsImpliesNoCrashExperiment(sequence, threshold, builder);
-        runDesiredSpeedExperiment(sequence, threshold, builder);
-        runSpeedLimitUntilFreeLaneExperiment(sequence, threshold, builder);
-
-    }
-
-    private void runCrashExperiment(EvolutionSequence sequence, double threshold, DefaultMonitorBuilder builder) {
+    protected void runCrashExperiment() {
         //crash
         DataStateFunction muCrash = (rg, ds) -> {
             List<DataStateUpdate> updates = new LinkedList<>();
@@ -123,11 +100,11 @@ public class AIMultipleLanes {
         };
         // Penalizes when the controlled car crashes with the vehicle in front or behind
         DataStateExpression penaltyCrash = (ds) -> ds.get(crashes) > 0.0 ? 1.0 : 0.0;
-        BrinkDisTLFormula atomicNoCrash = new BrinkDisTLFormula(muCrash, penaltyCrash, threshold);
+        BrinkDisTLFormula atomicNoCrash = new BrinkDisTLFormula(muCrash, penaltyCrash, atomicOpThreshold);
 
         UDisTLFormula alwaysCrash = new UnboundedAlwaysuDisTLFormula(atomicNoCrash, 0);
         DefaultUDisTLMonitor mCrash = builder.build(alwaysCrash);
-        printMonitoringSummary(sequence, mCrash, STEPS_TO_SAMPLE, "G nocrash", OUTPUT);
+        printMonitorEval(sequence, mCrash, totalSteps, "G nocrash", output);
     }
 
 
@@ -173,11 +150,11 @@ public class AIMultipleLanes {
         return maxPenalty;
     }
 
-    private void runSafetyGapExperiment(EvolutionSequence sequence, double threshold, DefaultMonitorBuilder builder) {
-        TargetDisTLFormula atomicSG = new TargetDisTLFormula(this::safetyGapMu, this::safetyGapPenalty, threshold);
+    protected void runSafetyGapExperiment() {
+        TargetDisTLFormula atomicSG = new TargetDisTLFormula(this::safetyGapMu, this::safetyGapPenalty, atomicOpThreshold);
         UDisTLFormula alwaysSG = new UnboundedAlwaysuDisTLFormula(atomicSG, 0);
         DefaultUDisTLMonitor mSG = builder.build(alwaysSG);
-        printMonitorEval(sequence, mSG, STEPS_TO_SAMPLE, "G RSSsd", OUTPUT);
+        printMonitorEval(sequence, mSG, totalSteps, "G RSSsd", output);
     }
 
     private DataState fiveCarsLengthMu(RandomGenerator rg, DataState ds){
@@ -225,18 +202,18 @@ public class AIMultipleLanes {
         return maxPenalty;
     }
 
-    private void run5CarsExperiment(EvolutionSequence sequence, double threshold, DefaultMonitorBuilder builder) {
-        TargetDisTLFormula atomicSG = new TargetDisTLFormula(this::fiveCarsLengthMu, this::fiveCarsPenalty, threshold);
+    protected void run5CarsExperiment() {
+        TargetDisTLFormula atomicSG = new TargetDisTLFormula(this::fiveCarsLengthMu, this::fiveCarsPenalty, atomicOpThreshold);
         UDisTLFormula alwaysSG = new UnboundedAlwaysuDisTLFormula(atomicSG, 0);
         DefaultUDisTLMonitor mSG = builder.build(alwaysSG);
-        printMonitorEval(sequence, mSG, STEPS_TO_SAMPLE, "G 5csd", OUTPUT);
+        printMonitorEval(sequence, mSG, totalSteps, "G 5csd", output);
     }
 
     private double compute3CarsDistance(DataState ds, int ego, int other){
         return VEHICLE_LENGTH*5;
     }
 
-    private void run5CarsImpliesNoCrashExperiment(EvolutionSequence sequence, double threshold, DefaultMonitorBuilder builder) {
+    protected void run5CarsImpliesNoCrashExperiment() {
 
         //crash
         DataStateFunction muCrash = (rg, ds) -> {
@@ -246,21 +223,21 @@ public class AIMultipleLanes {
         };
         // Penalizes when the controlled car crashes with the vehicle in front or behind
         DataStateExpression penaltyCrash = (ds) -> ds.get(crashes) > 0.0 ? 1.0 : 0.0;
-        TargetDisTLFormula atomicCrash = new TargetDisTLFormula(muCrash, penaltyCrash, threshold);
+        TargetDisTLFormula atomicCrash = new TargetDisTLFormula(muCrash, penaltyCrash, atomicOpThreshold);
 
-        TargetDisTLFormula atomic5csd = new TargetDisTLFormula(this::fiveCarsLengthMu, this::fiveCarsPenalty, threshold);
+        TargetDisTLFormula atomic5csd = new TargetDisTLFormula(this::fiveCarsLengthMu, this::fiveCarsPenalty, atomicOpThreshold);
 
         UDisTLFormula disjunction = new DisjunctionDisTLFormula(atomic5csd, new UnboundedEventuallyuDisTLFormula(atomicCrash, 0));
         UDisTLFormula safetyGapImpliesNoCrash = new UnboundedAlwaysuDisTLFormula(disjunction, 0);
         DefaultUDisTLMonitor mSGimpliesNoCrash = builder.build(safetyGapImpliesNoCrash);
 
-        printMonitorEval(sequence, mSGimpliesNoCrash, STEPS_TO_SAMPLE, "G (sg->nocrash)", OUTPUT);
-        printStepwiseMonitorEval(sequence, atomicCrash, builder, STEPS_TO_SAMPLE, "stepwise crash", OUTPUT);
-        printStepwiseMonitorEval(sequence, atomic5csd, builder, STEPS_TO_SAMPLE, "stepwise 5csd", OUTPUT);
+        printMonitorEval(sequence, mSGimpliesNoCrash, totalSteps, "G (sg->nocrash)", output);
+//        printStepwiseMonitorEval(sequence, atomicCrash, builder, STEPS_TO_SAMPLE, "stepwise crash", OUTPUT);
+//        printStepwiseMonitorEval(sequence, atomic5csd, builder, STEPS_TO_SAMPLE, "stepwise 5csd", OUTPUT);
 //        printStepwiseEvaluationSummary(sequence, disjunction, builder, STEPS_TO_SAMPLE, "disj", OUTPUT);
     }
 
-    private void runDesiredSpeedExperiment(EvolutionSequence sequence, double threshold, DefaultMonitorBuilder builder) {
+    protected void runDesiredSpeedExperiment() {
         // desired speed
         double DESIRED_SPEED = 25.0;
         // muDesiredSpeed: gaussian with mean DESIRED_SPEED
@@ -276,11 +253,11 @@ public class AIMultipleLanes {
             double egoSpeed = ds.get(xSpeed[controlledVehicle]);
             return Math.abs((DESIRED_SPEED - egoSpeed)/(VX_RANGE[1] - VX_RANGE[0]));
         };
-        TargetDisTLFormula atomicDesiredSpeed = new TargetDisTLFormula(muDesiredSpeed, penaltyDesiredSpeed, threshold);
+        TargetDisTLFormula atomicDesiredSpeed = new TargetDisTLFormula(muDesiredSpeed, penaltyDesiredSpeed, atomicOpThreshold);
         UDisTLFormula alwaysDesiredSpeed = new EventuallyDisTLFormula(atomicDesiredSpeed,20,100);
         DefaultUDisTLMonitor mDesiredSpeed = builder.build(alwaysDesiredSpeed);
 
-        printMonitoringSummary(sequence, mDesiredSpeed, STEPS_TO_SAMPLE, "F desiredspeed", OUTPUT);
+        printMonitorEval(sequence, mDesiredSpeed, totalSteps, "F desiredspeed", output);
     }
 
     private DataStateFunction createMuFW() {
@@ -352,21 +329,21 @@ public class AIMultipleLanes {
         };
     }
 
-    private void runSpeedLimitUntilFreeLaneExperiment(EvolutionSequence sequence, double threshold, DefaultMonitorBuilder builder) {
+    protected void runSpeedLimitUntilFreeLaneExperiment() {
         double SPEED_LIMIT = 50.0;
         double SPEED_LOWERBOUND = -30.0;
         double s = 0.1;
         double decay = 0.01;
 
-        TargetDisTLFormula atomicFW = new TargetDisTLFormula(createMuFW(), createPenaltyFW(), threshold);
-        TargetDisTLFormula atomicSpeedLimit = new TargetDisTLFormula(createMuSpeedLimit(SPEED_LIMIT, SPEED_LOWERBOUND, s, decay), createPenaltySpeedLimit(SPEED_LIMIT), threshold);
+        TargetDisTLFormula atomicFW = new TargetDisTLFormula(createMuFW(), createPenaltyFW(), atomicOpThreshold);
+        TargetDisTLFormula atomicSpeedLimit = new TargetDisTLFormula(createMuSpeedLimit(SPEED_LIMIT, SPEED_LOWERBOUND, s, decay), createPenaltySpeedLimit(SPEED_LIMIT), atomicOpThreshold);
 
         UDisTLFormula formula = new UnboundedReleaseuDisTLFormula(new UnboundedAlwaysuDisTLFormula(atomicSpeedLimit,0), atomicFW,0);
 
         DefaultUDisTLMonitor mRelease = builder.build(formula);
-        printMonitorEval(sequence, mRelease, STEPS_TO_SAMPLE, "sl U fl",OUTPUT);
-        printStepwiseMonitorEval(sequence, atomicFW, builder, STEPS_TO_SAMPLE, "stepwise fl", OUTPUT);
-        printStepwiseMonitorEval(sequence, atomicSpeedLimit, builder, STEPS_TO_SAMPLE, "stepwise sl", OUTPUT);
+        printMonitorEval(sequence, mRelease, totalSteps, "sl U fl", output);
+//        printStepwiseMonitorEval(sequence, atomicFW, builder, STEPS_TO_SAMPLE, "stepwise fl", OUTPUT);
+//        printStepwiseMonitorEval(sequence, atomicSpeedLimit, builder, STEPS_TO_SAMPLE, "stepwise sl", OUTPUT);
 
     }
 
@@ -441,18 +418,25 @@ public class AIMultipleLanes {
 
     private void feedAndPrintMonitoringSummary(EvolutionSequence sequence, DefaultUDisTLMonitor m, int stepsToPrint, String title, OutputStream outputStream, MonitorFeeder feeder) {
         PrintWriter writer = new PrintWriter(outputStream);
-        writer.printf("%s%n" + ("%6s, ").repeat(24) + "%n", title,
-                "i", "mon", "n", "crash", "p0", "x0", "y0", "v0", "p1", "x1", "y1", "v1", "p2", "x2", "y2", "v2", "p3", "x3", "y3", "v3", "p4", "x4", "y4", "v4");
+        writer.printf("%s%n" + ("%6s, ").repeat(25) + "%n", title,
+                "i", "mon", "time_ns", "n", "crash", "p0", "x0", "y0", "v0", "p1", "x1", "y1", "v1", "p2", "x2", "y2", "v2", "p3", "x3", "y3", "v3", "p4", "x4", "y4", "v4");
         int i = 0;
         while (i < stepsToPrint) {
             SampleSet<PerceivedSystemState> distribution = sequence.getAsPerceivedSystemStates(i);
+
+            // Measure only the time spent evaluating the monitor on the new distribution.
+            // Distribution generation and summary/printing code are deliberately excluded.
+            long monitorStart = System.nanoTime();
             OptionalDouble monitorEval = feeder.feed(m, distribution, i);
+            long monitorElapsedNs = System.nanoTime() - monitorStart;
+
             ArrayList<String> s = new ArrayList<>();
 
             OptionalDouble selfPerceivedI = Arrays.stream(distribution.evalPenaltyFunction
                     (ds -> ds.get(MonitoringAiState.DATASTATE_INDEX_FOR_TIMESTEP))).average();
             s.add(String.format("%" + 6 + ".2f,", selfPerceivedI.orElse(Double.NaN)));
             s.add(monitorEval.isPresent() ? String.format("%" + 6 + ".2f,", monitorEval.getAsDouble()) : "n");
+            s.add(String.format("%" + 10 + "d,", monitorElapsedNs));
             s.add(String.format("%" + 6 + "d,", distribution.size()));
             OptionalDouble c = Arrays.stream(distribution.evalPenaltyFunction(ds -> ds.get(crashes))).average();
             s.add(String.format("%" + 6 + ".2f,", c.orElse(Double.NaN)));
@@ -486,18 +470,18 @@ public class AIMultipleLanes {
     ) {
         PrintWriter writer = new PrintWriter(outputStream);
         writer.println(title);
+        writer.println("mon\ttime_ns");
         for (int i = 0; i < stepsToPrint; i++) {
             SampleSet<PerceivedSystemState> distribution =
                     sequence.getAsPerceivedSystemStates(i);
-
+            long monitorStart = System.nanoTime();
             OptionalDouble monitorEval = m.evalNext(distribution);
+            long monitorElapsedNs = System.nanoTime() - monitorStart;
 
-            writer.println(
-                    monitorEval.isPresent()
-                            ? String.format(Locale.GERMAN, "%.6f", monitorEval.getAsDouble())
-                            : "u"
-            );
-
+            String monitorValue = monitorEval.isPresent()
+                    ? String.format(Locale.ROOT, "%.6f", monitorEval.getAsDouble())
+                    : "u";
+            writer.printf(Locale.US, "%s\t%d%n", monitorValue, monitorElapsedNs);
             writer.flush();
         }
     }

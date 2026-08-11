@@ -214,7 +214,7 @@ class DefaultUnboundedMacrosMonitorTest {
         DefaultMonitorBuilder defaultMonitorBuilder = new DefaultMonitorBuilder(SAMPLE_SIZE, false);
 
 
-        UDisTLFormula phi = new UnboundedReleaseuDisTLFormula(left, right);
+        UDisTLFormula phi = new UnboundedReleaseuDisTLFormula(left, right, 0);
         UDisTLFormula phiMacro = new NegationDisTLFormula(
                 new UnboundedUntiluDisTLFormula(
                         new NegationDisTLFormula(left),
