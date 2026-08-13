@@ -23,6 +23,7 @@ Usage:
 Defaults:
     healthy_csv  = runs_ms_healthy.csv
     sick_csv = runs_ms_sick.csv
+    sickuc_csv = runs_ms_sickuc.csv
     output_dir   = .
 """
 
@@ -64,12 +65,13 @@ def configure_style() -> None:
 
 
 # ----- Data loading --------------------------------------------------------
-def load_runs(healthy_path: str, sick_path: str) -> pd.DataFrame:
+def load_runs(healthy_path: str, sick_path: str, sickuc_path: str) -> pd.DataFrame:
     """Load and concatenate the two run CSVs into one tidy DataFrame."""
     healthy = pd.read_csv(healthy_path)
     if os.path.exists(sick_path):
         sick = pd.read_csv(sick_path)
-        df = pd.concat([healthy, sick], ignore_index=True)
+        sickuc = pd.read_csv(sickuc_path)
+        df = pd.concat([healthy, sick, sickuc], ignore_index=True)
     else:
         print(f"Note: {sick_path} not found - plotting healthy only.")
         df = healthy
@@ -98,7 +100,7 @@ def plot_distribution_bands(df: pd.DataFrame, observable: str, ylabel: str,
     for ax, condition in zip(axes, conditions):
         sub = df[df["condition"] == condition]
         color = NOMINAL_COLOR if condition == "healthy" else ATTACKED_COLOR
-        label = "Healthy" if condition == "healthy" else "Sick"
+        label = "Healthy" if condition == "healthy" else f"Sick({condition})"
 
         # Compute per-step quantiles
         grouped = sub.groupby("step")[observable]
@@ -131,8 +133,18 @@ def plot_distribution_bands(df: pd.DataFrame, observable: str, ylabel: str,
 # ----- Entry point ---------------------------------------------------------
 if __name__ == "__main__":
     healthy_path = sys.argv[1] if len(sys.argv) > 1 else "runs_ms_healthy.csv"
-    sick_path = sys.argv[2] if len(sys.argv) > 2 else "runs_ms_sick.csv"
-    output_dir = sys.argv[3] if len(sys.argv) > 3 else "."
+    
+    sick7 = sys.argv[2] if len(sys.argv) > 2 else "runs_ms_s7.csv"
+    sick8 = sys.argv[2] if len(sys.argv) > 2 else "runs_ms_s8.csv"
+    sick9 = sys.argv[2] if len(sys.argv) > 2 else "runs_ms_s9.csv"
+    sick10 = sys.argv[2] if len(sys.argv) > 2 else "runs_ms_s10.csv"
+    sick11 = sys.argv[2] if len(sys.argv) > 2 else "runs_ms_s11.csv"
+    sick12 = sys.argv[2] if len(sys.argv) > 2 else "runs_ms_s12.csv"
+    
+    sickuc_path = sys.argv[3] if len(sys.argv) > 3 else "runs_ms_sickuc.csv"
+    output_dir = sys.argv[4] if len(sys.argv) > 4 else "."
+    
+    
 
     if not os.path.exists(healthy_path):
         print(f"Error: file not found: {healthy_path}")
@@ -141,24 +153,129 @@ if __name__ == "__main__":
     os.makedirs(output_dir, exist_ok=True)
     configure_style()
 
-    df = load_runs(healthy_path, sick_path)
-    print(f"Loaded {len(df):,} rows ({df['run'].nunique()} runs per condition, "
-          f"{df['step'].nunique()} steps)")
+    df7 = load_runs(healthy_path, sick7, sickuc_path)
+    print(f"Loaded {len(df7):,} rows ({df7['run'].nunique()} runs per condition, "
+          f"{df7['step'].nunique()} steps)")
 
 
-    plot_distribution_bands(df, "E", "Active TEff cells",
+    plot_distribution_bands(df7, "E", "Active TEff cells",
                              "Active TEff cells distribution: healthy vs sick",
-                             os.path.join(output_dir, "TEff_distribution.png"))
-    plot_distribution_bands(df, "R", "Active TReg cells",
+                             os.path.join(output_dir, "TEff_distrib7_aR24_cg7.png"))
+    plot_distribution_bands(df7, "R", "Active TReg cells",
                              "Active TReg cells distribution: healthy vs sick",
-                             os.path.join(output_dir, "TReg_distribution.png"))
-    plot_distribution_bands(df, "ratio", "TEff-TReg ratio",
+                             os.path.join(output_dir, "TReg_distrib7_aR24_cg7.png"))
+    plot_distribution_bands(df7, "ratio", "TEff-TReg ratio",
                              "TEff-TReg cells ratio distribution: healthy vs sick",
-                             os.path.join(output_dir, "ratio_distribution.png"))
-    plot_distribution_bands(df, "l", "Reversible damage",
+                             os.path.join(output_dir, "ratio_distrib7_aR24_cg7.png"))
+    plot_distribution_bands(df7, "l", "Reversible damage",
                              "Reversible damage distribution: healthy vs sick",
-                             os.path.join(output_dir, "rev_damage_distribution.png"))
-    plot_distribution_bands(df, "L", "Irreversible damage",
+                             os.path.join(output_dir, "rev_damage_distrib74_aR2_cg7.png"))
+    plot_distribution_bands(df7, "L", "Irreversible damage",
                              "Irreverisible damage distribution: healthy vs sick",
-                             os.path.join(output_dir, "irrev_damage_distribution.png"))
+                             os.path.join(output_dir, "irrev_damage_distrib74_aR2_cg7.png"))
+    
+    df8 = load_runs(healthy_path, sick8, sickuc_path)
+    print(f"Loaded {len(df8):,} rows ({df8['run'].nunique()} runs per condition, "
+          f"{df8['step'].nunique()} steps)")
+
+
+    plot_distribution_bands(df8, "E", "Active TEff cells",
+                             "Active TEff cells distribution: healthy vs sick",
+                             os.path.join(output_dir, "TEff_distrib8_aR24_cg7.png"))
+    plot_distribution_bands(df8, "R", "Active TReg cells",
+                             "Active TReg cells distribution: healthy vs sick",
+                             os.path.join(output_dir, "TReg_distrib8_aR24_cg7.png"))
+    plot_distribution_bands(df8, "ratio", "TEff-TReg ratio",
+                             "TEff-TReg cells ratio distribution: healthy vs sick",
+                             os.path.join(output_dir, "ratio_distrib8_aR24_cg7.png"))
+    plot_distribution_bands(df8, "l", "Reversible damage",
+                             "Reversible damage distribution: healthy vs sick",
+                             os.path.join(output_dir, "rev_damage_distrib8_aR24_cg7.png"))
+    plot_distribution_bands(df8, "L", "Irreversible damage",
+                             "Irreverisible damage distribution: healthy vs sick",
+                             os.path.join(output_dir, "irrev_damage_distrib8_aR24_cg7.png"))
+    
+    df9 = load_runs(healthy_path, sick9, sickuc_path)
+    print(f"Loaded {len(df9):,} rows ({df9['run'].nunique()} runs per condition, "
+          f"{df9['step'].nunique()} steps)")
+
+
+    plot_distribution_bands(df9, "E", "Active TEff cells",
+                             "Active TEff cells distribution: healthy vs sick",
+                             os.path.join(output_dir, "TEff_distrib9_aR24_cg7.png"))
+    plot_distribution_bands(df9, "R", "Active TReg cells",
+                             "Active TReg cells distribution: healthy vs sick",
+                             os.path.join(output_dir, "TReg_distrib9_aR24_cg7.png"))
+    plot_distribution_bands(df9, "ratio", "TEff-TReg ratio",
+                             "TEff-TReg cells ratio distribution: healthy vs sick",
+                             os.path.join(output_dir, "ratio_distrib9_aR24_cg7.png"))
+    plot_distribution_bands(df9, "l", "Reversible damage",
+                             "Reversible damage distribution: healthy vs sick",
+                             os.path.join(output_dir, "rev_damage_distrib9_aR24_cg7.png"))
+    plot_distribution_bands(df9, "L", "Irreversible damage",
+                             "Irreverisible damage distribution: healthy vs sick",
+                             os.path.join(output_dir, "irrev_damage_distrib9_aR24_cg7.png"))
+    
+    df10 = load_runs(healthy_path, sick10, sickuc_path)
+    print(f"Loaded {len(df7):,} rows ({df10['run'].nunique()} runs per condition, "
+          f"{df10['step'].nunique()} steps)")
+
+
+    plot_distribution_bands(df10, "E", "Active TEff cells",
+                             "Active TEff cells distribution: healthy vs sick",
+                             os.path.join(output_dir, "TEff_distrib10_aR24_cg7.png"))
+    plot_distribution_bands(df10, "R", "Active TReg cells",
+                             "Active TReg cells distribution: healthy vs sick",
+                             os.path.join(output_dir, "TReg_distrib10_aR24_cg7.png"))
+    plot_distribution_bands(df10, "ratio", "TEff-TReg ratio",
+                             "TEff-TReg cells ratio distribution: healthy vs sick",
+                             os.path.join(output_dir, "ratio_distrib10_aR24_cg7.png"))
+    plot_distribution_bands(df10, "l", "Reversible damage",
+                             "Reversible damage distribution: healthy vs sick",
+                             os.path.join(output_dir, "rev_damage_distrib10_aR24_cg7.png"))
+    plot_distribution_bands(df10, "L", "Irreversible damage",
+                             "Irreverisible damage distribution: healthy vs sick",
+                             os.path.join(output_dir, "irrev_damage_distrib10_aR24_cg7.png"))
+    
+    df11 = load_runs(healthy_path, sick11, sickuc_path)
+    print(f"Loaded {len(df11):,} rows ({df11['run'].nunique()} runs per condition, "
+          f"{df11['step'].nunique()} steps)")
+
+
+    plot_distribution_bands(df11, "E", "Active TEff cells",
+                             "Active TEff cells distribution: healthy vs sick",
+                             os.path.join(output_dir, "TEff_distrib11_aR24_cg7.png"))
+    plot_distribution_bands(df11, "R", "Active TReg cells",
+                             "Active TReg cells distribution: healthy vs sick",
+                             os.path.join(output_dir, "TReg_distrib11_aR24_cg7.png"))
+    plot_distribution_bands(df11, "ratio", "TEff-TReg ratio",
+                             "TEff-TReg cells ratio distribution: healthy vs sick",
+                             os.path.join(output_dir, "ratio_distrib11_aR24_cg7.png"))
+    plot_distribution_bands(df11, "l", "Reversible damage",
+                             "Reversible damage distribution: healthy vs sick",
+                             os.path.join(output_dir, "rev_damage_distrib11_aR24_cg7.png"))
+    plot_distribution_bands(df11, "L", "Irreversible damage",
+                             "Irreverisible damage distribution: healthy vs sick",
+                             os.path.join(output_dir, "irrev_damage_distrib11_aR24_cg7.png"))
+    
+    df12 = load_runs(healthy_path, sick12, sickuc_path)
+    print(f"Loaded {len(df12):,} rows ({df12['run'].nunique()} runs per condition, "
+          f"{df12['step'].nunique()} steps)")
+
+
+    plot_distribution_bands(df12, "E", "Active TEff cells",
+                             "Active TEff cells distribution: healthy vs sick",
+                             os.path.join(output_dir, "TEff_distrib12_aR24_cg7.png"))
+    plot_distribution_bands(df12, "R", "Active TReg cells",
+                             "Active TReg cells distribution: healthy vs sick",
+                             os.path.join(output_dir, "TReg_distrib12_aR24_cg7.png"))
+    plot_distribution_bands(df12, "ratio", "TEff-TReg ratio",
+                             "TEff-TReg cells ratio distribution: healthy vs sick",
+                             os.path.join(output_dir, "ratio_distrib12_aR24_cg7.png"))
+    plot_distribution_bands(df12, "l", "Reversible damage",
+                             "Reversible damage distribution: healthy vs sick",
+                             os.path.join(output_dir, "rev_damage_distrib12_aR24_cg7.png"))
+    plot_distribution_bands(df12, "L", "Irreversible damage",
+                             "Irreverisible damage distribution: healthy vs sick",
+                             os.path.join(output_dir, "irrev_damage_distrib12_aR24_cg7.png"))
     

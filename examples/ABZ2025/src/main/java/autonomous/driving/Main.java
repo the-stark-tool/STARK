@@ -13,6 +13,7 @@ public class Main {
 
     // AI
     // This case study requires the AI server from https://github.com/the-stark-tool/highway-env-ai-server
+    /*
     public static void main(String[] args) {
         double[] sensorPertubationOffsets = new double[]{0.25};
         double[] invisibilityChances = new double[]{0.25};
@@ -20,6 +21,8 @@ public class Main {
             new AIMultipleLanes(sensorPertubationOffsets[i], invisibilityChances[i]);
         }
     }
+
+     */
 
     // ONE LANE TWO VEHICLES
     /*
@@ -44,7 +47,7 @@ public class Main {
     */
 
     // TWO LANES TWO VEHICLES
-    /*
+
     public static void main(String[] args) throws IOException{
         try{
             new TwoLanesTwoCars();
@@ -52,6 +55,6 @@ public class Main {
             e.printStackTrace();
         }
     }
-    */
+
 
 }

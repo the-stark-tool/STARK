@@ -85,7 +85,7 @@ public class Main {
      */
     public static final double alphaE = 2.0; // initial value for v_alphaE
     public static final double alphaRH = 1.0; // healthy value for v_alphaR
-    public static final double alphaRS = 0.25; // unhealthy value for v_alphaR
+    public static final double alphaRS = 0.24; // unhealthy value for v_alphaR
     public static final double gammaE = 0.2; // initial value for v_gammaE
     public static final double gammaR = 0.2; // initial value for v_gammaR
     public static final double kE = 1000.0; // Hill dynamic Teff coefficient
@@ -104,12 +104,10 @@ public class Main {
     private static final double delta_t = Math.pow(10,-4); //
     private static final double jumps = 1;
     private static final double ctrl_step = 0;
-    private static final double ctrl_gran = 15;
+    private static final double ctrl_gran = 8;
 
     public static void main(String[] args) throws IOException {
         try {
-
-            Controller controller = getController();
 
             /*
             Two systems are created, one is healthy (alphaR = alphaRH = 1.0), the other is unhealthy (alphaR = alphaRH = 0.25)
@@ -117,13 +115,18 @@ public class Main {
             DataState stateH = getInitialState(jumps, 0.0, 0.0, delta_t, ctrl_step, ctrl_gran, alphaRH, 1.0);
             DataState stateS = getInitialState(jumps, 0.0, 0.0, delta_t, ctrl_step, ctrl_gran, alphaRS, 1.0);
             RandomGenerator rand = new DefaultRandomGenerator();
-            //DecoupledTimedSystem systemH1 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,1)), stateH, ds -> selectTime(rand,ds));
-            DecoupledTimedSystem systemH5 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,5)), stateH, ds -> selectTime(rand,ds));
-            //DecoupledTimedSystem systemS1 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,1)), stateS, ds -> selectTime(rand,ds));
-            DecoupledTimedSystem systemS5 = new DecoupledTimedSystem(controller, (rg, ds) -> ds.apply(odeEnv(rg, ds,5)), stateS, ds -> selectTime(rand,ds));
-            DecoupledTimedSystem systemS5uc = new DecoupledTimedSystem(new NilController(), (rg, ds) -> ds.apply(odeEnv(rg, ds,5)), stateS, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemH = new DecoupledTimedSystem(new NilController(), (rg, ds) -> ds.apply(odeEnv(rg, ds,0)), stateH, ds -> selectTime(rand,ds));
 
-            int size = 100;
+            DecoupledTimedSystem systemS7 = new DecoupledTimedSystem(getController(7), (rg, ds) -> ds.apply(odeEnv(rg, ds,0)), stateS, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemS8 = new DecoupledTimedSystem(getController(8), (rg, ds) -> ds.apply(odeEnv(rg, ds,0)), stateS, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemS9 = new DecoupledTimedSystem(getController(9), (rg, ds) -> ds.apply(odeEnv(rg, ds,0)), stateS, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemS10 = new DecoupledTimedSystem(getController(10), (rg, ds) -> ds.apply(odeEnv(rg, ds,0)), stateS, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemS11 = new DecoupledTimedSystem(getController(11), (rg, ds) -> ds.apply(odeEnv(rg, ds,0)), stateS, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemS12 = new DecoupledTimedSystem(getController(12), (rg, ds) -> ds.apply(odeEnv(rg, ds,0)), stateS, ds -> selectTime(rand,ds));
+
+            DecoupledTimedSystem systemSuc = new DecoupledTimedSystem(new NilController(), (rg, ds) -> ds.apply(odeEnv(rg, ds,0)), stateS, ds -> selectTime(rand,ds));
+
+            int size = 10;
             int size_sim = 100;
             int steps = 2000;
 
@@ -210,8 +213,8 @@ public class Main {
             ArrayList<String> LS = new ArrayList<>();
             LS.add("E");
             LS.add("R");
-            LS.add("Er");
-            LS.add("Rr");
+            //LS.add("Er");
+            //LS.add("Rr");
             LS.add("l");
             LS.add("L");
             LS.add("ratio");
@@ -222,8 +225,8 @@ public class Main {
             ArrayList<DataStateExpression> F = new ArrayList<>();
             F.add(ds -> ds.get(E));
             F.add(ds -> ds.get(R));
-            F.add(ds -> ds.get(Er));
-            F.add(ds -> ds.get(Rr));
+            //F.add(ds -> ds.get(Er));
+            //F.add(ds -> ds.get(Rr));
             F.add(ds -> ds.get(l));
             F.add(ds -> ds.get(L));
             F.add(ds -> (ds.get(E) / ds.get(R)));
@@ -260,14 +263,37 @@ public class Main {
             //Util.writeToCSV("./multipleSclerosisOdeHealthy.csv", data_avgH);
             //Util.writeToCSV("./multipleSclerosisOdeSick.csv", data_avgS);
 
-            writeRunsToCSV(rand, LS, F, systemH5, 2000,
-                    100, "healthy", "./runs_ms_healthy.csv");
+            //writeRunsToCSV(rand, LS, F, systemH, 2000, 100, "healthy", "./runs_ms_healthy.csv");
 
-            writeRunsToCSV(rand, LS, F, systemS5, 2000,
-                    100, "controlled", "./runs_ms_sick.csv");
+            System.out.println("Unhealthy controlled systems: simulation started");
 
-            writeRunsToCSV(rand, LS, F, systemS5uc, 2000,
-                    100, "uncontrolled", "./runs_ms_sickuc.csv");
+            System.out.println("Controller for ratio 7: simulation started");
+            writeRunsToCSV(rand, LS, F, systemS7, 2000, 10, "controlled", "./runs_ms_s7.csv");
+            System.out.println("Controller for ratio 7: simulation ended");
+
+            System.out.println("Controller for ratio 8: simulation started");
+            writeRunsToCSV(rand, LS, F, systemS8, 2000, 10, "controlled", "./runs_ms_s8.csv");
+            System.out.println("Controller for ratio 8: simulation ended");
+
+            System.out.println("Controller for ratio 9: simulation started");
+            writeRunsToCSV(rand, LS, F, systemS9, 2000, 10, "controlled", "./runs_ms_s9.csv");
+            System.out.println("Controller for ratio 9: simulation ended");
+
+            System.out.println("Controller for ratio 10: simulation started");
+            writeRunsToCSV(rand, LS, F, systemS10, 2000, 10, "controlled", "./runs_ms_s10.csv");
+            System.out.println("Controller for ratio 10: simulation ended");
+
+            System.out.println("Controller for ratio 11: simulation started");
+            writeRunsToCSV(rand, LS, F, systemS11, 2000, 10, "controlled", "./runs_ms_s11.csv");
+            System.out.println("Controller for ratio 11: simulation ended");
+
+            System.out.println("Controller for ratio 12: simulation started");
+            writeRunsToCSV(rand, LS, F, systemS12, 2000, 10, "controlled", "./runs_ms_s12.csv");
+            System.out.println("Controller for ratio 12: simulation ended");
+
+            System.out.println("Unhealthy controlled systems: simulation ended");
+
+            //writeRunsToCSV(rand, LS, F, systemSuc, 2000, 100, "uncontrolled", "./runs_ms_sickuc.csv");
 
 
             /*
@@ -451,14 +477,14 @@ public class Main {
 
     }
 
-    public static Controller getController() {
+    public static Controller getController(double check_ratio) {
         ControllerRegistry registry = new ControllerRegistry();
 
         registry.set("Ctrl",
                 Controller.ifThenElse(
-                        (rg,ds)-> ds.get(ratioER)>10,
+                        (rg,ds)-> ds.get(ratioER)>check_ratio,
                         Controller.doAction(
-                                (rg,ds)->List.of(new DataStateUpdate(Rr,ds.get(Rr)+1000+(rg.nextDouble()*20-10)), new DataStateUpdate(flag,ds.get(flag)+1), new DataStateUpdate(flag2,ds.get(flag2)+1), new DataStateUpdate(wait_month,1)),
+                                (rg,ds)->List.of(new DataStateUpdate(R,ds.get(R)+1000+(rg.nextDouble()*200-100)), new DataStateUpdate(flag,ds.get(flag)+1), new DataStateUpdate(flag2,ds.get(flag2)+1), new DataStateUpdate(wait_month,1)),
                                 registry.reference("Ctrl")
                         ),
                         //Controller.doTick(registry.reference("Ctrl"))

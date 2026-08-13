@@ -21,7 +21,7 @@
  */
 
 
-package tutorial.rv;
+package tutorial;
 
 import stark.*;
 import stark.controller.ControllerRegistry;
@@ -47,7 +47,7 @@ import java.util.*;
 
 
 
-public class Main {
+public class AutonomousDriving {
 
 
     private static final int SCENARIO = 1; // Set this parameter to 1,2,3 to choose between the three possible scenarios described in the paper
@@ -227,7 +227,7 @@ public class Main {
 
             EvolutionSequence perturbedSequence = sequence.apply(get_reckless_driver(),0,PERTURBATION_SIZE);
 
-            DistanceExpression crash_speed = new AtomicDistanceExpression(Main::rho_si,(v1, v2)->Math.abs(v1-v2));
+            DistanceExpression crash_speed = new AtomicDistanceExpression(AutonomousDriving::rho_si,(v1, v2)->Math.abs(v1-v2));
 
             double[][] direct_evaluation_crash_speed = new double[H][1];
 
@@ -255,7 +255,7 @@ public class Main {
             EvolutionSequence step4_pert = sequence.apply(get_reckless_driver(),4,PERTURBATION_SIZE);
             EvolutionSequence step5_pert = sequence.apply(get_reckless_driver(),5,PERTURBATION_SIZE);
 
-            DistanceExpression crash = new AtomicDistanceExpression(Main::rho_crash,(v1, v2)->Math.abs(v1-v2));
+            DistanceExpression crash = new AtomicDistanceExpression(AutonomousDriving::rho_crash,(v1, v2)->Math.abs(v1-v2));
 
             double[][] step1_crash = new double[H][1];
             double[][] step2_crash = new double[H][1];
@@ -410,7 +410,7 @@ public class Main {
 
             // don't go off-road
 
-            DistanceExpression atomic_r2l = new AtomicDistanceExpression(Main::rho_r2l,(v1,v2)->Math.abs(v1-v2));
+            DistanceExpression atomic_r2l = new AtomicDistanceExpression(AutonomousDriving::rho_r2l,(v1, v2)->Math.abs(v1-v2));
 
             RobustnessFormula phi_R2L = new AlwaysRobustnessFormula(
                     new AtomicRobustnessFormula(
@@ -429,7 +429,7 @@ public class Main {
 
             // kip it right
 
-            DistanceExpression atomic_kir = new AtomicDistanceExpression(Main::rho_kir,(v1,v2)->Math.abs(v1-v2));
+            DistanceExpression atomic_kir = new AtomicDistanceExpression(AutonomousDriving::rho_kir,(v1, v2)->Math.abs(v1-v2));
 
             RobustnessFormula phi_KIR = new AlwaysRobustnessFormula(
                     new AtomicRobustnessFormula(
@@ -447,7 +447,7 @@ public class Main {
             System.out.println("Evaluation of KIR robustness in Scenario "+SCENARIO+" with response time "+ TIMER +": "+KIR);
 
             DistanceExpression max_so = new MaxIntervalDistanceExpression(
-                    new AtomicDistanceExpression(Main::rho_so,(v1,v2)->Math.abs(v1-v2)),
+                    new AtomicDistanceExpression(AutonomousDriving::rho_so,(v1, v2)->Math.abs(v1-v2)),
                     0,
                     300
             );
@@ -1151,7 +1151,7 @@ public class Main {
     // RECKLESS DRIVER PERTURBATION
 
     private static Perturbation get_reckless_driver(){
-        return new AfterPerturbation(5,new IterativePerturbation(50,new AtomicPerturbation(2,Main::reckless_driver)));
+        return new AfterPerturbation(5,new IterativePerturbation(50,new AtomicPerturbation(2, AutonomousDriving::reckless_driver)));
     }
 
     private static DataState reckless_driver(RandomGenerator rg, DataState state){
