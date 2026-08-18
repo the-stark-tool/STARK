@@ -57,7 +57,7 @@ public final class StarkReal implements StarkValue {
     }
 
     @Override
-    public StarkType getJSpearType() {
+    public StarkType getStarkType() {
         return StarkType.REAL_TYPE;
     }
 

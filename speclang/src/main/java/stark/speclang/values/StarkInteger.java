@@ -36,7 +36,7 @@ public final class StarkInteger implements StarkValue {
     }
 
     @Override
-    public StarkType getJSpearType() {
+    public StarkType getStarkType() {
         return StarkType.INTEGER_TYPE;
     }
 
@@ -53,7 +53,7 @@ public final class StarkInteger implements StarkValue {
 
     public StarkValue sum(StarkValue v) {
         if (v instanceof StarkInteger intValue) {
-            return new StarkInteger(this.value+ intValue.value);
+            return new StarkInteger(this.value+ intValue.value());
         }
         if (v instanceof StarkReal realValue) {
             return new StarkReal(this.value+ realValue.value());
@@ -63,7 +63,7 @@ public final class StarkInteger implements StarkValue {
 
     public StarkValue product(StarkValue v) {
         if (v instanceof StarkInteger intValue) {
-            return new StarkInteger(this.value* intValue.value);
+            return new StarkInteger(this.value* intValue.value());
         }
         if (v instanceof StarkReal realValue) {
             return new StarkReal(this.value* realValue.value());
@@ -73,7 +73,7 @@ public final class StarkInteger implements StarkValue {
 
     public StarkValue subtraction(StarkValue v) {
         if (v instanceof StarkInteger intValue) {
-            return new StarkInteger(this.value- intValue.value);
+            return new StarkInteger(this.value- intValue.value());
         }
         if (v instanceof StarkReal realValue) {
             return new StarkReal(this.value- realValue.value());
@@ -83,7 +83,7 @@ public final class StarkInteger implements StarkValue {
 
     public StarkValue division(StarkValue v) {
         if (v instanceof StarkInteger intValue) {
-            return new StarkInteger(this.value/ intValue.value);
+            return new StarkInteger(this.value/ intValue.value());
         }
         if (v instanceof StarkReal realValue) {
             return new StarkReal(this.value/ realValue.value());
@@ -93,7 +93,7 @@ public final class StarkInteger implements StarkValue {
 
     public StarkValue modulo(StarkValue v) {
         if (v instanceof StarkInteger intValue) {
-            return new StarkInteger(this.value%intValue.value);
+            return new StarkInteger(this.value%intValue.value());
         }
         if (v instanceof StarkReal realValue) {
             return new StarkReal(this.value%realValue.value());
@@ -103,7 +103,7 @@ public final class StarkInteger implements StarkValue {
 
     public StarkValue apply(DoubleBinaryOperator op, StarkValue v) {
         if (v instanceof StarkInteger intValue) {
-            return new StarkReal(op.applyAsDouble(this.value, intValue.value));
+            return new StarkReal(op.applyAsDouble(this.value, intValue.value()));
         }
         if (v instanceof StarkReal realValue) {
             return new StarkReal(op.applyAsDouble(this.value, realValue.value()));

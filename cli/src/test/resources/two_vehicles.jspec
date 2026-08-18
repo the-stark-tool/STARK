@@ -46,19 +46,6 @@ function eval_rd(real speed){
   return eval_bd(speed) + SAFETY_DISTANCE;
 }
 
-
-function effectOf(accel_type v) {
-    if (v == ACCELERATION) {
-        return 1.0;
-    } else {
-        if (v == NEUTRAL) {
-            return 0.0;
-        } else {
-            return -1.0;
-        }
-    }
-}
-
 function crash_probability(real dist){
   if (dist > 0){
     return 0.0;
@@ -299,7 +286,7 @@ distance exp_crash_speed = \G[10,400] < rho_crash_speed;
 perturbation p_slow_02 = [s_speed_V2 <- slow_speed(p_speed_V2,offset_speed_V2),
                        required_distance_V2 <- eval_rd(slow_speed(p_speed_V2,offset_speed_V2)),
                        safety_gap_V1_V2 <- p_distance_V1_V2 - eval_rd(slow_speed(p_speed_V2,offset_speed_V2)),
-                       offset_speed_V2 <- p_speed_V2 * MAX_SPEED_OFFSET_02 * R[0,1]]@(TIMER-1);
+                       offset_speed_V2 <- p_speed_V2 * MAX_SPEED_OFFSET_02 * R[0,1]]@(TIMER_INIT-1);
 
 perturbation p_ItSlow_02 = ([offset_speed_V2 <- p_speed_V2 * MAX_SPEED_OFFSET_02 * R[0,1]]@0); (p_slow_02)^150;
 
@@ -307,7 +294,7 @@ perturbation p_ItSlow_02 = ([offset_speed_V2 <- p_speed_V2 * MAX_SPEED_OFFSET_02
 perturbation p_fast_02 = [s_speed_V1 <- fast_speed(p_speed_V1,offset_speed_V1),
                        required_distance_V1 <- eval_rd(fast_speed(p_speed_V1,offset_speed_V1)),
                        safety_gap_V1 <- p_distance_V1 - eval_rd(fast_speed(p_speed_V1,offset_speed_V1)),
-                       offset_speed_V1 <- p_speed_V1 * MAX_SPEED_OFFSET_02 * R[0,1]]@(TIMER-1);
+                       offset_speed_V1 <- p_speed_V1 * MAX_SPEED_OFFSET_02 * R[0,1]]@(TIMER_INIT-1);
 
 perturbation p_ItFast_02 = ([offset_speed_V1 <- p_speed_V1 * MAX_SPEED_OFFSET_02 * R[0,1]]@0);(p_fast_02)^150;
 
@@ -320,7 +307,7 @@ perturbation p_comb_02 = ([offset_speed_V1 <- p_speed_V1 * MAX_SPEED_OFFSET_02 *
 perturbation p_slow_03 = [s_speed_V2 <- slow_speed(p_speed_V2,offset_speed_V2),
                        required_distance_V2 <- eval_rd(slow_speed(p_speed_V2,offset_speed_V2)),
                        safety_gap_V1_V2 <- p_distance_V1_V2 - eval_rd(slow_speed(p_speed_V2,offset_speed_V2)),
-                       offset_speed_V2 <- p_speed_V2 * MAX_SPEED_OFFSET_03 * R[0,1]]@(TIMER-1);
+                       offset_speed_V2 <- p_speed_V2 * MAX_SPEED_OFFSET_03 * R[0,1]]@(TIMER_INIT-1);
 
 perturbation p_ItSlow_03 = ([offset_speed_V2 <- p_speed_V2 * MAX_SPEED_OFFSET_03 * R[0,1]]@0); (p_slow_03)^150;
 
@@ -328,7 +315,7 @@ perturbation p_ItSlow_03 = ([offset_speed_V2 <- p_speed_V2 * MAX_SPEED_OFFSET_03
 perturbation p_fast_03 = [s_speed_V1 <- fast_speed(p_speed_V1,offset_speed_V1),
                        required_distance_V1 <- eval_rd(fast_speed(p_speed_V1,offset_speed_V1)),
                        safety_gap_V1 <- p_distance_V1 - eval_rd(fast_speed(p_speed_V1,offset_speed_V1)),
-                       offset_speed_V1 <- p_speed_V1 * MAX_SPEED_OFFSET_03 * R[0,1]]@(TIMER-1);
+                       offset_speed_V1 <- p_speed_V1 * MAX_SPEED_OFFSET_03 * R[0,1]]@(TIMER_INIT-1);
 
 perturbation p_ItFast_03 = ([offset_speed_V1 <- p_speed_V1 * MAX_SPEED_OFFSET_03 * R[0,1]]@0);(p_fast_03)^150;
 
@@ -341,7 +328,7 @@ perturbation p_comb_03 = ([offset_speed_V1 <- p_speed_V1 * MAX_SPEED_OFFSET_03 *
 perturbation p_slow_04 = [s_speed_V2 <- slow_speed(p_speed_V2,offset_speed_V2),
                        required_distance_V2 <- eval_rd(slow_speed(p_speed_V2,offset_speed_V2)),
                        safety_gap_V1_V2 <- p_distance_V1_V2 - eval_rd(slow_speed(p_speed_V2,offset_speed_V2)),
-                       offset_speed_V2 <- p_speed_V2 * MAX_SPEED_OFFSET_04 * R[0,1]]@(TIMER-1);
+                       offset_speed_V2 <- p_speed_V2 * MAX_SPEED_OFFSET_04 * R[0,1]]@(TIMER_INIT-1);
 
 perturbation p_ItSlow_04 = ([offset_speed_V2 <- p_speed_V2 * MAX_SPEED_OFFSET_04 * R[0,1]]@0); (p_slow_04)^150;
 
@@ -349,7 +336,7 @@ perturbation p_ItSlow_04 = ([offset_speed_V2 <- p_speed_V2 * MAX_SPEED_OFFSET_04
 perturbation p_fast_04 = [s_speed_V1 <- fast_speed(p_speed_V1,offset_speed_V1),
                        required_distance_V1 <- eval_rd(fast_speed(p_speed_V1,offset_speed_V1)),
                        safety_gap_V1 <- p_distance_V1 - eval_rd(fast_speed(p_speed_V1,offset_speed_V1)),
-                       offset_speed_V1 <- p_speed_V1 * MAX_SPEED_OFFSET_04 * R[0,1]]@(TIMER-1);
+                       offset_speed_V1 <- p_speed_V1 * MAX_SPEED_OFFSET_04 * R[0,1]]@(TIMER_INIT-1);
 
 perturbation p_ItFast_04 = ([offset_speed_V1 <- p_speed_V1 * MAX_SPEED_OFFSET_04 * R[0,1]]@0);(p_fast_04)^150;
 
@@ -363,7 +350,7 @@ perturbation p_distSens = [s_distance_V1_V2 <- p_distance_V1_V2 * (1 + offset_di
                            s_distance_V2 <- p_distance_V2 * (1 + offset_distance),
                            safety_gap_V1_V2 <- p_distance_V1_V2 * (1 + offset_distance) - eval_rd(p_speed_V2),
                            safety_gap_V2 <- p_distance_V2 * (1 + offset_distance) - eval_rd(p_speed_V2),
-                           offset_distance <- R[0,1] * MAX_DISTANCE_OFFSET]@(TIMER-1);
+                           offset_distance <- R[0,1] * MAX_DISTANCE_OFFSET]@(TIMER_INIT-1);
 
 perturbation p_ItDistSens = ([offset_distance <- R[0,1] * MAX_DISTANCE_OFFSET]@0); (p_distSens)^300;
 

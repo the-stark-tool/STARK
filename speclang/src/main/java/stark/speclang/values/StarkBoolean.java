@@ -42,7 +42,7 @@ public final class StarkBoolean implements StarkValue {
 
 
     @Override
-    public StarkType getJSpearType() {
+    public StarkType getStarkType() {
         return StarkType.BOOLEAN_TYPE;
     }
 

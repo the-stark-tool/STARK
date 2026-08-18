@@ -71,7 +71,7 @@ public sealed interface StarkValue permits StarkBoolean, StarkInteger, StarkReal
 //    }
 
 
-    StarkType getJSpearType();
+    StarkType getStarkType();
 
     static StarkValue sum(StarkValue v1, StarkValue v2) {
         if (v1 instanceof StarkInteger intValue) {
@@ -219,7 +219,7 @@ public sealed interface StarkValue permits StarkBoolean, StarkInteger, StarkReal
 
 
      static StarkValue sampleNormal(RandomGenerator rg, StarkValue v1, StarkValue v2) {
-        return new StarkReal(rg.nextDouble()*doubleOf(v1)+doubleOf(v2));
+        return new StarkReal(rg.nextGaussian()*doubleOf(v2) + doubleOf(v1));
     }
 
     static StarkValue sample(RandomGenerator rg, StarkValue from, StarkValue to) {

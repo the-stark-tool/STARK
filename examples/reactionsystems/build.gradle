@@ -8,5 +8,5 @@ dependencies {
 
 application {
     // Define the main class for the application.
-    mainClass = 'stark.examples.reactionsystems.Main'
+    mainClass = 'reactionsystems.Main'
 }

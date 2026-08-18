@@ -27,7 +27,7 @@ import stark.speclang.types.StarkType;
 public final class StarkErrorValue implements StarkValue {
 
     @Override
-    public StarkType getJSpearType() {
+    public StarkType getStarkType() {
         return StarkType.ERROR_TYPE;
     }
 
