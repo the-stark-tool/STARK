@@ -45,7 +45,7 @@ public class UnboundedEventuallyuDisTLFormula implements UDisTLFormula {
     }
 
     @Override
-    public <T> T build(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
+    public <T> T buildMonitor(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
         UnboundedUntiluDisTLFormula equivalent = new UnboundedUntiluDisTLFormula(new TrueDisTLFormula(),formula, from);
         return visitor.buildUnboundedUntil(equivalent, semanticsEvaluationTimestep);
     }

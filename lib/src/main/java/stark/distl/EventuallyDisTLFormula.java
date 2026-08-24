@@ -58,7 +58,7 @@ public final class EventuallyDisTLFormula implements DisTLFormula {
     }
 
     @Override
-    public <T> T build(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
+    public <T> T buildMonitor(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
         return visitor.buildEventually(this, semanticsEvaluationTimestep);
     }
 

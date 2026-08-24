@@ -45,7 +45,7 @@ public class UnboundedAlwaysuDisTLFormula implements UDisTLFormula {
     }
 
     @Override
-    public <T> T build(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
+    public <T> T buildMonitor(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
         NegationDisTLFormula equivalent = new NegationDisTLFormula(
                 new UnboundedUntiluDisTLFormula(new TrueDisTLFormula(), new NegationDisTLFormula(formula), this.from));
         return visitor.buildNegation(equivalent, semanticsEvaluationTimestep);

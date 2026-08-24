@@ -53,7 +53,7 @@ public class UnboundedUntiluDisTLFormula implements UDisTLFormula {
     }
 
     @Override
-    public <T> T build(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
+    public <T> T buildMonitor(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
         return visitor.buildUnboundedUntil(this, semanticsEvaluationTimestep);
     }
 

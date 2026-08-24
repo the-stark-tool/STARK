@@ -29,7 +29,7 @@ import stark.MonitorBuildingVisitor;
 import java.util.OptionalInt;
 
 public interface UDisTLFormula {
-    <T> T build(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep);
+    <T> T buildMonitor(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep);
 
     int getFES();
 

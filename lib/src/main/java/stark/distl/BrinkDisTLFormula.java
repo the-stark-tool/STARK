@@ -103,7 +103,7 @@ public final class BrinkDisTLFormula implements DisTLFormula {
     public double getThreshold() { return this.q; }
 
     @Override
-    public <T> T build(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
+    public <T> T buildMonitor(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
         return visitor.buildBrink(this, semanticsEvaluationTimestep);
     }
 
