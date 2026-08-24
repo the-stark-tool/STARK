@@ -25,9 +25,9 @@ package stark.distl;
 import stark.DefaultRandomGenerator;
 import stark.SampleSet;
 import stark.SystemState;
-import stark.penalty.*;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateFunction;
+import stark.distance.GroundDistance;
 import org.apache.commons.math3.random.AbstractRandomGenerator;
 import stark.penalty.Penalty;
 
@@ -70,29 +70,35 @@ public class DoubleSemanticsVisitor implements DisTLFormulaVisitor<Double> {
     }
 
     @Override
-    public DisTLFunction<Double> evalBrink(BrinkDisTLFormula brinkDisTLFormula){
-        DataStateFunction mu = brinkDisTLFormula.getDistribution();
-        Optional<DataStateExpression> rho = brinkDisTLFormula.getRho();
-        Penalty P = brinkDisTLFormula.getP();
-        double q = brinkDisTLFormula.getThreshold();
-        if (brinkDisTLFormula.getSampledDistribution().size() ==0) {
-        return rho.<DisTLFunction<Double>>map(
-                dataStateExpression -> (sampleSize, step, sequence)
-                -> sequence.get(step).distanceLeq(dataStateExpression, sequence.get(step).replica(sampleSize).applyDistribution(rg, mu, parallel)) - q)
-                .orElseGet(() -> (sampleSize, step, sequence)
-                -> sequence.get(step).distanceLeq(P, sequence.get(step).replica(sampleSize).applyDistribution(rg, mu, parallel), step) - q);
-        } else {
-            SampleSet<SystemState> muSample = brinkDisTLFormula.getSampledDistribution();
-            return rho.<DisTLFunction<Double>>map(dataStateExpression -> (sampleSize, step, sequence)
-                    -> {
-                //SampleSet<SystemState> muSample = sequence.get(step).replica(sampleSize).applyDistribution(rg, mu, parallel);
-                return sequence.get(step).distanceLeq(dataStateExpression, muSample) -q;
-            }).orElseGet(() -> (sampleSize, step, sequence)
-                    -> {
-                //SampleSet<SystemState> muSample = sequence.get(step).replica(sampleSize).applyDistribution(rg, mu, parallel);
-                return sequence.get(step).distanceLeq(P, muSample, step)-q;
-            });
-        }
+    public DisTLFunction<Double> evalBrink(BrinkDisTLFormula formula){
+        DataStateFunction mu = formula.getDistribution();
+        Optional<DataStateExpression> rho = formula.getRho();
+        Penalty penalty = formula.getP();
+        double q = formula.getThreshold();
+        SampleSet<SystemState> sampledDistribution = formula.getSampledDistribution();
+        GroundDistance distance = formula.getDistance();
+
+        return (sampleSize, step, sequence) -> {
+            SampleSet<SystemState> current = sequence.get(step); // S_t
+
+            // The distribution mu can be represented in two ways:
+            // 1. as a precomputed set of samples drawn from mu; or
+            // 2. as a DataStateFunction that generates samples from the current distribution S_t
+            SampleSet<SystemState> target;
+            if (sampledDistribution.size() != 0) {
+                target = sampledDistribution; // Use the precomputed samples when they are available
+            } else {
+                // Otherwise, replicate each sample in S_t and apply mu
+                target = current.replica(sampleSize).applyDistribution(rg, mu, parallel);
+            }
+
+            // The penalty is represented either by a DataStateExpression or a possibly time-dependent Penalty object
+            if (rho.isPresent()) { // If a DataStateExpression is present, compute the distance using it
+                return distance.compute(current, rho.get(), target) - q;
+            } else { // Otherwise, use the Penalty object
+                return distance.compute(current, penalty, target, step) - q;
+            }
+        };
     }
 
 
@@ -138,34 +144,37 @@ public class DoubleSemanticsVisitor implements DisTLFormulaVisitor<Double> {
         return (sampleSize, step, sequence) -> - argumentFunction.eval(sampleSize, step, sequence);
     }
 
+
     @Override
-    public DisTLFunction<Double> evalTarget(TargetDisTLFormula targetDisTLFormula) {
-        DataStateFunction mu = targetDisTLFormula.getDistribution();
-        Optional<DataStateExpression> rho = targetDisTLFormula.getRho();
-        Penalty P = targetDisTLFormula.getP();
-        double q = targetDisTLFormula.getThreshold();
-        if (targetDisTLFormula.getSampledDistribution().size() ==0) {
-            return rho.<DisTLFunction<Double>>map(dataStateExpression -> (sampleSize, step, sequence)
-                    -> {
-                SampleSet<SystemState> muSample = sequence.get(step).replica(sampleSize).applyDistribution(rg, mu, parallel);
-                return q - sequence.get(step).distanceGeq(dataStateExpression, muSample);
-            }).orElseGet(() -> (sampleSize, step, sequence)
-                    -> {
-                SampleSet<SystemState> muSample = sequence.get(step).replica(sampleSize).applyDistribution(rg, mu, parallel);
-                return q - sequence.get(step).distanceGeq(P, muSample, step);
-            });
-        } else {
-            SampleSet<SystemState> muSample = targetDisTLFormula.getSampledDistribution();
-            return rho.<DisTLFunction<Double>>map(dataStateExpression -> (sampleSize, step, sequence)
-                    -> {
-                //SampleSet<SystemState> muSample = sequence.get(step).replica(sampleSize).applyDistribution(rg, mu, parallel);
-                return q - sequence.get(step).distanceGeq(dataStateExpression, muSample);
-            }).orElseGet(() -> (sampleSize, step, sequence)
-                    -> {
-                //SampleSet<SystemState> muSample = sequence.get(step).replica(sampleSize).applyDistribution(rg, mu, parallel);
-                return q - sequence.get(step).distanceGeq(P, muSample, step);
-            });
-        }
+    public DisTLFunction<Double> evalTarget(TargetDisTLFormula formula) {
+        DataStateFunction mu = formula.getDistribution();
+        Optional<DataStateExpression> rho = formula.getRho();
+        Penalty penalty = formula.getP();
+        double q = formula.getThreshold();
+        SampleSet<SystemState> sampledDistribution = formula.getSampledDistribution();
+        GroundDistance distance = formula.getDistance();
+
+        return (sampleSize, step, sequence) -> {
+            SampleSet<SystemState> current = sequence.get(step); // S_t
+
+            // The target distribution mu can be represented in two ways:
+            // 1. as a precomputed set of samples drawn from mu; or
+            // 2. as a DataStateFunction that generates target samples from the current distribution S_t
+            SampleSet<SystemState> target;
+            if (sampledDistribution.size() != 0) {
+                target = sampledDistribution; // Use the precomputed samples when they are available
+            } else {
+                // Otherwise, replicate each sample in S_t and apply mu
+                target = current.replica(sampleSize).applyDistribution(rg, mu, parallel);
+            }
+
+            // The penalty is represented either by a DataStateExpression or a possibly time-dependent Penalty object
+            if (rho.isPresent()) { // If an DataStateExpression is present, compute the distance using it
+                return q - distance.compute(current, rho.get(), target);
+            } else { // Otherwise, use the Penalty object
+                return q - distance.compute(current, penalty, target, step);
+            }
+        };
     }
 
     @Override

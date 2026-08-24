@@ -25,7 +25,6 @@ package stark;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateFunction;
 import org.apache.commons.math3.random.RandomGenerator;
-import stark.penalty.*;
 import stark.penalty.Penalty;
 
 import java.util.LinkedList;
@@ -133,8 +132,21 @@ public class SampleSet<T extends SystemState> {
      * computed on the values obtained by applying <code>f</code> to the data states in the samples,
      * between this sample set and <code>other</code>.
      */
-    public synchronized double distance(DataStateExpression f, SampleSet<T> other) {
+    public synchronized double distanceSymmetric(DataStateExpression f, SampleSet<T> other) {
         return distance(f, (v1, v2) -> Math.abs(v2-v1), other);
+    }
+
+    /**
+     * Returns the symmetric distance using the expression produced by the penalty at the given step.
+     *
+     * @param penalty possibly time-dependent penalty used to compute the distance.
+     * @param other sample set to compare.
+     * @param step step at which the penalty is evaluated.
+     * @return the symmetric distance between this sample set and {@code other}.
+     */
+    public synchronized double distanceSymmetric(Penalty penalty, SampleSet<T> other, int step) {
+        DataStateExpression expression = penalty.effectUpTo(step).get(step);
+        return distanceSymmetric(expression, other);
     }
 
     /**
@@ -177,7 +189,7 @@ public class SampleSet<T extends SystemState> {
      * the function <code>f</code>.
      */
     public synchronized double distanceLeq(DataStateExpression f, SampleSet<T> other) {
-        return distance(f, (v1,v2) -> Math.max(0.0, v2-v1), other);
+        return distance(f, (v1, v2) -> Math.max(0.0, v2-v1), other);
     }
 
     public synchronized double distanceLeq(Penalty rho, SampleSet<T> other, int step) {
@@ -214,13 +226,9 @@ public class SampleSet<T extends SystemState> {
      * @return the distance between this sample set and <code>other</code> computed according to
      * the function <code>f</code>.
      */
-//    public synchronized double distanceGeq(DataStateExpression f, SampleSet<T> other) {
-//        return distance(f, (v1,v2) -> Math.max(0, v1-v2), other);
-//    }
 
-    // LAST MINUTE FIX : Hardcode metric that is symmetric
     public synchronized double distanceGeq(DataStateExpression f, SampleSet<T> other) {
-        return distance(f, (v1,v2) -> Math.abs(v1-v2), other);
+        return distance(f, (v1, v2) -> Math.abs(v1-v2), other);
     }
 
     public synchronized double distanceGeq(Penalty rho, SampleSet<T> other, int step) {
