@@ -24,16 +24,17 @@ package stark.distl;
 
 import stark.SampleSet;
 import stark.SystemState;
-import stark.ds.*;
-import stark.penalty.*;
 import stark.MonitorBuildingVisitor;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateFunction;
+import stark.distance.GroundDistance;
+import stark.distance.StandardGroundDistance;
 import stark.penalty.NonePenalty;
 import stark.penalty.Penalty;
 
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Objects;
 
 
 public final class TargetDisTLFormula implements DisTLFormula {
@@ -48,41 +49,58 @@ public final class TargetDisTLFormula implements DisTLFormula {
 
     private final double q;
 
+    private final GroundDistance distance;
+
     public TargetDisTLFormula(DataStateFunction distribution, DataStateExpression penalty, double threshold) {
+        this(distribution, penalty, threshold, StandardGroundDistance.GEQ);
+    }
+
+    public TargetDisTLFormula(DataStateFunction distribution, DataStateExpression penalty, double threshold, GroundDistance distance) {
         this.mu = distribution;
         this.dist = new SampleSet<>();
         this.rho = Optional.ofNullable(penalty);
         this.P = new NonePenalty();
         this.q = threshold;
+        this.distance = Objects.requireNonNull(distance);
     }
 
     public TargetDisTLFormula(DataStateFunction distribution, Penalty penalty, double threshold) {
-        this.mu =distribution;
+        this(distribution, penalty, threshold, StandardGroundDistance.GEQ);
+    }
+
+    public TargetDisTLFormula(DataStateFunction distribution, Penalty penalty, double threshold, GroundDistance distance) {
+        this.mu = distribution;
         this.dist = new SampleSet<>();
         this.rho = Optional.empty();
         this.P = penalty;
         this.q = threshold;
+        this.distance = Objects.requireNonNull(distance);
     }
 
     public TargetDisTLFormula(SampleSet<SystemState> distribution, DataStateExpression penalty, double threshold) {
+        this(distribution, penalty, threshold, StandardGroundDistance.GEQ);
+    }
+
+    public TargetDisTLFormula(SampleSet<SystemState> distribution, DataStateExpression penalty, double threshold, GroundDistance distance) {
         this.mu = (rg, ds) -> ds;
         this.dist = distribution;
         this.rho = Optional.ofNullable(penalty);
         this.P = new NonePenalty();
         this.q = threshold;
+        this.distance = Objects.requireNonNull(distance);
     }
 
     public TargetDisTLFormula(SampleSet<SystemState> distribution, Penalty penalty, double threshold) {
+        this(distribution, penalty, threshold, StandardGroundDistance.GEQ);
+    }
+
+    public TargetDisTLFormula(SampleSet<SystemState> distribution, Penalty penalty, double threshold, GroundDistance distance) {
         this.mu = (rg, ds) -> ds;
         this.dist = distribution;
         this.rho = Optional.empty();
         this.P = penalty;
         this.q = threshold;
-    }
-
-    private TargetDisTLFormula(DataStateFunction distribution, double threshold) {
-        this.mu = distribution;
-        this.q = threshold;
+        this.distance = Objects.requireNonNull(distance);
     }
 
 
@@ -108,6 +126,8 @@ public final class TargetDisTLFormula implements DisTLFormula {
     }
 
     public double getThreshold() { return this.q; }
+
+    public GroundDistance getDistance() { return this.distance; }
 
     @Override
     public <T> T build(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {

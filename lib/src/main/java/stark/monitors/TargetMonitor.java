@@ -25,6 +25,7 @@ package stark.monitors;
 import stark.PerceivedSystemState;
 import stark.SampleSet;
 import stark.distl.TargetDisTLFormula;
+import stark.distance.GroundDistance;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateFunction;
 import stark.penalty.Penalty;
@@ -68,6 +69,7 @@ public class TargetMonitor extends DefaultUDisTLMonitor {
         Optional<DataStateExpression> rho = formula.getRho();
         Penalty P = formula.getP();
         double q = formula.getThreshold();
+        GroundDistance distance = formula.getDistance();
 
         SampleSet<PerceivedSystemState> muSample;
         if (formula.getSampledDistribution().size() == 0) {
@@ -77,7 +79,7 @@ public class TargetMonitor extends DefaultUDisTLMonitor {
             muSample = new SampleSet<>(
                     formula.getSampledDistribution().stream().map((st) -> new PerceivedSystemState(st.getDataState())).toList());
         }
-        return rho.map(dataStateExpression -> q - sample.distanceGeq(dataStateExpression, muSample)
-        ).orElseGet(() -> q - sample.distanceGeq(P, muSample, semanticsEvaluationStep));
+        return rho.map(dataStateExpression -> q - distance.compute(sample, dataStateExpression, muSample)
+        ).orElseGet(() -> q - distance.compute(sample, P, muSample, semanticsEvaluationStep));
     }
 }

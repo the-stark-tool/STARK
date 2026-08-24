@@ -26,13 +26,15 @@ import stark.SampleSet;
 import stark.SystemState;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateFunction;
-import stark.penalty.*;
 import stark.MonitorBuildingVisitor;
+import stark.distance.GroundDistance;
+import stark.distance.StandardGroundDistance;
 import stark.penalty.NonePenalty;
 import stark.penalty.Penalty;
 
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Objects;
 
 
 public final class BrinkDisTLFormula implements DisTLFormula {
@@ -47,36 +49,58 @@ public final class BrinkDisTLFormula implements DisTLFormula {
 
     private final double q;
 
+    private final GroundDistance distance;
+
     public BrinkDisTLFormula(DataStateFunction distribution, DataStateExpression penalty, double threshold) {
+        this(distribution, penalty, threshold, StandardGroundDistance.LEQ);
+    }
+
+    public BrinkDisTLFormula(DataStateFunction distribution, DataStateExpression penalty, double threshold, GroundDistance distance) {
         this.mu = distribution;
         this.dist = new SampleSet<>();
         this.rho = Optional.of(penalty);
         this.q = threshold;
         this.P = new NonePenalty();
+        this.distance = Objects.requireNonNull(distance);
     }
 
     public BrinkDisTLFormula(DataStateFunction distribution, Penalty penalty, double threshold) {
+        this(distribution, penalty, threshold, StandardGroundDistance.LEQ);
+    }
+
+    public BrinkDisTLFormula(DataStateFunction distribution, Penalty penalty, double threshold, GroundDistance distance) {
         this.mu = distribution;
         this.dist = new SampleSet<>();
         this.rho = Optional.empty();
         this.q = threshold;
         this.P = penalty;
+        this.distance = Objects.requireNonNull(distance);
     }
 
     public BrinkDisTLFormula(SampleSet<SystemState> distribution, DataStateExpression penalty, double threshold) {
+        this(distribution, penalty, threshold, StandardGroundDistance.LEQ);
+    }
+
+    public BrinkDisTLFormula(SampleSet<SystemState> distribution, DataStateExpression penalty, double threshold, GroundDistance distance) {
         this.mu = (rg, ds) -> ds;
         this.dist = distribution;
         this.rho = Optional.ofNullable(penalty);
         this.P = new NonePenalty();
         this.q = threshold;
+        this.distance = Objects.requireNonNull(distance);
     }
 
     public BrinkDisTLFormula(SampleSet<SystemState> distribution, Penalty penalty, double threshold) {
+        this(distribution, penalty, threshold, StandardGroundDistance.LEQ);
+    }
+
+    public BrinkDisTLFormula(SampleSet<SystemState> distribution, Penalty penalty, double threshold, GroundDistance distance) {
         this.mu = (rg, ds) -> ds;
         this.dist = distribution;
         this.rho = Optional.empty();
         this.P = penalty;
         this.q = threshold;
+        this.distance = Objects.requireNonNull(distance);
     }
 
     @Override
@@ -101,6 +125,8 @@ public final class BrinkDisTLFormula implements DisTLFormula {
     }
 
     public double getThreshold() { return this.q; }
+
+    public GroundDistance getDistance() { return this.distance; }
 
     @Override
     public <T> T build(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
