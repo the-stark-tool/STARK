@@ -170,9 +170,9 @@ public class DoubleSemanticsVisitor implements DisTLFormulaVisitor<Double> {
 
             // The penalty is represented either by a DataStateExpression or a possibly time-dependent Penalty object
             if (rho.isPresent()) { // If an DataStateExpression is present, compute the distance using it
-                return q - distance.compute(current, rho.get(), target);
+                return q - distance.compute(target, rho.get(), current);
             } else { // Otherwise, use the Penalty object
-                return q - distance.compute(current, penalty, target, step);
+                return q - distance.compute(target, penalty, current, step);
             }
         };
     }

@@ -21,7 +21,7 @@
  */
 
 
-package stark;
+package stark.monitors;
 
 import stark.*;
 import stark.controller.Controller;
@@ -30,8 +30,6 @@ import stark.distl.*;
 import stark.ds.DataState;
 import stark.ds.DataStateFunction;
 import stark.ds.DataStateUpdate;
-import stark.monitors.DefaultMonitorBuilder;
-import stark.monitors.DefaultUDisTLMonitor;
 import org.apache.commons.math3.random.RandomGenerator;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

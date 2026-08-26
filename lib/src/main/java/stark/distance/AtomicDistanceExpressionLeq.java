@@ -53,13 +53,13 @@ public final class AtomicDistanceExpressionLeq implements DistanceExpression {
      */
     @Override
     public double compute(int step, EvolutionSequence seq1, EvolutionSequence seq2) {
-        return seq1.get(step).distanceLeq(rho, seq2.get(step));
+        return StandardGroundDistance.LEQ.compute(seq1.get(step), rho, seq2.get(step));
     }
 
     @Override
     public double[] evalCI(RandomGenerator rg, int step, EvolutionSequence seq1, EvolutionSequence seq2, int m, double z){
         double[] res = new double[3];
-        res[0] = seq1.get(step).distanceLeq(rho, seq2.get(step));
+        res[0] = StandardGroundDistance.LEQ.compute(seq1.get(step), rho, seq2.get(step));
         double[] partial = seq1.get(step).bootstrapDistanceLeq(rg, rho, seq2.get(step),m,z);
         res[1] = partial[0];
         res[2] = partial[1];

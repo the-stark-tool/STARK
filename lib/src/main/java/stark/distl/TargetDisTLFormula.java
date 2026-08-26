@@ -52,7 +52,7 @@ public final class TargetDisTLFormula implements DisTLFormula {
     private final GroundDistance distance;
 
     public TargetDisTLFormula(DataStateFunction distribution, DataStateExpression penalty, double threshold) {
-        this(distribution, penalty, threshold, StandardGroundDistance.GEQ);
+        this(distribution, penalty, threshold, StandardGroundDistance.LEQ);
     }
 
     public TargetDisTLFormula(DataStateFunction distribution, DataStateExpression penalty, double threshold, GroundDistance distance) {
@@ -65,7 +65,7 @@ public final class TargetDisTLFormula implements DisTLFormula {
     }
 
     public TargetDisTLFormula(DataStateFunction distribution, Penalty penalty, double threshold) {
-        this(distribution, penalty, threshold, StandardGroundDistance.GEQ);
+        this(distribution, penalty, threshold, StandardGroundDistance.LEQ);
     }
 
     public TargetDisTLFormula(DataStateFunction distribution, Penalty penalty, double threshold, GroundDistance distance) {
