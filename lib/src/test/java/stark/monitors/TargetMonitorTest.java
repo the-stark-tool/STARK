@@ -25,6 +25,7 @@ package stark.monitors;
 import stark.*;
 import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
+import stark.distance.StandardGroundDistance;
 import stark.distl.DisTLFormula;
 import stark.distl.DoubleSemanticsVisitor;
 import stark.distl.TargetDisTLFormula;

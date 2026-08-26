@@ -26,6 +26,7 @@ package stark.monitors;
 import stark.*;
 import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
+import stark.distance.StandardGroundDistance;
 import stark.distl.*;
 import stark.ds.DataState;
 import stark.ds.DataStateFunction;
@@ -124,8 +125,8 @@ class DefaultUnboundedUntilMonitorTest {
                 List.of(new DataStateUpdate(t, 0),
                         new DataStateUpdate(x, 0.0)
                         ));
-        DisTLFormula right = new TargetDisTLFormula(mu, ds -> ds.get(x), 0.0);
-        DisTLFormula left = new TargetDisTLFormula(mu, ds -> ds.get(x), 0.0);
+        DisTLFormula right = new TargetDisTLFormula(mu, ds -> ds.get(x), 0.0, StandardGroundDistance.SYMMETRIC);
+        DisTLFormula left = new TargetDisTLFormula(mu, ds -> ds.get(x), 0.0, StandardGroundDistance.SYMMETRIC);
 
         int from = 0;
         int to = 5;
@@ -175,8 +176,8 @@ class DefaultUnboundedUntilMonitorTest {
                 List.of(new DataStateUpdate(t, 0),
                         new DataStateUpdate(x, 0.0)
                 ));
-        DisTLFormula right = new TargetDisTLFormula(mu, ds -> ds.get(x), 0.0);
-        DisTLFormula left = new TargetDisTLFormula(mu, ds -> ds.get(x), 0.0);
+        DisTLFormula right = new TargetDisTLFormula(mu, ds -> ds.get(x), 0.0, StandardGroundDistance.SYMMETRIC);
+        DisTLFormula left = new TargetDisTLFormula(mu, ds -> ds.get(x), 0.0, StandardGroundDistance.SYMMETRIC);
 
         int from = 2;
         int to = 7;
