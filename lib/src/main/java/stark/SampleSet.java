@@ -119,10 +119,10 @@ public class SampleSet<T extends SystemState> {
         double[] leftData = this.evalPenaltyFunction(f);
         double[] rightData = other.evalPenaltyFunction(f);
         if (leftData.length > rightData.length){
-            // Many leftData samples compared with one rightData sample
+            // Many leftData samples compared to one rightData sample
             return computeDistanceManyToOne(distance, leftData, rightData);
         }else {
-            // one leftData sample compared with many rightData samples
+            // one leftData sample compared to many rightData samples
             return computeDistanceOneToMany(distance, leftData, rightData);
         }
 
