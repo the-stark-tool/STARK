@@ -33,8 +33,8 @@ import java.util.stream.Stream;
 
 public abstract class DefaultUDisTLMonitor implements UDisTLMonitor<OptionalDouble> {
 
-    protected int sampleSize;
-    protected boolean parallel;
+    protected final int sampleSize;
+    protected final boolean parallel;
     protected final int semanticsEvaluationStep;
     protected final DefaultRandomGenerator rg;
 

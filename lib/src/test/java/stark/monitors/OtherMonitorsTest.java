@@ -45,7 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class OtherMonitorsTest {
-    static int seed = 0;
+    static final int seed = 0;
     static final int SAMPLE_SIZE = 10;
     static final int ES_SAMPLE_SIZE = 10;
     static final SampleSet<PerceivedSystemState> emptySampleSet = new SampleSet<>();

@@ -46,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TargetMonitorTest {
 
     final int x = 0;
-    int seed = 0;
+    final int seed = 0;
     final int SAMPLE_SIZE = 10000;
 
     final SampleSet<PerceivedSystemState> emptySampleSet = new SampleSet<>();

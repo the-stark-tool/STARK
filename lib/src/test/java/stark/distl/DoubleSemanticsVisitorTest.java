@@ -44,7 +44,7 @@ public class DoubleSemanticsVisitorTest {
 
     final int t = 0;
     final int x = 1;
-    int seed = 0;
+    final int seed = 0;
     final int SAMPLE_SIZE = 10;
 
     private static final double TOLERANCE = 1.0e-12;

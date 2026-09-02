@@ -41,11 +41,11 @@ public final class TargetDisTLFormula implements DisTLFormula {
 
     private final DataStateFunction mu;
 
-    private SampleSet<SystemState> dist;
+    private final SampleSet<SystemState> dist;
 
-    private Optional<DataStateExpression> rho;
+    private final Optional<DataStateExpression> rho;
 
-    private Penalty P;
+    private final Penalty P;
 
     private final double q;
 

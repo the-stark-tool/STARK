@@ -41,7 +41,7 @@ public final class BrinkDisTLFormula implements DisTLFormula {
 
     private final DataStateFunction mu;
 
-    private SampleSet<SystemState> dist;
+    private final SampleSet<SystemState> dist;
 
     private final Optional<DataStateExpression> rho;
 
