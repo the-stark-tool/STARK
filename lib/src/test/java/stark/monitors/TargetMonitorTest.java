@@ -20,10 +20,12 @@
  * limitations under the License.
  */
 
-package stark;
+package stark.monitors;
 
+import stark.*;
 import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
+import stark.distance.StandardGroundDistance;
 import stark.distl.DisTLFormula;
 import stark.distl.DoubleSemanticsVisitor;
 import stark.distl.TargetDisTLFormula;
@@ -31,8 +33,6 @@ import stark.ds.DataState;
 import stark.ds.DataStateFunction;
 import stark.ds.DataStateUpdate;
 import stark.udistl.UDisTLFormula;
-import stark.monitors.DefaultMonitorBuilder;
-import stark.monitors.DefaultUDisTLMonitor;
 import org.apache.commons.math3.random.RandomGenerator;
 import org.junit.jupiter.api.Test;
 
@@ -46,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TargetMonitorTest {
 
     final int x = 0;
-    int seed = 0;
+    final int seed = 0;
     final int SAMPLE_SIZE = 10000;
 
     final SampleSet<PerceivedSystemState> emptySampleSet = new SampleSet<>();

@@ -31,8 +31,8 @@ import java.util.OptionalDouble;
 
 public class DefaultMonitorBuilder implements MonitorBuildingVisitor<DefaultUDisTLMonitor> {
 
-    int sampleSize;
-    boolean parallel;
+    final int sampleSize;
+    final boolean parallel;
 
 
     public DefaultMonitorBuilder(int sampleSize, boolean parallel) {

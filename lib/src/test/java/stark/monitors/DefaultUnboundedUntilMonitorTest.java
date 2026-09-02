@@ -21,17 +21,16 @@
  */
 
 
-package stark;
+package stark.monitors;
 
 import stark.*;
 import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
+import stark.distance.StandardGroundDistance;
 import stark.distl.*;
 import stark.ds.DataState;
 import stark.ds.DataStateFunction;
 import stark.ds.DataStateUpdate;
-import stark.monitors.DefaultMonitorBuilder;
-import stark.monitors.DefaultUDisTLMonitor;
 import org.apache.commons.math3.random.RandomGenerator;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -48,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DefaultUnboundedUntilMonitorTest {
 
-    static int seed = 0;
+    static final int seed = 0;
     static final int SAMPLE_SIZE = 10;
     static final int ES_SAMPLE_SIZE = 10;
     static final SampleSet<PerceivedSystemState> emptySampleSet = new SampleSet<>();
@@ -126,8 +125,8 @@ class DefaultUnboundedUntilMonitorTest {
                 List.of(new DataStateUpdate(t, 0),
                         new DataStateUpdate(x, 0.0)
                         ));
-        DisTLFormula right = new TargetDisTLFormula(mu, ds -> ds.get(x), 0.0);
-        DisTLFormula left = new TargetDisTLFormula(mu, ds -> ds.get(x), 0.0);
+        DisTLFormula right = new TargetDisTLFormula(mu, ds -> ds.get(x), 0.0, StandardGroundDistance.SYMMETRIC);
+        DisTLFormula left = new TargetDisTLFormula(mu, ds -> ds.get(x), 0.0, StandardGroundDistance.SYMMETRIC);
 
         int from = 0;
         int to = 5;
@@ -177,8 +176,8 @@ class DefaultUnboundedUntilMonitorTest {
                 List.of(new DataStateUpdate(t, 0),
                         new DataStateUpdate(x, 0.0)
                 ));
-        DisTLFormula right = new TargetDisTLFormula(mu, ds -> ds.get(x), 0.0);
-        DisTLFormula left = new TargetDisTLFormula(mu, ds -> ds.get(x), 0.0);
+        DisTLFormula right = new TargetDisTLFormula(mu, ds -> ds.get(x), 0.0, StandardGroundDistance.SYMMETRIC);
+        DisTLFormula left = new TargetDisTLFormula(mu, ds -> ds.get(x), 0.0, StandardGroundDistance.SYMMETRIC);
 
         int from = 2;
         int to = 7;
