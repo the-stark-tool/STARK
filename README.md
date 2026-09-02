@@ -19,7 +19,7 @@ Hence, STARK includes:
 Since the procedures outlined above are based on statistical inference, we need to take into account the statistical error when checking the satisfaction of formulae.
 Hence, STARK also includes a classical algorithm for the evaluation of confidence intervals in the evaluation of distances, and a three-valued semantics for RobTL specifications, in which the truth value *unknown* is added to true and false.
 
-The [lib](./lib) folder contains all the [Java classes](./lib/src/main/java/it/unicam/quasylab/jspear/) that are necessary to implement all the procedures, mechanisms, and functions described above.
+The [lib](./lib) folder contains all the [Java classes](./lib/src/main/java/stark) that are necessary to implement all the procedures, mechanisms, and functions described above.
 
 In the [examples](./examples/) folder you can find several case studies that showcase different features of STARK.
 
@@ -28,7 +28,7 @@ In the [examples](./examples/) folder you can find several case studies that sho
 To download STARK you have to clone the GitHub project:
 
 ```
-git clone https://github.com/quasylab/jspear.git
+git clone https://github.com/the-stark-tool/STARK.git
 ```
 
 Run this command in the folder where you want to download the tool.
@@ -54,7 +54,7 @@ cd ./cli/build/install/stark
 ```
 
 An example, based on the single vehicle scenario, is available in the folder ```examples\single_vehicle```. 
-The ```single_vehicle.jspear``` model can be loaded by using the following command:
+The ```single_vehicle.stark``` model can be loaded by using the following command:
 
 ```
 cd "examples/single_vehicle"

@@ -71,10 +71,10 @@ public class ThreeValuedSemanticsVisitor implements RobustnessFormulaVisitor<Tru
         int to = alwaysRobustnessFormula.getTo();
         return ((sampleSize, step, sequence) -> {
             TruthValues value = TruthValues.TRUE;
-            for(int i = from+step; i<to+step; i++){
+            for(int i = from+step; i<to+step+1; i++){
                 value = TruthValues.and(value, argumentFunction.eval(sampleSize, i, sequence));
                 if (value == TruthValues.FALSE){
-                    i = to+step;
+                    i = to+step+1;
                 }
             }
             return value;
@@ -118,9 +118,9 @@ public class ThreeValuedSemanticsVisitor implements RobustnessFormulaVisitor<Tru
         int to = eventuallyRobustnessFormula.getTo();
         return ((sampleSize, step, sequence) -> {
             TruthValues value = TruthValues.FALSE;
-            for(int i = from+step; i<to+step; i++){
+            for(int i = from+step; i<to+step+1; i++){
                 value = TruthValues.or(value, argumentFunction.eval(sampleSize, i, sequence));
-                if(value==TruthValues.TRUE){i=to+step;}
+                if(value==TruthValues.TRUE){i=to+step+1;}
             }
             return value;
         });
@@ -160,7 +160,7 @@ public class ThreeValuedSemanticsVisitor implements RobustnessFormulaVisitor<Tru
         return ((sampleSize, step, sequence) -> {
             TruthValues value = TruthValues.FALSE;
             TruthValues leftValue = TruthValues.TRUE;
-            for(int i=from+step; (i<to+step)&&(value!=TruthValues.TRUE)&&(leftValue!=TruthValues.FALSE); i++){
+            for(int i=from+step; (i<to+step+1)&&(value!=TruthValues.TRUE)&&(leftValue!=TruthValues.FALSE); i++){
                 //double start = System.currentTimeMillis();
                 value = TruthValues.and(leftValue, rightFunction.eval(sampleSize, i, sequence));
                 if (value != TruthValues.TRUE) {

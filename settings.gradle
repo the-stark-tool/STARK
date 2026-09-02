@@ -11,8 +11,6 @@
 rootProject.name = 'stark'
 include('lib')
 include('examples')
-include('examples:engine')
-include('examples:vehicle')
 include('speclang')
 include('cli')
 include 'examples:agriculturalDT'
@@ -27,8 +25,6 @@ include 'examples:tollbooth'
 findProject(':examples:tollbooth')?.name = 'tollbooth'
 include 'examples:envzompr'
 findProject(':examples:envzompr')?.name = 'envzompr'
-include 'examples:Lotka'
-findProject(':examples:Lotka')?.name = 'Lotka'
 include 'examples:polistil'
 findProject(':examples:polistil')?.name = 'polistil'
 include 'examples:multipleSclerosis'
@@ -43,6 +39,10 @@ findProject(':examples:mutliScler')?.name = 'mutliScler'
 
 include 'examples:rover'
 include 'examples:repressilator-skorokhod'
-include 'examples:repressilator-skorokhod'
-include 'examples:monitoring:highway'
-include 'examples:monitoring:highwayAI'
+include 'examples:reactionsystems'
+include 'examples:vehicle'
+include 'examples:engine'
+include 'examples:lotka'
+include 'examples:mechanicallungventilator'
+include 'examples:tollbooth'
+include 'examples:tutorialRV'

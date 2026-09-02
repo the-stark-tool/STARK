@@ -49,12 +49,12 @@ import java.util.*;
  */
 public class TwoLanesTwoCars {
 
-    private static final int SCENARIO = 1; // Set this parameter to 1,2,3 to choose between the three possible scenarios described in the paper
+    private static final int SCENARIO = 3; // Set this parameter to 1,2,3 to choose between the three possible scenarios described in the paper
 
     // VEHICLE DIMENSIONS
     private static final double VEHICLE_LENGTH = 5;
     private static final double VEHICLE_WIDTH = 2;
-    private static final double TIMER = 2;
+    private static final double TIMER = 5;
 
     // VARIABLE BOUNDS
     private static final double MAX_SPEED = 40;
@@ -195,10 +195,10 @@ public class TwoLanesTwoCars {
                 Util.writeToCSV("./my_extra_trajectory_scen2.csv", my_extra_trajectory);
                 Util.writeToCSV("./other_extra_trajectory_scen2.csv", other_extra_trajectory);
             } else {
-                Util.writeToCSV("./my_trajectory_scen3.csv", my_trajectory);
-                Util.writeToCSV("./other_trajectory_scen3.csv", other_trajectory);
-                Util.writeToCSV("./my_extra_trajectory_scen3.csv", my_extra_trajectory);
-                Util.writeToCSV("./other_extra_trajectory_scen3.csv", other_extra_trajectory);
+                Util.writeToCSV("./my_trajectory_scen3_t5.csv", my_trajectory);
+                Util.writeToCSV("./other_trajectory_scen3_t5.csv", other_trajectory);
+                Util.writeToCSV("./my_extra_trajectory_scen3_t5.csv", my_extra_trajectory);
+                Util.writeToCSV("./other_extra_trajectory_scen3_t5.csv", other_extra_trajectory);
             }
 
             double[][] my_extra_trajectory_p = new double[H][2];
@@ -218,8 +218,8 @@ public class TwoLanesTwoCars {
                 Util.writeToCSV("./my_extra_trajectory_p_scen2.csv", my_extra_trajectory_p);
                 Util.writeToCSV("./other_extra_trajectory_p_scen2.csv", other_extra_trajectory_p);
             } else {
-                Util.writeToCSV("./my_extra_trajectory_p_scen3.csv", my_extra_trajectory_p);
-                Util.writeToCSV("./other_extra_trajectory_p_scen3.csv", other_extra_trajectory_p);
+                Util.writeToCSV("./my_extra_trajectory_p_scen3_t5.csv", my_extra_trajectory_p);
+                Util.writeToCSV("./other_extra_trajectory_p_scen3_t5.csv", other_extra_trajectory_p);
             }
 
             // APPLICATION OF PERTURBATION reckless_driver
@@ -239,7 +239,7 @@ public class TwoLanesTwoCars {
             } else if (SCENARIO==2) {
                 Util.writeToCSV("./atomic_crash_speed_scen2.csv",direct_evaluation_crash_speed);
             } else {
-                Util.writeToCSV("./atomic_crash_speed_scen3.csv",direct_evaluation_crash_speed);
+                Util.writeToCSV("./atomic_crash_speed_scen3_t5.csv",direct_evaluation_crash_speed);
             }
 
             double[][] step1_crash_speed = new double[H][1];
@@ -274,8 +274,8 @@ public class TwoLanesTwoCars {
                 Util.writeToCSV("./step1_crash_speed_scen2.csv", step1_crash_speed);
                 Util.writeToCSV("./step1_crash_scen2.csv", step1_crash);
             } else {
-                Util.writeToCSV("./step1_crash_speed_scen3.csv", step1_crash_speed);
-                Util.writeToCSV("./step1_crash_scen3.csv", step1_crash);
+                Util.writeToCSV("./step1_crash_speed_scen3_t5.csv", step1_crash_speed);
+                Util.writeToCSV("./step1_crash_scen3_t5.csv", step1_crash);
             }
 
             for (int i = 0; i<H; i++){
@@ -289,8 +289,8 @@ public class TwoLanesTwoCars {
                 Util.writeToCSV("./step2_crash_speed_scen2.csv", step2_crash_speed);
                 Util.writeToCSV("./step2_crash_scen2.csv", step2_crash);
             } else {
-                Util.writeToCSV("./step2_crash_speed_scen3.csv", step2_crash_speed);
-                Util.writeToCSV("./step2_crash_scen3.csv", step2_crash);
+                Util.writeToCSV("./step2_crash_speed_scen3_t5.csv", step2_crash_speed);
+                Util.writeToCSV("./step2_crash_scen3_t5.csv", step2_crash);
             }
 
             for (int i = 0; i<H; i++){
@@ -304,8 +304,8 @@ public class TwoLanesTwoCars {
                 Util.writeToCSV("./step3_crash_speed_scen2.csv", step3_crash_speed);
                 Util.writeToCSV("./step3_crash_scen2.csv", step3_crash);
             } else {
-                Util.writeToCSV("./step3_crash_speed_scen3.csv", step3_crash_speed);
-                Util.writeToCSV("./step3_crash_scen3.csv", step3_crash);
+                Util.writeToCSV("./step3_crash_speed_scen3_t5.csv", step3_crash_speed);
+                Util.writeToCSV("./step3_crash_scen3_t5.csv", step3_crash);
             }
 
             for (int i = 0; i<H; i++){
@@ -319,8 +319,8 @@ public class TwoLanesTwoCars {
                 Util.writeToCSV("./step4_crash_speed_scen2.csv", step4_crash_speed);
                 Util.writeToCSV("./step4_crash_scen2.csv", step4_crash);
             } else {
-                Util.writeToCSV("./step4_crash_speed_scen3.csv", step4_crash_speed);
-                Util.writeToCSV("./step4_crash_scen3.csv", step4_crash);
+                Util.writeToCSV("./step4_crash_speed_scen3_t5.csv", step4_crash_speed);
+                Util.writeToCSV("./step4_crash_scen3_t5.csv", step4_crash);
             }
 
             for (int i = 0; i<H; i++){
@@ -334,8 +334,8 @@ public class TwoLanesTwoCars {
                 Util.writeToCSV("./step5_crash_speed_scen2.csv", step5_crash_speed);
                 Util.writeToCSV("./step5_crash_scen2.csv", step5_crash);
             } else {
-                Util.writeToCSV("./step5_crash_speed_scen3.csv", step5_crash_speed);
-                Util.writeToCSV("./step5_crash_scen3.csv", step5_crash);
+                Util.writeToCSV("./step5_crash_speed_scen3_t5.csv", step5_crash_speed);
+                Util.writeToCSV("./step5_crash_scen3_t5.csv", step5_crash);
             }
 
 
@@ -400,7 +400,7 @@ public class TwoLanesTwoCars {
             } else if (SCENARIO==2) {
                 Util.writeToCSV("./three_val_crash_scen2.csv",val_crash);
             } else {
-                Util.writeToCSV("./three_val_crash_scen3.csv",val_crash);
+                Util.writeToCSV("./three_val_crash_scen3_t5.csv",val_crash);
             }
 
             Boolean SAF = new BooleanSemanticsVisitor().eval(phi_SAF).eval(PERTURBATION_SIZE,0,sequence);
@@ -575,7 +575,7 @@ public class TwoLanesTwoCars {
         registry.set("Control",
                 Controller.ifThenElse(
                         DataState.greaterThan(my_timer,0),
-                        Controller.doTick(registry.reference("Controller")
+                        Controller.doTick(registry.reference("Control")
                         ),
                 Controller.ifThenElse(
                         DataState.equalsTo(my_lane,1),

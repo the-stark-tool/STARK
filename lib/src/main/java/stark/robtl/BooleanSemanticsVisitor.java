@@ -55,10 +55,10 @@ public class BooleanSemanticsVisitor implements RobustnessFormulaVisitor<Boolean
         int to = alwaysRobustnessFormula.getTo();
         if (parallel) {
             return (sampleSize, step, sequence) ->
-                    IntStream.of(from, to).parallel().allMatch(i -> argumentFunction.eval(sampleSize, step+i, sequence));
+                    IntStream.range(from, to+1).parallel().allMatch(i -> argumentFunction.eval(sampleSize, step+i, sequence));
         } else {
             return (sampleSize, step, sequence) ->
-                    IntStream.of(from, to).sequential().allMatch(i -> argumentFunction.eval(sampleSize, step+i, sequence));
+                    IntStream.range(from, to+1).sequential().allMatch(i -> argumentFunction.eval(sampleSize, step+i, sequence));
         }
     }
 
@@ -96,10 +96,10 @@ public class BooleanSemanticsVisitor implements RobustnessFormulaVisitor<Boolean
         int to = eventuallyRobustnessFormula.getTo();
         if (parallel) {
             return (sampleSize, step, sequence) ->
-                    IntStream.of(from, to).parallel().anyMatch(i -> argumentFunction.eval(sampleSize, step+i, sequence));
+                    IntStream.range(from, to+1).parallel().anyMatch(i -> argumentFunction.eval(sampleSize, step+i, sequence));
         } else {
             return (sampleSize, step, sequence) ->
-                    IntStream.of(from, to).sequential().anyMatch(i -> argumentFunction.eval(sampleSize, step+i, sequence));
+                    IntStream.range(from, to+1).sequential().anyMatch(i -> argumentFunction.eval(sampleSize, step+i, sequence));
         }
     }
 
@@ -134,12 +134,12 @@ public class BooleanSemanticsVisitor implements RobustnessFormulaVisitor<Boolean
         int from = untilRobustnessFormula.getFrom();
         int to = untilRobustnessFormula.getTo();
         if (parallel) {
-            return (sampleSize, step, sequence) -> IntStream.range(from+step, to+step).parallel().anyMatch(
+            return (sampleSize, step, sequence) -> IntStream.range(from+step, to+step+1).parallel().anyMatch(
                     i -> rightFunction.eval(sampleSize, i, sequence) &&
                             IntStream.range(from+step, i).allMatch(j -> leftFunction.eval(sampleSize, j, sequence))
             );
         } else {
-            return (sampleSize, step, sequence) -> IntStream.range(from+step, to+step).sequential().anyMatch(
+            return (sampleSize, step, sequence) -> IntStream.range(from+step, to+step+1).sequential().anyMatch(
                     i -> rightFunction.eval(sampleSize, i, sequence) &&
                             IntStream.range(from+step, i).allMatch(j -> leftFunction.eval(sampleSize, j, sequence))
             );

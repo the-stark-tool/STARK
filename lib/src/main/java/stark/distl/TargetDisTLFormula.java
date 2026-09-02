@@ -41,18 +41,18 @@ public final class TargetDisTLFormula implements DisTLFormula {
 
     private final DataStateFunction mu;
 
-    private SampleSet<SystemState> dist;
+    private final SampleSet<SystemState> dist;
 
-    private Optional<DataStateExpression> rho;
+    private final Optional<DataStateExpression> rho;
 
-    private Penalty P;
+    private final Penalty P;
 
     private final double q;
 
     private final GroundDistance distance;
 
     public TargetDisTLFormula(DataStateFunction distribution, DataStateExpression penalty, double threshold) {
-        this(distribution, penalty, threshold, StandardGroundDistance.GEQ);
+        this(distribution, penalty, threshold, StandardGroundDistance.LEQ);
     }
 
     public TargetDisTLFormula(DataStateFunction distribution, DataStateExpression penalty, double threshold, GroundDistance distance) {
@@ -65,7 +65,7 @@ public final class TargetDisTLFormula implements DisTLFormula {
     }
 
     public TargetDisTLFormula(DataStateFunction distribution, Penalty penalty, double threshold) {
-        this(distribution, penalty, threshold, StandardGroundDistance.GEQ);
+        this(distribution, penalty, threshold, StandardGroundDistance.LEQ);
     }
 
     public TargetDisTLFormula(DataStateFunction distribution, Penalty penalty, double threshold, GroundDistance distance) {
@@ -78,7 +78,7 @@ public final class TargetDisTLFormula implements DisTLFormula {
     }
 
     public TargetDisTLFormula(SampleSet<SystemState> distribution, DataStateExpression penalty, double threshold) {
-        this(distribution, penalty, threshold, StandardGroundDistance.GEQ);
+        this(distribution, penalty, threshold, StandardGroundDistance.LEQ);
     }
 
     public TargetDisTLFormula(SampleSet<SystemState> distribution, DataStateExpression penalty, double threshold, GroundDistance distance) {
@@ -91,7 +91,7 @@ public final class TargetDisTLFormula implements DisTLFormula {
     }
 
     public TargetDisTLFormula(SampleSet<SystemState> distribution, Penalty penalty, double threshold) {
-        this(distribution, penalty, threshold, StandardGroundDistance.GEQ);
+        this(distribution, penalty, threshold, StandardGroundDistance.LEQ);
     }
 
     public TargetDisTLFormula(SampleSet<SystemState> distribution, Penalty penalty, double threshold, GroundDistance distance) {
@@ -130,7 +130,7 @@ public final class TargetDisTLFormula implements DisTLFormula {
     public GroundDistance getDistance() { return this.distance; }
 
     @Override
-    public <T> T buildMonitor(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
+    public <T> T build(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
         return visitor.buildTarget(this, semanticsEvaluationTimestep);
     }
 

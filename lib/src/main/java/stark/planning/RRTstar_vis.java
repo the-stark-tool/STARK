@@ -81,7 +81,7 @@ public class RRTstar_vis extends JPanel {
         RRTstar_vis panel = new RRTstar_vis(map);
         frame.add(panel);
         frame.setSize((int)map_size + 10, (int)map_size + 10);
-        //frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
 
         double dimension = 3;

@@ -35,9 +35,9 @@ public class AiState {
 
     private static final int PRESENCE_COLUMN = 0;
     private static final int X_POSITION_COLUMN = 1;
-    private static final int Y_SPEED_COLUMN = 2;
+    private static final int Y_POSITION_COLUMN =  2;
     private static final int X_SPEED_COLUMN = 3;
-    private static final int Y_POSITION_COLUMN =  4;
+    private static final int Y_SPEED_COLUMN = 4;
 
 
     private int originalValuesCount = -1; // includes non car values

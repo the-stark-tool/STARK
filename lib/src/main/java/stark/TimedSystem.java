@@ -30,6 +30,8 @@ import stark.ds.DataStateExpression;
 import stark.ds.DataStateFunction;
 import org.apache.commons.math3.random.RandomGenerator;
 
+import java.sql.Time;
+
 /**
  * Represents a system controlled by controller.
  */
@@ -62,13 +64,16 @@ public class TimedSystem implements SystemState {
 
     public TimedSystem sampleNextMicro(RandomGenerator rg){
         EffectStep<Controller> step = controller.next(rg, state);
-        return new TimedSystem(step.next(), environment, environment.apply(rg, state.apply(step.effect())),generateNextTime);
+        int c_step = state.getStep();
+        DataState newState = environment.apply(rg, state.apply(step.effect()));
+        newState.setStep(c_step+1);
+        return new TimedSystem(step.next(), environment, newState, generateNextTime);
     }
 
     @Override
     public SystemState sampleNext(RandomGenerator rg) {
         TimedSystem next = new TimedSystem(this.controller,this.environment,this.state,this.generateNextTime);
-        DataState ds = next.state;
+        DataState ds = next.getDataState();
         double t = next.generateNextTime.eval(ds);
         double sum_t = t + ds.getTimeReal();
         while(sum_t < ds.getTimeStep() + ds.getGranularity()){
