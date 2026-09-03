@@ -26,6 +26,7 @@ import stark.*;
 import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
 import stark.controller.ExecController;
+import stark.distance.StandardGroundDistance;
 import stark.distl.*;
 import stark.ds.*;
 import stark.monitors.DefaultMonitorBuilder;
@@ -95,7 +96,7 @@ public class HighwayEnvScenario {
         };
         // Penalizes when the controlled car crashes with the vehicle in front or behind
         DataStateExpression penaltyCrash = (ds) -> ds.get(crashes) > 0.0 ? 1.0 : 0.0;
-        BrinkDisTLFormula atomicNoCrash = new BrinkDisTLFormula(muCrash, penaltyCrash, atomicOpThreshold);
+        BrinkDisTLFormula atomicNoCrash = new BrinkDisTLFormula(muCrash, penaltyCrash, 1.0, StandardGroundDistance.SYMMETRIC);
 
         UDisTLFormula alwaysCrash = new UnboundedAlwaysuDisTLFormula(atomicNoCrash, 0);
         DefaultUDisTLMonitor mCrash = builder.build(alwaysCrash);

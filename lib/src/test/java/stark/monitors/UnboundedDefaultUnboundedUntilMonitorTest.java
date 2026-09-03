@@ -124,11 +124,12 @@ class UnboundedDefaultUnboundedUntilMonitorTest {
         semanticsEvaluator.setRandomGeneratorSeed(seed);
         DefaultMonitorBuilder defaultMonitorBuilder = new DefaultMonitorBuilder(SAMPLE_SIZE, false);
 
-        UDisTLFormula phi = new UnboundedUntiluDisTLFormula(left, right);
+        int start = 0;
+        UDisTLFormula phi = new UnboundedUntiluDisTLFormula(left, right, start);
         DefaultUDisTLMonitor m = defaultMonitorBuilder.build(phi, semanticsEvalTimestep);
         m.setRandomGeneratorSeed(seed);
         int from = 0;
-        for (int i = 0; i < TEST_LIMIT; i++) {
+        for (int i = start; i < TEST_LIMIT; i++) {
             DisTLFormula truncatedPhi = new UntilDisTLFormula(left, from, from+i+1, right);
 
             DefaultUDisTLMonitor mTruncated = defaultMonitorBuilder.build(truncatedPhi, semanticsEvalTimestep);

@@ -130,7 +130,7 @@ public final class TargetDisTLFormula implements DisTLFormula {
     public GroundDistance getDistance() { return this.distance; }
 
     @Override
-    public <T> T build(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
+    public <T> T buildMonitor(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
         return visitor.buildTarget(this, semanticsEvaluationTimestep);
     }
 
