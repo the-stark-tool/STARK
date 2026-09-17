@@ -520,7 +520,7 @@ public class AutonomousDriving {
                                                                         (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_timer, TIMER)),
                                                                         registry.reference("Idling")
                                                                 ),
-                                                                Controller.doAction( // case distance > safety gap ==> slow down  XXXXXXXXXXXXXX
+                                                                Controller.doAction( // case distance < safety gap ==> slow down
                                                                         (rg, ds) -> List.of(new DataStateUpdate(intention, SLOWER), new DataStateUpdate(my_timer, TIMER)),
                                                                         registry.reference("Idling")
                                                                 )
