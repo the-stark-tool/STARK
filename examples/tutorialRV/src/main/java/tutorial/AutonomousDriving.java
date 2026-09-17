@@ -49,9 +49,6 @@ import java.util.*;
 
 public class AutonomousDriving {
 
-
-    private static final int SCENARIO = 1; // Set this parameter to 1,2,3 to choose between the three possible scenarios described in the paper
-
     // VEHICLE DIMENSIONS
     private static final double VEHICLE_LENGTH = 5;
     private static final double VEHICLE_WIDTH = 2;
@@ -68,22 +65,13 @@ public class AutonomousDriving {
     private static final double DIST_OFFSET = VEHICLE_LENGTH*VEHICLE_WIDTH;
     private static final int H = 300;
 
-
-    // INITIAL VALUES PER SCENARIO
+    // INITIAL VALUES
     private static final double MY_INIT_SPEED = 15;
     private static final double OTHER_INIT_SPEED = 15;
-    private static final double MY_INIT_X_1 = 0;
-    private static final double MY_INIT_Y_1 = 2;
-    private static final double OTHER_INIT_X_1 = 150;
-    private static final double OTHER_INIT_Y_1 = 2;
-    private static final double MY_INIT_X_2 = 50;
-    private static final double MY_INIT_Y_2 = 6;
-    private static final double OTHER_INIT_X_2 = 0;
-    private static final double OTHER_INIT_Y_2 = 4;
-    private static final double MY_INIT_X_3 = 0;
-    private static final double MY_INIT_Y_3 = 2;
-    private static final double OTHER_INIT_X_3 = 150;
-    private static final double OTHER_INIT_Y_3 = 2;
+    private static final double MY_INIT_X = 0;
+    private static final double MY_INIT_Y = 2;
+    private static final double OTHER_INIT_X = 150;
+    private static final double OTHER_INIT_Y = 2;
 
 
     // VARIABLE INDEXES
@@ -120,22 +108,15 @@ public class AutonomousDriving {
 
     public static void main(String[] args) throws IOException{
         try {
-            int EVOLUTION_SEQUENCE_SIZE = 100;
-            int PERTURBATION_SIZE = 100;
-            int EXTRA_SIZE = 100000;
+            int EVOLUTION_SEQUENCE_SIZE = 10; // was 100;
+            int PERTURBATION_SIZE = 10; // was 100;
+            int EXTRA_SIZE = 10; //was 100000
 
             RandomGenerator rand = new DefaultRandomGenerator();
             DataState state = getInitialState();
 
             ControlledSystem system;
-
-            if(SCENARIO==1) {
-                system = new ControlledSystem(getController(), (rg, ds) -> ds.apply(getEnvironmentUpdates_1(rg, ds)), state);
-            } else if (SCENARIO==2) {
-                system = new ControlledSystem(getController(), (rg, ds) -> ds.apply(getEnvironmentUpdates_2(rg, ds)), state);
-            }else{
-                system = new ControlledSystem(getController(), (rg, ds) -> ds.apply(getEnvironmentUpdates_3(rg, ds)), state);
-            }
+            system = new ControlledSystem(getController(), (rg, ds) -> ds.apply(getEnvironmentUpdates(rg, ds)), state);
 
             EvolutionSequence sequence = new EvolutionSequence(rand, rg -> system, EVOLUTION_SEQUENCE_SIZE);
 
@@ -157,10 +138,10 @@ public class AutonomousDriving {
             F.add(ds -> ds.get(safety_gap));
             F.add(ds->ds.get(crash));
 
-            System.out.println("Simulation of single nominal behaviour in scenario: "+SCENARIO);
+            System.out.println("Simulation of single nominal behaviour");
             printLData(rand, L, F, system, H, 1);
 
-            System.out.println("Simulation of single perturbed behaviour in scenario: "+SCENARIO);
+            System.out.println("Simulation of single perturbed behaviour");
             printLData(rand, L, F, get_reckless_driver(), system, H, 1);
 
             // trajectories
@@ -185,22 +166,10 @@ public class AutonomousDriving {
                 other_extra_trajectory[i][1] = extra_data[i][3];
             }
 
-            if (SCENARIO == 1){
-                Util.writeToCSV("./my_trajectory.csv", my_trajectory);
-                Util.writeToCSV("./other_trajectory.csv", other_trajectory);
-                Util.writeToCSV("./my_extra_trajectory.csv", my_extra_trajectory);
-                Util.writeToCSV("./other_extra_trajectory.csv", other_extra_trajectory);
-            } else if (SCENARIO==2) {
-                Util.writeToCSV("./my_trajectory_scen2.csv", my_trajectory);
-                Util.writeToCSV("./other_trajectory_scen2.csv", other_trajectory);
-                Util.writeToCSV("./my_extra_trajectory_scen2.csv", my_extra_trajectory);
-                Util.writeToCSV("./other_extra_trajectory_scen2.csv", other_extra_trajectory);
-            } else {
-                Util.writeToCSV("./my_trajectory_scen3.csv", my_trajectory);
-                Util.writeToCSV("./other_trajectory_scen3.csv", other_trajectory);
-                Util.writeToCSV("./my_extra_trajectory_scen3.csv", my_extra_trajectory);
-                Util.writeToCSV("./other_extra_trajectory_scen3.csv", other_extra_trajectory);
-            }
+            Util.writeToCSV("./my_trajectory_scen3.csv", my_trajectory);
+            Util.writeToCSV("./other_trajectory_scen3.csv", other_trajectory);
+            Util.writeToCSV("./my_extra_trajectory_scen3.csv", my_extra_trajectory);
+            Util.writeToCSV("./other_extra_trajectory_scen3.csv", other_extra_trajectory);
 
             double[][] my_extra_trajectory_p = new double[H][2];
             double[][] other_extra_trajectory_p = new double[H][2];
@@ -212,16 +181,11 @@ public class AutonomousDriving {
                 other_extra_trajectory_p[i][1] = extra_data_p[i][3];
             }
 
-            if (SCENARIO == 1){
-                Util.writeToCSV("./my_extra_trajectory_p.csv", my_extra_trajectory_p);
-                Util.writeToCSV("./other_extra_trajectory_p.csv", other_extra_trajectory_p);
-            } else if (SCENARIO==2) {
-                Util.writeToCSV("./my_extra_trajectory_p_scen2.csv", my_extra_trajectory_p);
-                Util.writeToCSV("./other_extra_trajectory_p_scen2.csv", other_extra_trajectory_p);
-            } else {
-                Util.writeToCSV("./my_extra_trajectory_p_scen3.csv", my_extra_trajectory_p);
-                Util.writeToCSV("./other_extra_trajectory_p_scen3.csv", other_extra_trajectory_p);
-            }
+
+            Util.writeToCSV("./my_extra_trajectory_p_scen3.csv", my_extra_trajectory_p);
+            Util.writeToCSV("./other_extra_trajectory_p_scen3.csv", other_extra_trajectory_p);
+
+
 
             // APPLICATION OF PERTURBATION reckless_driver
 
@@ -235,13 +199,9 @@ public class AutonomousDriving {
                 direct_evaluation_crash_speed[i][0] = crash_speed.compute(i, sequence, perturbedSequence);
             }
 
-            if (SCENARIO == 1){
-                Util.writeToCSV("./atomic_crash_speed.csv",direct_evaluation_crash_speed);
-            } else if (SCENARIO==2) {
-                Util.writeToCSV("./atomic_crash_speed_scen2.csv",direct_evaluation_crash_speed);
-            } else {
-                Util.writeToCSV("./atomic_crash_speed_scen3.csv",direct_evaluation_crash_speed);
-            }
+
+            Util.writeToCSV("./atomic_crash_speed_scen3.csv",direct_evaluation_crash_speed);
+
 
             double[][] step1_crash_speed = new double[H][1];
             double[][] step2_crash_speed = new double[H][1];
@@ -268,76 +228,46 @@ public class AutonomousDriving {
                 step1_crash_speed[i][0] = crash_speed.compute(i+1, sequence, step1_pert);
                 step1_crash[i][0] = crash.compute(i, sequence, step1_pert);
             }
-            if (SCENARIO == 1){
-                Util.writeToCSV("./step1_crash_speed.csv", step1_crash_speed);
-                Util.writeToCSV("./step1_crash.csv", step1_crash);
-            } else if (SCENARIO == 2){
-                Util.writeToCSV("./step1_crash_speed_scen2.csv", step1_crash_speed);
-                Util.writeToCSV("./step1_crash_scen2.csv", step1_crash);
-            } else {
-                Util.writeToCSV("./step1_crash_speed_scen3.csv", step1_crash_speed);
-                Util.writeToCSV("./step1_crash_scen3.csv", step1_crash);
-            }
+
+            Util.writeToCSV("./step1_crash_speed_scen3.csv", step1_crash_speed);
+            Util.writeToCSV("./step1_crash_scen3.csv", step1_crash);
+
 
             for (int i = 0; i<H; i++){
                 step2_crash_speed[i][0] = crash_speed.compute(i+2, sequence, step2_pert);
                 step2_crash[i][0] = crash.compute(i, sequence, step2_pert);
             }
-            if (SCENARIO == 1){
-                Util.writeToCSV("./step2_crash_speed.csv", step2_crash_speed);
-                Util.writeToCSV("./step2_crash.csv", step2_crash);
-            } else if (SCENARIO == 2){
-                Util.writeToCSV("./step2_crash_speed_scen2.csv", step2_crash_speed);
-                Util.writeToCSV("./step2_crash_scen2.csv", step2_crash);
-            } else {
-                Util.writeToCSV("./step2_crash_speed_scen3.csv", step2_crash_speed);
-                Util.writeToCSV("./step2_crash_scen3.csv", step2_crash);
-            }
+
+            Util.writeToCSV("./step2_crash_speed_scen3.csv", step2_crash_speed);
+            Util.writeToCSV("./step2_crash_scen3.csv", step2_crash);
+
 
             for (int i = 0; i<H; i++){
                 step3_crash_speed[i][0] = crash_speed.compute(i+3, sequence, step3_pert);
                 step3_crash[i][0] = crash.compute(i+3, sequence, step3_pert);
             }
-            if (SCENARIO == 1){
-                Util.writeToCSV("./step3_crash_speed.csv", step3_crash_speed);
-                Util.writeToCSV("./step3_crash.csv", step3_crash);
-            } else if (SCENARIO == 2){
-                Util.writeToCSV("./step3_crash_speed_scen2.csv", step3_crash_speed);
-                Util.writeToCSV("./step3_crash_scen2.csv", step3_crash);
-            } else {
-                Util.writeToCSV("./step3_crash_speed_scen3.csv", step3_crash_speed);
-                Util.writeToCSV("./step3_crash_scen3.csv", step3_crash);
-            }
+
+            Util.writeToCSV("./step3_crash_speed_scen3.csv", step3_crash_speed);
+            Util.writeToCSV("./step3_crash_scen3.csv", step3_crash);
+
 
             for (int i = 0; i<H; i++){
                 step4_crash_speed[i][0] = crash_speed.compute(i+4, sequence, step4_pert);
                 step4_crash[i][0] = crash.compute(i+4, sequence, step4_pert);
             }
-            if (SCENARIO == 1){
-                Util.writeToCSV("./step4_crash_speed.csv", step4_crash_speed);
-                Util.writeToCSV("./step4_crash.csv", step4_crash);
-            } else if (SCENARIO == 2){
-                Util.writeToCSV("./step4_crash_speed_scen2.csv", step4_crash_speed);
-                Util.writeToCSV("./step4_crash_scen2.csv", step4_crash);
-            } else {
-                Util.writeToCSV("./step4_crash_speed_scen3.csv", step4_crash_speed);
-                Util.writeToCSV("./step4_crash_scen3.csv", step4_crash);
-            }
+
+            Util.writeToCSV("./step4_crash_speed_scen3.csv", step4_crash_speed);
+            Util.writeToCSV("./step4_crash_scen3.csv", step4_crash);
+
 
             for (int i = 0; i<H; i++){
                 step5_crash_speed[i][0] = crash_speed.compute(i+5, sequence, step5_pert);
                 step5_crash[i][0] = crash.compute(i+5, sequence, step5_pert);
             }
-            if (SCENARIO == 1){
-                Util.writeToCSV("./step5_crash_speed.csv", step5_crash_speed);
-                Util.writeToCSV("./step5_crash.csv", step5_crash);
-            } else if (SCENARIO == 2){
-                Util.writeToCSV("./step5_crash_speed_scen2.csv", step5_crash_speed);
-                Util.writeToCSV("./step5_crash_scen2.csv", step5_crash);
-            } else {
-                Util.writeToCSV("./step5_crash_speed_scen3.csv", step5_crash_speed);
-                Util.writeToCSV("./step5_crash_scen3.csv", step5_crash);
-            }
+
+            Util.writeToCSV("./step5_crash_speed_scen3.csv", step5_crash_speed);
+            Util.writeToCSV("./step5_crash_scen3.csv", step5_crash);
+
 
 
             // VERIFICATION
@@ -396,17 +326,13 @@ public class AutonomousDriving {
                 }
             }
 
-            if (SCENARIO == 1){
-                Util.writeToCSV("./three_val_crash.csv",val_crash);
-            } else if (SCENARIO==2) {
-                Util.writeToCSV("./three_val_crash_scen2.csv",val_crash);
-            } else {
-                Util.writeToCSV("./three_val_crash_scen3.csv",val_crash);
-            }
+
+            Util.writeToCSV("./three_val_crash_scen3.csv",val_crash);
+
 
             Boolean SAF = new BooleanSemanticsVisitor().eval(phi_SAF).eval(PERTURBATION_SIZE,0,sequence);
 
-            System.out.println("Evaluation of SAF robustness in Scenario "+SCENARIO+" with response time "+ TIMER +": "+SAF);
+            System.out.println("Evaluation of SAF robustness  with response time "+ TIMER +": "+SAF);
 
             // don't go off-road
 
@@ -425,7 +351,7 @@ public class AutonomousDriving {
 
             Boolean R2L = new BooleanSemanticsVisitor().eval(phi_R2L).eval(PERTURBATION_SIZE,0,sequence);
 
-            System.out.println("Evaluation of R2L robustness in Scenario "+SCENARIO+" with response time "+ TIMER +": "+R2L);
+            System.out.println("Evaluation of R2L robustness  with response time "+ TIMER +": "+R2L);
 
             // kip it right
 
@@ -444,7 +370,7 @@ public class AutonomousDriving {
 
             Boolean KIR = new BooleanSemanticsVisitor().eval(phi_KIR).eval(PERTURBATION_SIZE,0,sequence);
 
-            System.out.println("Evaluation of KIR robustness in Scenario "+SCENARIO+" with response time "+ TIMER +": "+KIR);
+            System.out.println("Evaluation of KIR robustness  with response time "+ TIMER +": "+KIR);
 
             DistanceExpression max_so = new MaxIntervalDistanceExpression(
                     new AtomicDistanceExpression(AutonomousDriving::rho_so,(v1, v2)->Math.abs(v1-v2)),
@@ -467,7 +393,7 @@ public class AutonomousDriving {
 
             Boolean SO = new BooleanSemanticsVisitor().eval(phi_SO).eval(PERTURBATION_SIZE,0,sequence);
 
-            System.out.println("Evaluation of SO robustness in Scenario "+SCENARIO+" with response time "+ TIMER +": "+SO);
+            System.out.println("Evaluation of SO robustness  with response time "+ TIMER +": "+SO);
 
         }
         catch (RuntimeException e) {
@@ -475,90 +401,62 @@ public class AutonomousDriving {
         }
     }
 
+
+
+
+
+
+
+
+
     // INITIAL DATA STATE
 
     private static DataState getInitialState() {
         Map<Integer, Double> values = new HashMap<>();
 
-        values.put(my_speed,MY_INIT_SPEED);
-        values.put(intention,IDLE);
-        values.put(my_acc, IDLE);
-
+        values.put(my_speed, MY_INIT_SPEED);
         values.put(other_speed, OTHER_INIT_SPEED);
+        values.put(intention, IDLE);
+        values.put(my_acc, IDLE);
         values.put(other_acc, IDLE);
-
         values.put(my_move, 0.0);
-        if(SCENARIO != 2){
-            values.put(other_move,0.0);
-        } else {
-            values.put(other_move, LANE_LEFT);
-        }
-        values.put(my_timer,0.0);
+        values.put(other_move,0.0);
+        values.put(my_timer, 0.0);
         values.put(other_timer, TIMER -1);
-
+        values.put(my_x, MY_INIT_X);
+        values.put(other_x, OTHER_INIT_X);
+        values.put(my_y, MY_INIT_Y);
+        values.put(other_y, OTHER_INIT_Y);
+        values.put(my_lane, (MY_INIT_Y <= 4) ? 0.0 : 1.0); // 0 = right / 1 = left
+        values.put(other_lane, (OTHER_INIT_Y <= 4) ? 0.0 : 1.0);
+        values.put(my_position, (MY_INIT_X <= OTHER_INIT_X) ? -1.0 : 1.0); // -1.0 = behind / 1.0 = ahead
+        values.put(dist, Math.sqrt(Math.pow((OTHER_INIT_X - MY_INIT_X), 2) + Math.pow((OTHER_INIT_Y - MY_INIT_Y), 2)));
         double initialSafetyGap;
-        if (SCENARIO ==1) {
-            values.put(my_x, MY_INIT_X_1);
-            values.put(my_y, MY_INIT_Y_1);
-            values.put(other_x, OTHER_INIT_X_1);
-            values.put(other_y, OTHER_INIT_Y_1);
-
-            values.put(my_lane, (MY_INIT_Y_1 <= 4) ? 0.0 : 1.0);
-            values.put(other_lane, (OTHER_INIT_Y_1 <= 4) ? 0.0 : 1.0);
-
-            values.put(my_position, (MY_INIT_X_1 <= OTHER_INIT_X_1) ? -1.0 : 1.0);
-
-            values.put(dist, Math.sqrt(Math.pow((OTHER_INIT_X_1 - MY_INIT_X_1), 2) + Math.pow((OTHER_INIT_Y_1 - MY_INIT_Y_1), 2)));
-
-            if (MY_INIT_X_1 <= OTHER_INIT_X_1) {
-                initialSafetyGap = calculateRSSSafetyDistance(MY_INIT_SPEED, OTHER_INIT_SPEED);
-            } else {
-                initialSafetyGap = calculateRSSSafetyDistance(OTHER_INIT_SPEED, MY_INIT_SPEED);
-            }
+        if (MY_INIT_X <= OTHER_INIT_X) {
+            initialSafetyGap = calculateRSSSafetyDistance(MY_INIT_SPEED, OTHER_INIT_SPEED);
         } else {
-            if (SCENARIO == 2) {
-                values.put(my_x, MY_INIT_X_2);
-                values.put(my_y, MY_INIT_Y_2);
-                values.put(other_x, OTHER_INIT_X_2);
-                values.put(other_y, OTHER_INIT_Y_2);
-
-                values.put(my_lane, (MY_INIT_Y_2 <= 4) ? 0.0 : 1.0);
-                values.put(other_lane, (OTHER_INIT_Y_2 <= 4) ? 0.0 : 1.0);
-
-                values.put(my_position, (MY_INIT_X_2 <= OTHER_INIT_X_2) ? -1.0 : 1.0);
-
-                values.put(dist, Math.sqrt(Math.pow((OTHER_INIT_X_2 - MY_INIT_X_2), 2) + Math.pow((OTHER_INIT_Y_2 - MY_INIT_Y_2), 2)));
-
-                if (MY_INIT_X_2 <= OTHER_INIT_X_2) {
-                    initialSafetyGap = calculateRSSSafetyDistance(MY_INIT_SPEED, OTHER_INIT_SPEED);
-                } else {
-                    initialSafetyGap = calculateRSSSafetyDistance(OTHER_INIT_SPEED, MY_INIT_SPEED);
-                }
-            } else {
-                values.put(my_x, MY_INIT_X_3);
-                values.put(my_y, MY_INIT_Y_3);
-                values.put(other_x, OTHER_INIT_X_3);
-                values.put(other_y, OTHER_INIT_Y_3);
-
-                values.put(my_lane, (MY_INIT_Y_3 <= 4) ? 0.0 : 1.0);
-                values.put(other_lane, (OTHER_INIT_Y_3 <= 4) ? 0.0 : 1.0);
-
-                values.put(my_position, (MY_INIT_X_3 <= OTHER_INIT_X_3) ? -1.0 : 1.0);
-
-                values.put(dist, Math.sqrt(Math.pow((OTHER_INIT_X_3 - MY_INIT_X_3), 2) + Math.pow((OTHER_INIT_Y_3 - MY_INIT_Y_3), 2)));
-
-                if (MY_INIT_X_3 <= OTHER_INIT_X_3) {
-                    initialSafetyGap = calculateRSSSafetyDistance(MY_INIT_SPEED, OTHER_INIT_SPEED);
-                } else {
-                    initialSafetyGap = calculateRSSSafetyDistance(OTHER_INIT_SPEED, MY_INIT_SPEED);
-                }
-            }
+            initialSafetyGap = calculateRSSSafetyDistance(OTHER_INIT_SPEED, MY_INIT_SPEED);
         }
         values.put(safety_gap, initialSafetyGap);
         values.put(crash,0.0);
 
         return new DataState(NUMBER_OF_VARIABLES, i -> values.getOrDefault(i, Double.NaN));
-    }
+
+    }  // close getInitialState
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // FORMULA FOR RSS GAP
     private static double calculateRSSSafetyDistance(double rearVehicleSpeed, double frontVehicleSpeed){
@@ -570,75 +468,90 @@ public class AutonomousDriving {
         return rssSafetyDistance + VEHICLE_LENGTH;
     }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // CONTROLLER
+
     private static Controller getController(){
         ControllerRegistry registry = new ControllerRegistry();
 
-        registry.set("Control",
+        registry.set("Control", // agent Control implements the task of the controller when the vehicle is not changing lane
                 Controller.ifThenElse(
                         DataState.greaterThan(my_timer,0),
-                        Controller.doTick(registry.reference("Control")
-                        ),
-                        Controller.ifThenElse(
+                        Controller.doTick(registry.reference("Control")), // case TIMER not expired: no decision has to be taken
+                        Controller.ifThenElse( // case TIMER has expired: decision on lane/speed change have to be taken
                                 DataState.equalsTo(my_lane,1),
-                                Controller.ifThenElse(
+                                Controller.ifThenElse( // case my_lane = LEFT
                                         (rg, ds) -> ds.get(dist) > ds.get(safety_gap),
-                                        Controller.doAction( // LANE_RIGHT
+                                        Controller.doAction( // case distance > safety gap ==> moving to RIGHT is safe
                                                 (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_move, LANE_RIGHT), new DataStateUpdate(my_timer, TIMER)),
                                                 registry.reference("Moving_right")
                                         ),
-                                        Controller.ifThenElse(
+                                        Controller.ifThenElse( // case distance <= safety gap
                                                 DataState.equalsTo(my_position,1),
-                                                Controller.ifThenElse(
+                                                Controller.ifThenElse( // case I'm ahead
                                                         DataState.equalsTo(other_lane,1),
-                                                        Controller.doAction( // LANE_RIGHT
+                                                        Controller.doAction( // case other vehicle on the LEFT lane ==> moving to RIGHT lane is safe
                                                                 (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_move,LANE_RIGHT), new DataStateUpdate(my_timer, TIMER)),
                                                                 registry.reference("Moving_right")
                                                         ),
-                                                        Controller.doAction( // FASTER
+                                                        Controller.doAction( // case other vehicle on the RIGHT lane ==> pushing is safe
                                                                 (rg, ds) -> List.of(new DataStateUpdate(intention, FASTER), new DataStateUpdate(my_timer, TIMER)),
                                                                 registry.reference("Idling")
                                                         )
                                                 ),
-                                                Controller.ifThenElse(
+                                                Controller.ifThenElse( // case I'm behind
                                                         DataState.equalsTo(other_lane,1),
-                                                        Controller.ifThenElse(
+                                                        Controller.ifThenElse( // case other vehicle on the LEFT lane
                                                                 (rg, ds) -> ds.get(dist) == ds.get(safety_gap),
-                                                                Controller.doAction( // IDLE
+                                                                Controller.doAction( // case distance == safety gap ==> do nothing
                                                                         (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_timer, TIMER)),
                                                                         registry.reference("Idling")
                                                                 ),
-                                                                Controller.doAction( // SLOWER
+                                                                Controller.doAction( // case distance > safety gap ==> slow down  XXXXXXXXXXXXXX
                                                                         (rg, ds) -> List.of(new DataStateUpdate(intention, SLOWER), new DataStateUpdate(my_timer, TIMER)),
                                                                         registry.reference("Idling")
                                                                 )
                                                         ),
-                                                        Controller.doAction( // FASTER
+                                                        Controller.doAction( // case other vehicle on the RIGHT lane ==> pushing is safe
                                                                 (rg, ds) -> List.of(new DataStateUpdate(intention, FASTER), new DataStateUpdate(my_timer, TIMER)),
                                                                 registry.reference("Idling")
                                                         )
                                                 )
                                         )
                                 ),
-                                Controller.ifThenElse(
+                                Controller.ifThenElse( // case my_lane = RIGHT
                                         (rg,ds) -> ds.get(dist) > ds.get(safety_gap) || ds.get(my_position) == 1,
-                                        Controller.doAction( // FASTER
+                                        Controller.doAction( // case distance > safety gap OR I'm ahead ==> pushing is safe
                                                 (rg, ds) -> List.of(new DataStateUpdate(intention, FASTER), new DataStateUpdate(my_timer, TIMER)),
                                                 registry.reference("Idling")
                                         ),
-                                        Controller.ifThenElse(
+                                        Controller.ifThenElse( // case distance <= safety gap AND I'm behind
                                                 DataState.equalsTo(other_lane,0),
-                                                Controller.ifThenElse(
+                                                Controller.ifThenElse( // case other vehicle on the RIGHT lane
                                                         (rg,ds) -> ds.get(dist) > ds.get(safety_gap)*0.8,
-                                                        Controller.doAction( // LANE_LEFT
+                                                        Controller.doAction( // case distance > 80% of safety gap ==> moving to LEFT is safe
                                                                 (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_move,LANE_LEFT), new DataStateUpdate(my_timer, TIMER)),
                                                                 registry.reference("Moving_left")
                                                         ),
-                                                        Controller.doAction( // SLOWER
+                                                        Controller.doAction( // case distance <= 80% of safety gap ==> I have to slow down
                                                                 (rg, ds) -> List.of(new DataStateUpdate(intention, SLOWER), new DataStateUpdate(my_timer, TIMER)),
                                                                 registry.reference("Idling")
                                                         )
                                                 ),
-                                                Controller.doAction( // IDLE
+                                                Controller.doAction( // case other vehicle on the LEFT lane ==> do nothing
                                                         (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_timer, TIMER)),
                                                         registry.reference("Idling")
                                                 )
@@ -647,7 +560,7 @@ public class AutonomousDriving {
                         ))
         );
 
-        registry.set("Idling",
+        registry.set("Idling", // agent Idling is waiting for expiring of TIMER
                 Controller.ifThenElse(
                         DataState.greaterThan(my_timer, 0),
                         Controller.doTick(registry.reference("Idling")),
@@ -655,23 +568,23 @@ public class AutonomousDriving {
                 )
         );
 
-        registry.set("Moving_right",
+        registry.set("Moving_right", // agent Moving_right manages the change from the LEFT to the RIGHT lane
                 Controller.ifThenElse(
                         DataState.greaterThan(my_timer,0),
-                        Controller.doTick(registry.reference("Moving_right")),
-                        Controller.ifThenElse(
+                        Controller.doTick(registry.reference("Moving_right")), // case timer not expired yet: no decision to take, lane crossing will go on
+                        Controller.ifThenElse( // case timer expired:
                                 (rg,ds) -> ds.get(my_position) == 1 || ds.get(dist) > ds.get(safety_gap),
-                                Controller.doAction( // FASTER
+                                Controller.doAction( // case I'm ahead OR distance > safety gap ==> pushing is safe
                                         (rg, ds) -> List.of(new DataStateUpdate(intention, FASTER), new DataStateUpdate(my_move,0), new DataStateUpdate(my_lane,0), new DataStateUpdate(my_timer, TIMER)),
                                         registry.reference("Idling")
                                 ),
-                                Controller.ifThenElse(
+                                Controller.ifThenElse( // case I'm behind AND distance <= safety gap
                                         (rg,ds) -> ds.get(dist) == ds.get(safety_gap),
-                                        Controller.doAction( // IDLE
+                                        Controller.doAction( // case distance = safety gap ==> do nothing
                                                 (rg,ds)-> List.of(new DataStateUpdate(intention,IDLE), new DataStateUpdate(my_move,0), new DataStateUpdate(my_lane,0), new DataStateUpdate(my_timer, TIMER)),
                                                 registry.reference("Idling")
                                         ),
-                                        Controller.doAction(// SLOWER
+                                        Controller.doAction(// if distance < safety gap ==> slow down
                                                 (rg,ds)-> List.of(new DataStateUpdate(intention,SLOWER), new DataStateUpdate(my_move,0), new DataStateUpdate(my_lane,0), new DataStateUpdate(my_timer, TIMER)),
                                                 registry.reference("Idling")
                                         )
@@ -680,17 +593,17 @@ public class AutonomousDriving {
                 )
         );
 
-        registry.set("Moving_left",
+        registry.set("Moving_left", // agent Moving_left manages the change from the RIGHT to the LEFT lane
                 Controller.ifThenElse(
                         DataState.greaterThan(my_timer, 0),
-                        Controller.doTick(registry.reference("Moving_left")),
-                        Controller.ifThenElse(
+                        Controller.doTick(registry.reference("Moving_left")), // case timer not expired yet: no decision to take, lane crossing will go on
+                        Controller.ifThenElse( // case timer expired
                                 DataState.equalsTo(other_lane, 0).and(DataState.equalsTo(my_position,-1)),
-                                Controller.doAction( // FASTER
+                                Controller.doAction( // case other vehicle on the RIGHT lane: pushing is safe
                                         (rg, ds) -> List.of(new DataStateUpdate(intention, FASTER), new DataStateUpdate(my_move,0), new DataStateUpdate(my_lane,1), new DataStateUpdate(my_timer, TIMER)),
                                         registry.reference("Idling")
                                 ),
-                                Controller.doAction( // SLOWER
+                                Controller.doAction( // case other vehicle on the LEFT lane: slow down is safe
                                         (rg, ds) -> List.of(new DataStateUpdate(intention, SLOWER), new DataStateUpdate(my_move,0), new DataStateUpdate(my_lane,1), new DataStateUpdate(my_timer, TIMER)),
                                         registry.reference("Idling")
                                 )
@@ -701,306 +614,36 @@ public class AutonomousDriving {
         return new ExecController(registry.reference("Control"));
     }
 
-    // ENVIRONMENT FUNCTION FOR SCENARIO 1
 
-    public static List<DataStateUpdate> getEnvironmentUpdates_1(RandomGenerator rg, DataState state) {
+
+
+
+
+
+
+
+
+    // ENVIRONMENT FUNCTION
+
+    public static List<DataStateUpdate> getEnvironmentUpdates(RandomGenerator rg, DataState state) {
         List<DataStateUpdate> updates = new LinkedList<>();
 
+        // updating the data of the controlled vehicle
         double my_new_acc;
-        if(state.get(intention) == FASTER){ // Controller wants to do action FASTER
+        // probabilistic update of the acceleration
+        if(state.get(intention) == FASTER){ // case Controller wants to do action FASTER
             my_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
-        }else if(state.get(intention) == SLOWER){ // Controller wants to do action SLOWER
-            my_new_acc = - Math.min(MAX_BRAKE, Math.max(MIN_BRAKE, MAX_BRAKE - rg.nextDouble() * SLOW_OFFSET));
-        } else if(state.get(intention) == IDLE) { // Controller wants to do action IDLE
-            my_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET; // Accel "close to 0"
-        } else {
-            System.out.println("Controller wants to do something else besides FASTER, SLOWER or IDLE");
-            my_new_acc = 0.0;
-        }
-        updates.add(new DataStateUpdate(my_acc, my_new_acc));
-
-        double my_travel_x = (my_new_acc/2 + state.get(my_speed))*Math.cos((Math.PI/9)*state.get(my_move));
-        double my_new_x = state.get(my_x) + my_travel_x;
-        double my_new_y = Math.min(8,Math.max(0,state.get(my_y) + (4/ TIMER)*state.get(my_move)));
-        double my_new_lane;
-        if (my_new_y >= 4){
-            my_new_lane = 1;
-        } else {
-            my_new_lane = 0;
-        }
-        double my_new_speed = Math.min(Math.max(0,state.get(my_speed) + my_new_acc), MAX_SPEED);
-
-        updates.add(new DataStateUpdate(my_speed, my_new_speed));
-        updates.add(new DataStateUpdate(my_x,my_new_x));
-        updates.add(new DataStateUpdate(my_y,my_new_y));
-        updates.add(new DataStateUpdate(my_lane,my_new_lane));
-
-        double other_new_timer;
-        double other_new_acc;
-        double other_new_move;
-
-        if (state.get(other_timer) == 0){
-            other_new_timer = TIMER -1;
-            if (state.get(other_lane) ==1){
-                if (state.get(dist)>state.get(safety_gap) || state.get(my_position)==-1){
-                    other_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET;
-                    other_new_move = LANE_RIGHT;
-                } else {
-                    other_new_move = 0.0;
-                    if (state.get(dist)>state.get(safety_gap)){
-                        double token = rg.nextDouble();
-                        if (token >= 0.50){
-                            other_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
-                        } else {
-                            if (token >= 0.20) {
-                                other_new_acc = rg.nextDouble() * (2 * IDLE_OFFSET) - IDLE_OFFSET;
-                            } else {
-                                other_new_acc = - (rg.nextDouble() * (MAX_BRAKE - MIN_BRAKE) + MIN_BRAKE);
+        } else if(state.get(intention) == SLOWER){ // case Controller wants to do action SLOWER
+                 my_new_acc = - Math.min(MAX_BRAKE, Math.max(MIN_BRAKE, MAX_BRAKE - rg.nextDouble() * SLOW_OFFSET));
+              } else if(state.get(intention) == IDLE) { // case Controller wants to do action IDLE
+                        my_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET; // Accel "close to 0"
+                     } else {
+                           System.out.println("Controller wants to do something else besides FASTER, SLOWER or IDLE");
+                           my_new_acc = 0.0;
                             }
-                        }
-                    } else {
-                        if (state.get(my_position)==1){
-                            other_new_acc = - (rg.nextDouble() * (MAX_BRAKE - MIN_BRAKE) + MIN_BRAKE);
-                        } else {
-                            other_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
-                        }
-                    }
-                }
-            } else {
-                other_new_move = 0.0;
-                if (state.get(dist)>state.get(safety_gap)){
-                    double token = rg.nextDouble();
-                    if (token >= 0.50){
-                        other_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
-                    } else {
-                        if (token >= 0.20) {
-                            other_new_acc = rg.nextDouble() * (2 * IDLE_OFFSET) - IDLE_OFFSET;
-                        } else {
-                            other_new_acc = - (rg.nextDouble() * (MAX_BRAKE - MIN_BRAKE) + MIN_BRAKE);
-                        }
-                    }
-                } else {
-                    if (state.get(my_position)==1) {
-                        other_new_acc = - (rg.nextDouble() * (MAX_BRAKE - MIN_BRAKE) + MIN_BRAKE);
-                    } else {
-                        other_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
-                    }
-                }
-            }
-        } else {
-            other_new_timer = state.get(other_timer)-1;
-            other_new_acc = state.get(other_acc);
-            if ((state.get(other_y) >= 6 && state.get(other_move)==LANE_LEFT) ||
-                    (state.get(other_y) <= 2 && state.get(other_move)==LANE_RIGHT)) {
-                other_new_move = 0;
-            } else {
-                other_new_move = state.get(other_move);
-            }
-        }
-        updates.add(new DataStateUpdate(other_acc,other_new_acc));
-        updates.add(new DataStateUpdate(other_timer,other_new_timer));
-        updates.add(new DataStateUpdate(other_move,other_new_move));
-
-        double other_new_speed = Math.min(Math.max(0, state.get(other_speed) + other_new_acc), MAX_SPEED-5);
-
-        double other_travel_x = (other_new_acc/2 + other_new_speed)*Math.cos((Math.PI/9)*other_new_move);
-        double other_new_x = state.get(other_x) + other_travel_x;
-        double other_new_y = Math.min(8,Math.max(0,state.get(other_y) + (4/ TIMER)*other_new_move));
-        double other_new_lane;
-        if (other_new_y >= 4){
-            other_new_lane = 1;
-        } else {
-            other_new_lane = 0;
-        }
-
-        updates.add(new DataStateUpdate(other_speed, other_new_speed));
-        updates.add(new DataStateUpdate(other_x,other_new_x));
-        updates.add(new DataStateUpdate(other_y,other_new_y));
-        updates.add(new DataStateUpdate(other_lane,other_new_lane));
-
-        double new_dist = Math.sqrt(Math.pow((other_new_x-my_new_x),2) + Math.pow((other_new_y-my_new_y),2));
-        updates.add(new DataStateUpdate(dist, new_dist));
-
-        double my_new_position = (my_new_x>= other_new_x)?1:-1;
-        updates.add(new DataStateUpdate(my_position,my_new_position));
-
-        double new_safety_gap;
-        if(my_new_position==-1){
-            new_safety_gap = calculateRSSSafetyDistance(my_new_speed,other_new_speed);
-        } else {
-            new_safety_gap = calculateRSSSafetyDistance(other_new_speed,my_new_speed);
-        }
-        updates.add(new DataStateUpdate(safety_gap, new_safety_gap));
-
-        double my_new_timer = state.get(my_timer) - 1;
-        updates.add(new DataStateUpdate(my_timer, my_new_timer));
-
-        if(my_new_lane==other_new_lane && Math.abs(my_new_x-other_new_x)<= VEHICLE_LENGTH){
-            updates.add(new DataStateUpdate(crash,1));
-        } else {
-            if (my_new_lane!=other_new_lane && Math.abs(my_new_x-other_new_x)<= VEHICLE_LENGTH && Math.abs(my_new_y-other_new_y)<= VEHICLE_WIDTH){
-                updates.add(new DataStateUpdate(crash,1));
-            }
-        }
-        return updates;
-    }
-
-
-    // ENVIRONMENT FUNCTION FOR SCENARIO 2
-
-    public static List<DataStateUpdate> getEnvironmentUpdates_2(RandomGenerator rg, DataState state) {
-        List<DataStateUpdate> updates = new LinkedList<>();
-
-        double my_new_acc;
-        if(state.get(intention) == FASTER){ // Controller wants to do action FASTER
-            my_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
-        }else if(state.get(intention) == SLOWER){ // Controller wants to do action SLOWER
-            my_new_acc = - Math.min(MAX_BRAKE, Math.max(MIN_BRAKE, MAX_BRAKE - rg.nextDouble() * SLOW_OFFSET));
-        } else if(state.get(intention) == IDLE) { // Controller wants to do action IDLE
-            my_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET; // Accel "close to 0"
-        } else {
-            System.out.println("Controller wants to do something else besides FASTER, SLOWER or IDLE");
-            my_new_acc = 0.0;
-        }
         updates.add(new DataStateUpdate(my_acc, my_new_acc));
 
-        double my_travel_x = (my_new_acc/2 + state.get(my_speed))*Math.cos((Math.PI/9)*state.get(my_move));
-        double my_new_x = state.get(my_x) + my_travel_x;
-        double my_new_y = Math.min(8,Math.max(0,state.get(my_y) + (4/ TIMER)*state.get(my_move)));
-        double my_new_lane;
-        if (my_new_y >= 4){
-            my_new_lane = 1;
-        } else {
-            my_new_lane = 0;
-        }
-        double my_new_speed = Math.min(Math.max(0,state.get(my_speed) + my_new_acc), MAX_SPEED-5);
-
-        updates.add(new DataStateUpdate(my_speed, my_new_speed));
-        updates.add(new DataStateUpdate(my_x,my_new_x));
-        updates.add(new DataStateUpdate(my_y,my_new_y));
-        updates.add(new DataStateUpdate(my_lane,my_new_lane));
-
-        double other_new_timer;
-        double other_new_acc;
-        double other_new_move;
-
-        if (state.get(other_timer) == 0){
-            other_new_timer = TIMER -1;
-            if (state.get(other_lane) ==1){
-                other_new_move = 0.0;
-                if (state.get(dist)>state.get(safety_gap)){
-                    double token = rg.nextDouble();
-                    if (token >= 0.50){
-                        other_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
-                    } else {
-                        if (token >= 0.20) {
-                            other_new_acc = rg.nextDouble() * (2 * IDLE_OFFSET) - IDLE_OFFSET;
-                        } else {
-                            other_new_acc = - (rg.nextDouble() * (MAX_BRAKE - MIN_BRAKE) + MIN_BRAKE);
-                        }
-                    }
-                } else {
-                    if (state.get(my_position)==1){
-                        other_new_acc = - (rg.nextDouble() * (MAX_BRAKE - MIN_BRAKE) + MIN_BRAKE);
-                    } else {
-                        other_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
-                    }
-                }
-            } else {
-                if (state.get(dist)>state.get(safety_gap)){
-                    other_new_acc = rg.nextDouble() * (2 * IDLE_OFFSET) - IDLE_OFFSET;
-                    other_new_move = LANE_LEFT;
-                } else {
-                    if (state.get(dist)>state.get(safety_gap)*0.8 && state.get(my_position)==1) {
-                        other_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET;
-                        other_new_move = LANE_LEFT;
-                    } else {
-                        other_new_move = 0.0;
-                        if (state.get(my_position)==1) {
-                            other_new_acc = - (rg.nextDouble() * (MAX_BRAKE - MIN_BRAKE) + MIN_BRAKE);
-                        } else {
-                            other_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
-                        }
-                    }
-                }
-            }
-        } else {
-            other_new_timer = state.get(other_timer)-1;
-            other_new_acc = state.get(other_acc);
-            if ((state.get(other_y) >= 6 && state.get(other_move)==LANE_LEFT) ||
-                    (state.get(other_y) <= 2 && state.get(other_move)==LANE_RIGHT)) {
-                other_new_move = 0;
-            } else {
-                other_new_move = state.get(other_move);
-            }
-        }
-        updates.add(new DataStateUpdate(other_acc,other_new_acc));
-        updates.add(new DataStateUpdate(other_timer,other_new_timer));
-        updates.add(new DataStateUpdate(other_move,other_new_move));
-
-        double other_new_speed = Math.min(Math.max(0, state.get(other_speed) + other_new_acc), MAX_SPEED);
-
-        double other_travel_x = (other_new_acc/2 + other_new_speed)*Math.cos((Math.PI/9)*other_new_move);
-        double other_new_x = state.get(other_x) + other_travel_x;
-        double other_new_y = Math.min(8,Math.max(0,state.get(other_y) + (4/ TIMER)*other_new_move));
-        double other_new_lane;
-        if (other_new_y >= 4){
-            other_new_lane = 1;
-        } else {
-            other_new_lane = 0;
-        }
-
-        updates.add(new DataStateUpdate(other_speed, other_new_speed));
-        updates.add(new DataStateUpdate(other_x,other_new_x));
-        updates.add(new DataStateUpdate(other_y,other_new_y));
-        updates.add(new DataStateUpdate(other_lane,other_new_lane));
-
-        double new_dist = Math.sqrt(Math.pow((other_new_x-my_new_x),2) + Math.pow((other_new_y-my_new_y),2));
-        updates.add(new DataStateUpdate(dist, new_dist));
-
-        double my_new_position = (my_new_x>= other_new_x)?1:-1;
-        updates.add(new DataStateUpdate(my_position,my_new_position));
-
-        double new_safety_gap;
-        if(my_new_position==-1){
-            new_safety_gap = calculateRSSSafetyDistance(my_new_speed,other_new_speed);
-        } else {
-            new_safety_gap = calculateRSSSafetyDistance(other_new_speed,my_new_speed);
-        }
-        updates.add(new DataStateUpdate(safety_gap, new_safety_gap));
-
-        double my_new_timer = state.get(my_timer) - 1;
-        updates.add(new DataStateUpdate(my_timer, my_new_timer));
-
-        if(my_new_lane==other_new_lane && Math.abs(my_new_x-other_new_x)<= VEHICLE_LENGTH){
-            updates.add(new DataStateUpdate(crash,1));
-        } else {
-            if (my_new_lane!=other_new_lane && Math.abs(my_new_x-other_new_x)<= VEHICLE_LENGTH && Math.abs(my_new_y-other_new_y)<= VEHICLE_WIDTH){
-                updates.add(new DataStateUpdate(crash,1));
-            }
-        }
-        return updates;
-    }
-
-
-    // ENVIRONMENT FUNCTION FOR SCENARIO 3
-
-    public static List<DataStateUpdate> getEnvironmentUpdates_3(RandomGenerator rg, DataState state) {
-        List<DataStateUpdate> updates = new LinkedList<>();
-
-        double my_new_acc;
-        if(state.get(intention) == FASTER){ // Controller wants to do action FASTER
-            my_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
-        }else if(state.get(intention) == SLOWER){ // Controller wants to do action SLOWER
-            my_new_acc = - Math.min(MAX_BRAKE, Math.max(MIN_BRAKE, MAX_BRAKE - rg.nextDouble() * SLOW_OFFSET));
-        } else if(state.get(intention) == IDLE) { // Controller wants to do action IDLE
-            my_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET; // Accel "close to 0"
-        } else {
-            System.out.println("Controller wants to do something else besides FASTER, SLOWER or IDLE");
-            my_new_acc = 0.0;
-        }
-        updates.add(new DataStateUpdate(my_acc, my_new_acc));
-
+        // update for speed / x_and_y position / lane depending on the acceleration
         double my_travel_x = (my_new_acc/2 + state.get(my_speed))*Math.cos((Math.PI/9)*state.get(my_move));
         double my_new_x = state.get(my_x) + my_travel_x;
         double my_new_y = Math.min(8,Math.max(0,state.get(my_y) + (4/ TIMER)*state.get(my_move)));
@@ -1017,37 +660,41 @@ public class AutonomousDriving {
         updates.add(new DataStateUpdate(my_y,my_new_y));
         updates.add(new DataStateUpdate(my_lane,my_new_lane));
 
+        // updating the data of the uncontrolled vehicle (UC)
         double other_new_timer;
         double other_new_acc;
         double other_new_move;
 
-        if (state.get(other_timer) == 0){
+        if (state.get(other_timer) == 0){ // case timer of UC expired
             other_new_timer = TIMER -1;
-            if (state.get(other_lane)==1){
-                if ((state.get(dist)>state.get(safety_gap) || state.get(my_position)==-1)){
-                    //updates.add(new DataStateUpdate(flag,state.get(flag)+1));
+            if (state.get(other_lane)==1){ // case UC-lane = LEFT
+                if ((state.get(dist) > state.get(safety_gap) || state.get(my_position)==-1)){
+                    //  case distance > safety gap OR UC ahead ==> UC moves to RIGHT lane
                     other_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET;
                     other_new_move = LANE_RIGHT;
-                } else {
+                } else {  // XXXXXXXXXXXXXXX
                     if (state.get(dist)>state.get(safety_gap)){
+                            // case distance > safety gap AND UC behind ==> everything is safe
                         double token = rg.nextDouble();
                         if (token >= 0.60){
+                                 // UC accelerates with probability 40%
                             other_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
                             other_new_move = 0.0;
                         } else {
                             if (token >= 0.20) {
+                                  // UC moves to RIGHT lane with probability 40%, unless UC was moving to he LEFT
                                 other_new_acc = rg.nextDouble() * (2 * IDLE_OFFSET) - IDLE_OFFSET;
                                 if (state.get(other_move)!=LANE_LEFT){
                                     other_new_move = LANE_RIGHT;
                                 } else {
                                     other_new_move = 0.0;
                                 }
-                            } else {
+                            } else { // UC brakes with probability 20%
                                 other_new_acc = - (rg.nextDouble() * (MAX_BRAKE - MIN_BRAKE) + MIN_BRAKE);
                                 other_new_move = 0.0;
                             }
                         }
-                    } else {
+                    } else { // case distance <= safety gap AND UC ahead
                         other_new_move = 0.0;
                         if (state.get(my_position)==1){
                             other_new_acc = - (rg.nextDouble() * (MAX_BRAKE - MIN_BRAKE) + MIN_BRAKE);
@@ -1056,17 +703,17 @@ public class AutonomousDriving {
                         }
                     }
                 }
-            } else {
-                if (state.get(dist)>state.get(safety_gap)){
+            } else { // case other_lane = RIGHT
+                if (state.get(dist)>state.get(safety_gap)){ // case distance > safety gap: everything is safe
                     double token = rg.nextDouble();
-                    if (token >= 0.45){
+                    if (token >= 0.45){  // UC accelerates with probability 55%
                         other_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
                         other_new_move = 0.0;
-                    } else {
+                    } else { // UC brakes with probability 25%
                         if (token >= 0.20) {
                             other_new_acc = - (rg.nextDouble() * (MAX_BRAKE - MIN_BRAKE) + MIN_BRAKE);
                             other_new_move = 0.0;
-                        } else {
+                        } else { // UC moves to the LEFT lane, unless it was moving to the RIGHT, with probability 20%
                             other_new_acc = rg.nextDouble() * (2 * IDLE_OFFSET) - IDLE_OFFSET;
                             if (state.get(other_move)!=LANE_RIGHT){
                                 other_new_move = LANE_LEFT;
@@ -1075,11 +722,12 @@ public class AutonomousDriving {
                             }
                         }
                     }
-                } else {
+                } else { // case 0.8*safety gap < distance <= safety gap AND UC behind and controlled vehicle on RIGHT lane
+                         // ==> UC moves to the LEFT lane
                     if (state.get(dist)>state.get(safety_gap)*0.8 && state.get(my_position)==1 && state.get(my_lane)==0) {
                         other_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET;
                         other_new_move = LANE_LEFT;
-                    } else {
+                    } else { // otherwise, if UC is behind it brakes, whereas if it is ahead it pushes
                         other_new_move = 0.0;
                         if (state.get(my_position)==1) {
                             other_new_acc = - (rg.nextDouble() * (MAX_BRAKE - MIN_BRAKE) + MIN_BRAKE);
@@ -1089,7 +737,7 @@ public class AutonomousDriving {
                     }
                 }
             }
-        } else {
+        } else { // case timer of UC not expired
             other_new_timer = state.get(other_timer)-1;
             other_new_acc = state.get(other_acc);
             if ((state.get(other_y) >= 6 && state.get(other_move)==LANE_LEFT) ||
@@ -1120,6 +768,8 @@ public class AutonomousDriving {
         updates.add(new DataStateUpdate(other_y,other_new_y));
         updates.add(new DataStateUpdate(other_lane,other_new_lane));
 
+
+        // updating of distance / safety gap / timer / crash
         double new_dist = Math.sqrt(Math.pow((other_new_x-my_new_x),2) + Math.pow((other_new_y-my_new_y),2));
         updates.add(new DataStateUpdate(dist, new_dist));
 
@@ -1147,6 +797,15 @@ public class AutonomousDriving {
 
         return updates;
     }
+
+
+
+
+
+
+
+
+
 
     // RECKLESS DRIVER PERTURBATION
 
@@ -1167,11 +826,9 @@ public class AutonomousDriving {
                 }
                 double other_new_speed;
                 double other_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET;
-                if (SCENARIO==2){
-                    other_new_speed = Math.min(Math.max(0, state.get(other_speed) + other_new_acc), MAX_SPEED);
-                } else {
-                    other_new_speed = Math.min(Math.max(0, state.get(other_speed) + other_new_acc), MAX_SPEED-5);
-                }
+
+                other_new_speed = Math.min(Math.max(0, state.get(other_speed) + other_new_acc), MAX_SPEED-5);
+
                 double other_travel_x = (other_new_acc/2 + other_new_speed)*Math.cos((Math.PI/9)*other_new_move);
                 double other_new_x = state.get(other_x) + other_travel_x;
                 double other_new_y = Math.min(8,Math.max(0,state.get(other_y) + 3*other_new_move));
