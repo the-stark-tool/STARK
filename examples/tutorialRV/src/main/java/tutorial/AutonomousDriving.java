@@ -646,9 +646,9 @@ public class AutonomousDriving {
         double other_new_timer;
         double other_new_acc;
         double other_new_move;
-        if (state.get(other_timer) == 0){ // case timer of UC expired ==> 2 cases
+        if (state.get(other_timer) == 0){ // case timer of UV expired ==> 2 cases
             other_new_timer = TIMER -1;
-            if (state.get(other_lane)==LEFT){ // case 1 - UC on LEFT lane ==> 3 cases
+            if (state.get(other_lane)==LEFT){ // case 1 - UV on LEFT lane ==> 3 cases
                 if ((state.get(dist) > state.get(safety_gap) & state.get(my_position)==BEHIND)){ // WAS OR INSTEAD OF AND
                     // case 1.1 - distance > RSS gap AND CV BEHIND of UV ==> UV moves to RIGHT lane
                     other_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET;
@@ -703,11 +703,11 @@ public class AutonomousDriving {
                             }
                         }
                     }
-                } else { // case 2.2 - 0.8*RSS gap < distance <= RSS gap AND CV AHEAD of UV ==> UV moves to the LEFT lane
+                } else { // case 2.2 - 0.8*RSS gap < distance <= RSS gap AND CV AHEAD of UV ==> UV AND CV on the RIGHT lane ==> UVmoves to the LEFT lane
                     if (state.get(dist)>state.get(safety_gap)*0.8 && state.get(my_position)==AHEAD && state.get(my_lane)==RIGHT) {
                         other_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET;
                         other_new_move = GO_LEFT;
-                    } else { // case 2.3 - distance < 0.8*RSS gap OR CV BEHIND UV
+                    } else { // case 2.3 - distance < 0.8*RSS gap OR CV BEHIND UV OR CV on the LEFT lane
                         other_new_move = GO_STRAIGHT;
                         if (state.get(my_position)==AHEAD) { // case CV AHEAD UV ==> UV brakes
                             other_new_acc = - (rg.nextDouble() * (MAX_BRAKE - MIN_BRAKE) + MIN_BRAKE);
