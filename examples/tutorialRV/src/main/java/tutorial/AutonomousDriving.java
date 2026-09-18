@@ -427,7 +427,6 @@ public class AutonomousDriving {
 
     private static DataState getInitialState() {
         Map<Integer, Double> values = new HashMap<>();
-
         // initial state of CV
         values.put(my_x, MY_INIT_X);
         values.put(my_y, MY_INIT_Y);
@@ -437,7 +436,6 @@ public class AutonomousDriving {
         values.put(my_lane, (MY_INIT_Y <= 4) ? RIGHT : LEFT);
         values.put(my_move, GO_STRAIGHT);
         values.put(my_timer, 0.0);
-
         // initial state of UV
         values.put(other_x, OTHER_INIT_X);
         values.put(other_y, OTHER_INIT_Y);
@@ -446,12 +444,9 @@ public class AutonomousDriving {
         values.put(other_lane, (OTHER_INIT_Y <= 4) ? RIGHT : LEFT);
         values.put(other_move, GO_STRAIGHT);
         values.put(other_timer, TIMER -1);
-
         // other components of initial state
         values.put(my_position, (MY_INIT_X <= OTHER_INIT_X) ? BEHIND : AHEAD);
-
         values.put(dist, Math.sqrt(Math.pow((OTHER_INIT_X - MY_INIT_X), 2) + Math.pow((OTHER_INIT_Y - MY_INIT_Y), 2)));
-
         double initialSafetyGap;
         if (MY_INIT_X <= OTHER_INIT_X) {
             initialSafetyGap = calculateRSSSafetyDistance(MY_INIT_SPEED, OTHER_INIT_SPEED);
@@ -459,13 +454,10 @@ public class AutonomousDriving {
             initialSafetyGap = calculateRSSSafetyDistance(OTHER_INIT_SPEED, MY_INIT_SPEED);
         }
         values.put(safety_gap, initialSafetyGap);
-
         values.put(crash,0.0);
-
+        //
         return new DataState(NUMBER_OF_VARIABLES, i -> values.getOrDefault(i, Double.NaN));
-
-    }  // close getInitialState
-
+    }
 
     // FORMULA FOR RSS GAP
     private static double calculateRSSSafetyDistance(double rearVehicleSpeed, double frontVehicleSpeed){
@@ -481,16 +473,12 @@ public class AutonomousDriving {
 
 
 
-
-
-
-
     // CONTROLLER OF CV
 
     private static Controller getController(){
         ControllerRegistry registry = new ControllerRegistry();
-
-        registry.set("Control", // agent Control implements the task of the controller when CV is not changing lane
+        // agent Control implements the task of the controller when CV is not changing lane
+        registry.set("Control",
                 Controller.ifThenElse(
                         DataState.greaterThan(my_timer,0),
                         Controller.doTick(registry.reference("Control")), // case timer not expired: no action
@@ -562,16 +550,16 @@ public class AutonomousDriving {
                                 )
                         ))
         );
-
-        registry.set("Idling", // agent Idling is waiting for expiring of TIMER
+        // agent Idling is waiting for expiring of TIMER
+        registry.set("Idling",
                 Controller.ifThenElse(
                         DataState.greaterThan(my_timer, 0),
                         Controller.doTick(registry.reference("Idling")),
                         registry.reference("Control")
                 )
         );
-
-        registry.set("Moving_right", // agent Moving_right manages the change from the LEFT to the RIGHT lane
+        // agent Moving_right manages the change from the LEFT to the RIGHT lane
+        registry.set("Moving_right",
                 Controller.ifThenElse(
                         DataState.greaterThan(my_timer,0),
                         Controller.doTick(registry.reference("Moving_right")), // case timer not expired: no action, lane crossing will go on
@@ -595,8 +583,8 @@ public class AutonomousDriving {
                         )
                 )
         );
-
-        registry.set("Moving_left", // agent Moving_left manages the change from the RIGHT to the LEFT lane
+        // agent Moving_left manages the change from the RIGHT to the LEFT lane
+        registry.set("Moving_left",
                 Controller.ifThenElse(
                         DataState.greaterThan(my_timer, 0),
                         Controller.doTick(registry.reference("Moving_left")), // case timer not expired no action, lane crossing will go on
@@ -620,20 +608,13 @@ public class AutonomousDriving {
 
 
 
-
-
-
-
-
-
     // ENVIRONMENT FUNCTION
 
     public static List<DataStateUpdate> getEnvironmentUpdates(RandomGenerator rg, DataState state) {
         List<DataStateUpdate> updates = new LinkedList<>();
-
-        // updating the data of the controlled vehicle
+        // FIRST TASK: updating the state of CV
+        // probabilistic update of the acceleration of CV
         double my_new_acc;
-        // probabilistic update of the acceleration
         if(state.get(intention) == FASTER){ // case Controller wants to do action FASTER
             my_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
         } else if(state.get(intention) == SLOWER){ // case Controller wants to do action SLOWER
@@ -641,100 +622,96 @@ public class AutonomousDriving {
               } else if(state.get(intention) == IDLE) { // case Controller wants to do action IDLE
                         my_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET; // Accel "close to 0"
                      } else {
-                           System.out.println("Controller wants to do something else besides FASTER, SLOWER or IDLE");
-                           my_new_acc = 0.0;
+                              System.out.println("Controller wants to do something else besides FASTER, SLOWER or IDLE");
+                              my_new_acc = 0.0;
                             }
         updates.add(new DataStateUpdate(my_acc, my_new_acc));
-
-        // update for speed / x_and_y position / lane depending on the acceleration
+        // update for speed / x_and_y position / lane of CV - depending on the acceleration
         double my_travel_x = (my_new_acc/2 + state.get(my_speed))*Math.cos((Math.PI/9)*state.get(my_move));
         double my_new_x = state.get(my_x) + my_travel_x;
-        double my_new_y = Math.min(8,Math.max(0,state.get(my_y) + (4/ TIMER)*state.get(my_move)));
+        double my_new_y = Math.min(8,Math.max(0,state.get(my_y) + (4/TIMER)*state.get(my_move)));
         double my_new_lane;
         if (my_new_y >= 4){
-            my_new_lane = 1;
+            my_new_lane = LEFT;
         } else {
-            my_new_lane = 0;
+            my_new_lane = RIGHT;
         }
         double my_new_speed = Math.min(Math.max(0,state.get(my_speed) + my_new_acc), MAX_SPEED);
-
         updates.add(new DataStateUpdate(my_speed, my_new_speed));
         updates.add(new DataStateUpdate(my_x,my_new_x));
         updates.add(new DataStateUpdate(my_y,my_new_y));
         updates.add(new DataStateUpdate(my_lane,my_new_lane));
 
-        // updating the data of the uncontrolled vehicle (UC)
+        // SECOND TASK: performing the control activity of UV
         double other_new_timer;
         double other_new_acc;
         double other_new_move;
-
-        if (state.get(other_timer) == 0){ // case timer of UC expired
+        if (state.get(other_timer) == 0){ // case timer of UC expired ==> 2 cases
             other_new_timer = TIMER -1;
-            if (state.get(other_lane)==1){ // case UC-lane = LEFT
-                if ((state.get(dist) > state.get(safety_gap) || state.get(my_position)==-1)){
-                    //  case distance > safety gap OR UC ahead ==> UC moves to RIGHT lane
+            if (state.get(other_lane)==LEFT){ // case 1 - UC on LEFT lane ==> 3 cases
+                if ((state.get(dist) > state.get(safety_gap) & state.get(my_position)==BEHIND)){ // WAS OR INSTEAD OF AND
+                    // case 1.1 - distance > RSS gap AND CV BEHIND of UV ==> UV moves to RIGHT lane
                     other_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET;
                     other_new_move = GO_RIGHT;
-                } else {  // XXXXXXXXXXXXXXX
+                } else {  //
                     if (state.get(dist)>state.get(safety_gap)){
-                            // case distance > safety gap AND UC behind ==> everything is safe
+                            // case 1.2 - distance > RSS gap AND CV AHEAD of UV ==> everything is safe: 3 cases
                         double token = rg.nextDouble();
                         if (token >= 0.60){
-                                 // UC accelerates with probability 40%
+                                 // case 1.2.1 (probability 40%) - UC accelerates
                             other_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
-                            other_new_move = 0.0;
+                            other_new_move = GO_STRAIGHT;
                         } else {
                             if (token >= 0.20) {
-                                  // UC moves to RIGHT lane with probability 40%, unless UC was moving to he LEFT
+                                  // case 1.2.2 (probability 40%) - UC moves to RIGHT lane, unless UC was moving to he LEFT
                                 other_new_acc = rg.nextDouble() * (2 * IDLE_OFFSET) - IDLE_OFFSET;
                                 if (state.get(other_move)!=GO_LEFT){
                                     other_new_move = GO_RIGHT;
                                 } else {
-                                    other_new_move = 0.0;
+                                    other_new_move = GO_STRAIGHT;
                                 }
-                            } else { // UC brakes with probability 20%
+                            } else { // case 1.2.3 (probability 20%) - UC brakes
                                 other_new_acc = - (rg.nextDouble() * (MAX_BRAKE - MIN_BRAKE) + MIN_BRAKE);
-                                other_new_move = 0.0;
+                                other_new_move = GO_STRAIGHT;
                             }
                         }
-                    } else { // case distance <= safety gap AND UC ahead
-                        other_new_move = 0.0;
-                        if (state.get(my_position)==1){
+                    } else { // case 1.3 - distance <= RSS gap ==> 2 cases
+                        other_new_move = GO_STRAIGHT;
+                        if (state.get(my_position)==AHEAD){ // case 1.3.1 - CV AHEAD of UV ==> UV brakes
                             other_new_acc = - (rg.nextDouble() * (MAX_BRAKE - MIN_BRAKE) + MIN_BRAKE);
-                        } else {
+                        } else { // case 1.3.1 - CV BEHIND of UV ==> UV pushes
                             other_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
                         }
                     }
                 }
-            } else { // case other_lane = RIGHT
-                if (state.get(dist)>state.get(safety_gap)){ // case distance > safety gap: everything is safe
+            } else { // case 2 - UV on the RIGHT lane ==> 3 cases
+                if (state.get(dist)>state.get(safety_gap)){ // case 2.1 - distance > RSS gap ==> everything is safe
                     double token = rg.nextDouble();
                     if (token >= 0.45){  // UC accelerates with probability 55%
                         other_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
-                        other_new_move = 0.0;
+                        other_new_move = GO_STRAIGHT;
                     } else { // UC brakes with probability 25%
                         if (token >= 0.20) {
                             other_new_acc = - (rg.nextDouble() * (MAX_BRAKE - MIN_BRAKE) + MIN_BRAKE);
-                            other_new_move = 0.0;
+                            other_new_move = GO_STRAIGHT;
                         } else { // UC moves to the LEFT lane, unless it was moving to the RIGHT, with probability 20%
                             other_new_acc = rg.nextDouble() * (2 * IDLE_OFFSET) - IDLE_OFFSET;
                             if (state.get(other_move)!=GO_RIGHT){
                                 other_new_move = GO_LEFT;
                             } else {
-                                other_new_move = 0.0;
+                                other_new_move = GO_STRAIGHT;
                             }
                         }
                     }
-                } else { // case 0.8*safety gap < distance <= safety gap AND UC behind and controlled vehicle on RIGHT lane
-                         // ==> UC moves to the LEFT lane
-                    if (state.get(dist)>state.get(safety_gap)*0.8 && state.get(my_position)==1 && state.get(my_lane)==0) {
+                } else { // case 2.2 - 0.8*RSS gap < distance <= RSS gap AND CV AHEAD of UV ==> UV moves to the LEFT lane
+                    if (state.get(dist)>state.get(safety_gap)*0.8 && state.get(my_position)==AHEAD && state.get(my_lane)==RIGHT) {
                         other_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET;
                         other_new_move = GO_LEFT;
-                    } else { // otherwise, if UC is behind it brakes, whereas if it is ahead it pushes
-                        other_new_move = 0.0;
-                        if (state.get(my_position)==1) {
+                    } else { // case 2.3 - distance < 0.8*RSS gap OR CV BEHIND UV
+                        other_new_move = GO_STRAIGHT;
+                        if (state.get(my_position)==AHEAD) { // case CV AHEAD UV ==> UV brakes
                             other_new_acc = - (rg.nextDouble() * (MAX_BRAKE - MIN_BRAKE) + MIN_BRAKE);
-                        } else {
+                        } else { // case CV BEHIND UV ==> UV pushes
                             other_new_acc = MAX_ACCELERATION - rg.nextDouble() * FAST_OFFSET;
                         }
                     }
@@ -745,51 +722,45 @@ public class AutonomousDriving {
             other_new_acc = state.get(other_acc);
             if ((state.get(other_y) >= 6 && state.get(other_move)==GO_LEFT) ||
                     (state.get(other_y) <= 2 && state.get(other_move)==GO_RIGHT)) {
-                other_new_move = 0;
+                other_new_move = GO_STRAIGHT;
             } else {
                 other_new_move = state.get(other_move);
             }
         }
+
+        // THIRD TASK: UPDATING THE STATE OF UV
         updates.add(new DataStateUpdate(other_acc,other_new_acc));
         updates.add(new DataStateUpdate(other_timer,other_new_timer));
         updates.add(new DataStateUpdate(other_move,other_new_move));
-
         double other_new_speed = Math.min(Math.max(0, state.get(other_speed) + other_new_acc), MAX_SPEED-5);
-
         double other_travel_x = (other_new_acc/2 + other_new_speed)*Math.cos((Math.PI/9)*other_new_move);
         double other_new_x = state.get(other_x) + other_travel_x;
         double other_new_y = Math.min(8,Math.max(0,state.get(other_y) + (4/ TIMER)*other_new_move));
         double other_new_lane;
         if (other_new_y >= 4){
-            other_new_lane = 1;
+            other_new_lane = LEFT;
         } else {
-            other_new_lane = 0;
+            other_new_lane = RIGHT;
         }
-
         updates.add(new DataStateUpdate(other_speed, other_new_speed));
         updates.add(new DataStateUpdate(other_x,other_new_x));
         updates.add(new DataStateUpdate(other_y,other_new_y));
         updates.add(new DataStateUpdate(other_lane,other_new_lane));
 
-
-        // updating of distance / safety gap / timer / crash
+        // FOURTH TASK: UPDATING THE OTHER COMPONENTS OF THE STATE
         double new_dist = Math.sqrt(Math.pow((other_new_x-my_new_x),2) + Math.pow((other_new_y-my_new_y),2));
         updates.add(new DataStateUpdate(dist, new_dist));
-
-        double my_new_position = (my_new_x>= other_new_x)?1:-1;
+        double my_new_position = (my_new_x>= other_new_x)?AHEAD:BEHIND;
         updates.add(new DataStateUpdate(my_position,my_new_position));
-
         double new_safety_gap;
-        if(my_new_position==-1){
+        if(my_new_position==BEHIND){
             new_safety_gap = calculateRSSSafetyDistance(my_new_speed,other_new_speed);
         } else {
             new_safety_gap = calculateRSSSafetyDistance(other_new_speed,my_new_speed);
         }
         updates.add(new DataStateUpdate(safety_gap, new_safety_gap));
-
         double my_new_timer = state.get(my_timer) - 1;
         updates.add(new DataStateUpdate(my_timer, my_new_timer));
-
         if(my_new_lane==other_new_lane && Math.abs(my_new_x-other_new_x)<= VEHICLE_LENGTH){
             updates.add(new DataStateUpdate(crash,1));
         } else {
