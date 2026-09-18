@@ -124,17 +124,96 @@ public class AutonomousDriving {
 
     public static void main(String[] args) throws IOException{
         try {
-            int EVOLUTION_SEQUENCE_SIZE = 10; // was 100;
-            int PERTURBATION_SIZE = 10; // was 100;
-            int EXTRA_SIZE = 10; //was 100000
 
-            RandomGenerator rand = new DefaultRandomGenerator();
+            /*
+            INITIAL CONFIGURATION
+            In order to perform simulations/analysis/model checking for a particular system, we need to create its
+            initial configuration, which is an instance of <code>ControlledSystem</code>
+            */
+
+            /*
+            One element of a system configuration is the "data state", i.e. an instance of <code>DataState</code>,
+            which models the state of the data.
+            Instances of <code>DataState</code> contains values for variables representing the quantities of the
+            system.
+            The initial state <code>state</code> is constructed by exploiting the static method
+            <code>getInitialState</code>.
+             */
             DataState state = getInitialState();
 
-            ControlledSystem system;
-            system = new ControlledSystem(getController(), (rg, ds) -> ds.apply(getEnvironmentUpdates(rg, ds)), state);
+            /*
+            Another element of a system configuration is the "controller", i.e. an instance of <code>Controller</code>.
+            We use the <code>Controller</code> <code>controller</code>, which is returned by static method <code>getController</code>
+            */
 
+            Controller controller = getController();
+            /*
+            We define the <code>ControlledSystem</code> <code>system</code>, which will be the starting configuration from
+            which the evolution sequences will be constructed.
+            This configuration consists of 4 elements:
+            - a random generator,
+            - the controller <code>controller</code> defined above,
+            - the data state <code>state</state> defined above,
+            - a random function over data states, which implements interface <code>DataStateFunction</code> and maps a
+            random generator <code>rg</code> and a data state <code>ds</code> to a new data state obtained by updating
+            <code>ds</code> with a list of changes, namely a list of <code>DataStateUpdate</code>. Essentially,
+            this random function implements the behaviour of the environment
+             */
+
+            RandomGenerator rand = new DefaultRandomGenerator();
+            ControlledSystem system = new ControlledSystem(controller, (rg, ds) -> ds.apply(getEnvironmentUpdates(rg, ds)), state);
+
+            int EVOLUTION_SEQUENCE_SIZE = 100; // was 100;
+
+
+            /*
+            EVOLUTION SEQUENCES
+            Having the initial configuration <code>system</code>, we can generate its behaviour, which means that
+            we can generate an evolution sequence.
+            */
+
+            /*
+            Variable <code>EVOLUTION_SEQUENCE_SIZE</code> gives the number of runs that are used to obtain the evolution sequence.
+            More in detail, an evolution sequence, modeled by class <code>EvolutionSequence</code>, is a sequence of
+            sample sets of system configurations, where configurations are modeled by class <code>ControlledSystem</code>
+            and sample sets by class <code>SampleSet</code>.
+            In this context, <code>EVOLUTION_SEQUENCE_SIZE</code> is the cardinality of those sample sets.
+            */
             EvolutionSequence sequence = new EvolutionSequence(rand, rg -> system, EVOLUTION_SEQUENCE_SIZE);
+
+            int PERTURBATION_SIZE = 10; // was 100;
+            int EXTRA_SIZE = 1; //was 100000
+
+            /*
+            USING THE SIMULATOR
+
+            We start with generating two evolution sequences from configuration <code>system</system>.
+            Both evolution sequences are sequences of length <code>H</code> of sample sets of cardinality
+            <code>EVOLUTION_SEQUENCE_SIZE</code> of configurations, with the first sample set consisting in
+            <code>EVOLUTION_SEQUENCE_SIZE</code> copies of <code>system</code>.
+            The second evolution sequence is perturbed by applying the perturbation returned by the static method
+            <code>get_reckless_driver()</code> defined later. Essentially, the method returns a perturbation that
+
+                    For both evolution sequences, we store in .csv files some information allowing us to observe the dynamics of
+            both the nominal and the perturbed system: for each time unit in [0,N-1] and for each variable, we store
+            the average value that the variable assumes in the <code>size</code> configurations in the sample set
+            obtained at that time unit.
+
+            */
+
+
+            /*
+            Each expression in the following list <code>F</code> allows us to read the value of a given variable
+            from a data state
+             */
+            ArrayList<DataStateExpression> F = new ArrayList<>();
+            F.add(ds -> ds.get(my_x));
+            F.add(ds -> ds.get(my_y));
+            F.add(ds -> ds.get(other_x));
+            F.add(ds -> ds.get(other_y));
+            F.add(ds -> ds.get(dist));
+            F.add(ds -> ds.get(safety_gap));
+            F.add(ds->ds.get(crash));
 
             ArrayList<String> L = new ArrayList<>();
             L.add("my_x");
@@ -145,20 +224,11 @@ public class AutonomousDriving {
             L.add("RSS_gap");
             L.add("crash");
 
-            ArrayList<DataStateExpression> F = new ArrayList<>();
-            F.add(ds -> ds.get(my_x));
-            F.add(ds -> ds.get(my_y));
-            F.add(ds -> ds.get(other_x));
-            F.add(ds -> ds.get(other_y));
-            F.add(ds -> ds.get(dist));
-            F.add(ds -> ds.get(safety_gap));
-            F.add(ds->ds.get(crash));
+            System.out.println("Simulation of nominal behaviour");
+            printLData(rand, L, F, system, H, EVOLUTION_SEQUENCE_SIZE);
 
-            System.out.println("Simulation of single nominal behaviour");
-            printLData(rand, L, F, system, H, 1);
-
-            System.out.println("Simulation of single perturbed behaviour");
-            printLData(rand, L, F, get_reckless_driver(), system, H, 1);
+            System.out.println("Simulation of perturbed behaviour");
+            printLData(rand, L, F, get_reckless_driver(), system, H, EVOLUTION_SEQUENCE_SIZE);
 
             // trajectories
 
@@ -182,10 +252,10 @@ public class AutonomousDriving {
                 other_extra_trajectory[i][1] = extra_data[i][3];
             }
 
-            Util.writeToCSV("./my_trajectory_scen3.csv", my_trajectory);
-            Util.writeToCSV("./other_trajectory_scen3.csv", other_trajectory);
-            Util.writeToCSV("./my_extra_trajectory_scen3.csv", my_extra_trajectory);
-            Util.writeToCSV("./other_extra_trajectory_scen3.csv", other_extra_trajectory);
+            Util.writeToCSV("./my_trajectory.csv", my_trajectory);
+            Util.writeToCSV("./other_trajectory.csv", other_trajectory);
+            Util.writeToCSV("./my_extra_trajectory.csv", my_extra_trajectory);
+            Util.writeToCSV("./other_extra_trajectory.csv", other_extra_trajectory);
 
             double[][] my_extra_trajectory_p = new double[H][2];
             double[][] other_extra_trajectory_p = new double[H][2];
@@ -198,12 +268,14 @@ public class AutonomousDriving {
             }
 
 
-            Util.writeToCSV("./my_extra_trajectory_p_scen3.csv", my_extra_trajectory_p);
-            Util.writeToCSV("./other_extra_trajectory_p_scen3.csv", other_extra_trajectory_p);
+            Util.writeToCSV("./my_extra_trajectory_p.csv", my_extra_trajectory_p);
+            Util.writeToCSV("./other_extra_trajectory_p.csv", other_extra_trajectory_p);
 
             // APPLICATION OF PERTURBATION reckless_driver
 
             EvolutionSequence perturbedSequence = sequence.apply(get_reckless_driver(),0,PERTURBATION_SIZE);
+
+
 
             DistanceExpression crash_speed = new AtomicDistanceExpression(AutonomousDriving::rho_si,(v1, v2)->Math.abs(v1-v2));
 
@@ -212,7 +284,6 @@ public class AutonomousDriving {
             for (int i = 0; i<H; i++){
                 direct_evaluation_crash_speed[i][0] = crash_speed.compute(i, sequence, perturbedSequence);
             }
-
 
             Util.writeToCSV("./atomic_crash_speed_scen3.csv",direct_evaluation_crash_speed);
 
@@ -468,8 +539,6 @@ public class AutonomousDriving {
         double rssSafetyDistance = Math.max(d1 + d2 + d3 + d4, 0);
         return rssSafetyDistance + VEHICLE_LENGTH;
     }
-
-
 
 
 
@@ -775,42 +844,31 @@ public class AutonomousDriving {
 
 
 
-
-
-
-
-
-
     // RECKLESS DRIVER PERTURBATION
-
     private static Perturbation get_reckless_driver(){
         return new AfterPerturbation(5,new IterativePerturbation(50,new AtomicPerturbation(2, AutonomousDriving::reckless_driver)));
     }
-
     private static DataState reckless_driver(RandomGenerator rg, DataState state){
         List<DataStateUpdate> updates = new LinkedList<>();
         if(state.get(dist) > state.get(safety_gap)*0.25) {
             double token = rg.nextDouble();
             double other_new_move;
             if (token > 0.4) {
-                if (state.get(other_lane) == 0){
+                if (state.get(other_lane) == RIGHT){
                     other_new_move = GO_LEFT;
                 } else {
                     other_new_move = GO_RIGHT;
                 }
-                double other_new_speed;
                 double other_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET;
-
-                other_new_speed = Math.min(Math.max(0, state.get(other_speed) + other_new_acc), MAX_SPEED-5);
-
+                double other_new_speed = Math.min(Math.max(0, state.get(other_speed) + other_new_acc), MAX_SPEED-5);
                 double other_travel_x = (other_new_acc/2 + other_new_speed)*Math.cos((Math.PI/9)*other_new_move);
                 double other_new_x = state.get(other_x) + other_travel_x;
                 double other_new_y = Math.min(8,Math.max(0,state.get(other_y) + 3*other_new_move));
                 double other_new_lane;
                 if (other_new_y >= 4){
-                    other_new_lane = 1;
+                    other_new_lane = LEFT;
                 } else {
-                    other_new_lane = 0;
+                    other_new_lane = RIGHT;
                 }
                 updates.add(new DataStateUpdate(other_move,other_new_move));
                 updates.add(new DataStateUpdate(other_speed, other_new_speed));
@@ -822,13 +880,12 @@ public class AutonomousDriving {
                 double my_new_position = (state.get(my_x)>= other_new_x)?1:-1;
                 updates.add(new DataStateUpdate(my_position,my_new_position));
                 double new_safety_gap;
-                if(my_new_position==-1){
+                if(my_new_position==BEHIND){
                     new_safety_gap = calculateRSSSafetyDistance(state.get(my_speed),other_new_speed);
                 } else {
                     new_safety_gap = calculateRSSSafetyDistance(other_new_speed,state.get(my_speed));
                 }
                 updates.add(new DataStateUpdate(safety_gap, new_safety_gap));
-                //updates.add(new DataStateUpdate(other_timer,RESPONSE_TIME-1));
             } else {
                 updates.add(new DataStateUpdate(dist,state.get(dist)+rg.nextDouble()*DIST_OFFSET));
             }
@@ -840,6 +897,7 @@ public class AutonomousDriving {
 
     // PENALTY FUNCTIONS
 
+    // penalty function returning the Severity of Impact in case of crash
     public static double rho_si(DataState state) {
         if (state.get(crash) == 1){
             return 0.5*Math.sqrt(state.get(my_speed)*state.get(my_speed) + state.get(other_speed)*state.get(other_speed) - 2*state.get(my_speed)*state.get(other_speed))/MAX_SPEED;
@@ -849,10 +907,12 @@ public class AutonomousDriving {
         }
     }
 
+    // penalty function returning the value of variable crash
     public static double rho_crash(DataState state) {
         return state.get(crash);
     }
 
+    // penalty function returning true if CV is going out of the two lanes
     public static double rho_r2l(DataState state){
         if (state.get(my_lane)>6 || state.get(my_lane)<2){
             return 1;
@@ -861,15 +921,18 @@ public class AutonomousDriving {
         }
     }
 
+
     public static double rho_so(DataState state){
-        if (state.get(my_timer)== TIMER -1 && state.get(my_move)==1 && state.get(other_y)%2==0 && state.get(other_lane)==1){
+        if (state.get(my_timer)== TIMER -1 && state.get(my_move)==GO_LEFT && state.get(other_y)%2==0 && state.get(other_lane)==LEFT){
             return Math.max(0,(state.get(safety_gap)-state.get(dist))/state.get(safety_gap));
         } else {
             return 0;
         }
     }
+
+    // penalty function returning
     public static double rho_kir(DataState state){
-        if (state.get(my_timer)== TIMER -1 && state.get(my_move)==1 && state.get(other_y)%2==0 && state.get(other_lane)==1){
+        if (state.get(my_timer)== TIMER -1 && state.get(my_move)==GO_LEFT && state.get(other_y)%2==0 && state.get(other_lane)==LEFT){
             return 1;
         } else {
             return 0;
@@ -879,6 +942,8 @@ public class AutonomousDriving {
 
     // Utility methods
 
+    // method to generate an evolution sequence from configuration <code>s</code> consisting in <code>steps</code> steps of <code>size</code> runs.
+    // for each step the average of the <code>size</code> values by each expression in <code>F</code> are printed out.
     private static void printLData(RandomGenerator rg, ArrayList<String> label, ArrayList<DataStateExpression> F, SystemState s, int steps, int size) {
         System.out.println(label);
         double[][] data = SystemState.sample(rg, F, s, steps, size);
@@ -891,6 +956,9 @@ public class AutonomousDriving {
         }
     }
 
+    // method to generate an evolution sequence from configuration <code>s</code> consisting in <code>steps</code> steps of <code>size</code> runs.
+    // the evolution sequence is perturbed by <code>p</code>.
+    // for each step the average of the <code>size</code> values by each expression in <code>F</code> are printed out.
     private static void printLData(RandomGenerator rg, ArrayList<String> label, ArrayList<DataStateExpression> F, Perturbation p, SystemState s, int steps, int size) {
         System.out.println(label);
         double[][] data = SystemState.sample(rg, F, p, s, steps, size);
