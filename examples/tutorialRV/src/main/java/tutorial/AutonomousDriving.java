@@ -49,12 +49,10 @@ import java.util.*;
 
 public class AutonomousDriving {
 
-    // VEHICLE DIMENSIONS
+    // SYSTEM PARAMETERS
     private static final double VEHICLE_LENGTH = 5;
     private static final double VEHICLE_WIDTH = 2;
     private static final double TIMER = 2;
-
-    // VARIABLE BOUNDS
     private static final double MAX_SPEED = 40;
     private static final double MAX_ACCELERATION = 5;
     private static final double FAST_OFFSET = 2;
@@ -65,46 +63,64 @@ public class AutonomousDriving {
     private static final double DIST_OFFSET = VEHICLE_LENGTH*VEHICLE_WIDTH;
     private static final int H = 300;
 
-    // INITIAL VALUES
+    // INITIAL VALUES FOR POSITION AND SPEED
     private static final double MY_INIT_SPEED = 15;
     private static final double OTHER_INIT_SPEED = 15;
     private static final double MY_INIT_X = 0;
     private static final double MY_INIT_Y = 2;
     private static final double OTHER_INIT_X = 150;
     private static final double OTHER_INIT_Y = 2;
+    private static final double MY_INIT_ACC = 0;
+    private static final double OTHER_INIT_ACC = 0;
 
 
-    // VARIABLE INDEXES
-    private static final int my_x = 0;
-    private static final int my_y = 1;
-    private static final int my_speed = 2;
-    private static final int intention = 3;
-    private static final int my_acc = 4;
-    private static final int my_lane = 5;
-    private static final int my_move = 6;
-    private static final int my_timer = 7;
-    private static final int my_position = 8;
+    // POSSIBLE CONTROLLER ACTIONS - VALUES FOR ACTUATORS
+    private static final double FASTER = 1;
+    private static final double SLOWER = -1;
+    private static final double IDLE  = 0;
+    private static final double GO_RIGHT = -1;
+    private static final double GO_LEFT = 1;
+    private static final double GO_STRAIGHT = 0.0;
 
-    private static final int other_x = 9;
-    private static final int other_y = 10;
-    private static final int other_speed = 11;
-    private static final int other_acc = 12;
-    private static final int other_lane = 13;
-    private static final int other_move = 14;
-    private static final int other_timer = 15;
+    //
+    private static final double LEFT = 1.0;
+    private static final double RIGHT = 0.0;
+    private static final double AHEAD = 1.0;
+    private static final double BEHIND = -1.0;
 
+
+    // STATE OF THE CONTROLLED VEHICLE (CV)
+    private static final int my_x = 0; // x position
+    private static final int my_y = 1; // y position
+    private static final int my_speed = 2; // speed
+    private static final int intention = 3; // acceleration actuator, domain = {SLOWER,IDLE,FASTER}
+    private static final int my_acc = 4; // acceleration
+    private static final int my_lane = 5; // occupied lane, domain = {LEFT,RIGHT}
+    private static final int my_move = 6; // steering wheel actuator, domain = {GO_LEFT , GO_STRAIGHT, GO_RIGHT}
+    private static final int my_timer = 7; // timer
+
+    private static final int my_position = 8; // position wrt UC, domain = {AHEAD,BEHIND}
+
+    // STATE OF THE UNCONTROLLED VEHICLE (UV)
+    private static final int other_x = 9; // x position
+    private static final int other_y = 10; // y position
+    private static final int other_speed = 11; // speed
+    private static final int other_acc = 12; // acceleration
+    private static final int other_lane = 13; // occupied lane, domain = {LEFT,RIGHT}
+    private static final int other_move = 14; // steering wheel actuator, domain = {GO_LEFT , GO_RIGHT}
+    private static final int other_timer = 15; // timer
+
+    // OTHER COMPONENTS OF SYSTEM STATE
     private static final int dist = 16;
     private static final int safety_gap = 17;
     private static final int crash = 18;
 
     private static final int NUMBER_OF_VARIABLES = 19;
 
-    // POSSIBLE CONTROLLER ACTIONS
-    private static final double FASTER = 1;
-    private static final double SLOWER = -1;
-    private static final double IDLE  = 0;
-    private static final double LANE_RIGHT = -1;
-    private static final double LANE_LEFT = 1;
+
+
+
+
 
     public static void main(String[] args) throws IOException{
         try {
@@ -184,8 +200,6 @@ public class AutonomousDriving {
 
             Util.writeToCSV("./my_extra_trajectory_p_scen3.csv", my_extra_trajectory_p);
             Util.writeToCSV("./other_extra_trajectory_p_scen3.csv", other_extra_trajectory_p);
-
-
 
             // APPLICATION OF PERTURBATION reckless_driver
 
@@ -409,28 +423,35 @@ public class AutonomousDriving {
 
 
 
-    // INITIAL DATA STATE
+    // INITIAL STATE
 
     private static DataState getInitialState() {
         Map<Integer, Double> values = new HashMap<>();
 
-        values.put(my_speed, MY_INIT_SPEED);
-        values.put(other_speed, OTHER_INIT_SPEED);
-        values.put(intention, IDLE);
-        values.put(my_acc, IDLE);
-        values.put(other_acc, IDLE);
-        values.put(my_move, 0.0);
-        values.put(other_move,0.0);
-        values.put(my_timer, 0.0);
-        values.put(other_timer, TIMER -1);
+        // initial state of CV
         values.put(my_x, MY_INIT_X);
-        values.put(other_x, OTHER_INIT_X);
         values.put(my_y, MY_INIT_Y);
+        values.put(my_speed, MY_INIT_SPEED);
+        values.put(intention, IDLE);
+        values.put(my_acc, MY_INIT_ACC);
+        values.put(my_lane, (MY_INIT_Y <= 4) ? RIGHT : LEFT);
+        values.put(my_move, GO_STRAIGHT);
+        values.put(my_timer, 0.0);
+
+        // initial state of UV
+        values.put(other_x, OTHER_INIT_X);
         values.put(other_y, OTHER_INIT_Y);
-        values.put(my_lane, (MY_INIT_Y <= 4) ? 0.0 : 1.0); // 0 = right / 1 = left
-        values.put(other_lane, (OTHER_INIT_Y <= 4) ? 0.0 : 1.0);
-        values.put(my_position, (MY_INIT_X <= OTHER_INIT_X) ? -1.0 : 1.0); // -1.0 = behind / 1.0 = ahead
+        values.put(other_speed, OTHER_INIT_SPEED);
+        values.put(other_acc, OTHER_INIT_ACC);
+        values.put(other_lane, (OTHER_INIT_Y <= 4) ? RIGHT : LEFT);
+        values.put(other_move, GO_STRAIGHT);
+        values.put(other_timer, TIMER -1);
+
+        // other components of initial state
+        values.put(my_position, (MY_INIT_X <= OTHER_INIT_X) ? BEHIND : AHEAD);
+
         values.put(dist, Math.sqrt(Math.pow((OTHER_INIT_X - MY_INIT_X), 2) + Math.pow((OTHER_INIT_Y - MY_INIT_Y), 2)));
+
         double initialSafetyGap;
         if (MY_INIT_X <= OTHER_INIT_X) {
             initialSafetyGap = calculateRSSSafetyDistance(MY_INIT_SPEED, OTHER_INIT_SPEED);
@@ -438,24 +459,12 @@ public class AutonomousDriving {
             initialSafetyGap = calculateRSSSafetyDistance(OTHER_INIT_SPEED, MY_INIT_SPEED);
         }
         values.put(safety_gap, initialSafetyGap);
+
         values.put(crash,0.0);
 
         return new DataState(NUMBER_OF_VARIABLES, i -> values.getOrDefault(i, Double.NaN));
 
     }  // close getInitialState
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     // FORMULA FOR RSS GAP
@@ -476,82 +485,76 @@ public class AutonomousDriving {
 
 
 
-
-
-
-
-
-
-    // CONTROLLER
+    // CONTROLLER OF CV
 
     private static Controller getController(){
         ControllerRegistry registry = new ControllerRegistry();
 
-        registry.set("Control", // agent Control implements the task of the controller when the vehicle is not changing lane
+        registry.set("Control", // agent Control implements the task of the controller when CV is not changing lane
                 Controller.ifThenElse(
                         DataState.greaterThan(my_timer,0),
-                        Controller.doTick(registry.reference("Control")), // case TIMER not expired: no decision has to be taken
-                        Controller.ifThenElse( // case TIMER has expired: decision on lane/speed change have to be taken
-                                DataState.equalsTo(my_lane,1),
-                                Controller.ifThenElse( // case my_lane = LEFT
+                        Controller.doTick(registry.reference("Control")), // case timer not expired: no action
+                        Controller.ifThenElse( // case timer expired ==> two cases: CV on the LEFT or RIGHT lane
+                                DataState.equalsTo(my_lane,LEFT),
+                                Controller.ifThenElse( // case CV on LEFT lane ==> two cases: distance > or <= RSS gap
                                         (rg, ds) -> ds.get(dist) > ds.get(safety_gap),
-                                        Controller.doAction( // case distance > safety gap ==> moving to RIGHT is safe
-                                                (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_move, LANE_RIGHT), new DataStateUpdate(my_timer, TIMER)),
+                                        Controller.doAction( // case distance > RSS gap ==> moving to RIGHT is safe
+                                                (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_move, GO_RIGHT), new DataStateUpdate(my_timer, TIMER)),
                                                 registry.reference("Moving_right")
                                         ),
-                                        Controller.ifThenElse( // case distance <= safety gap
-                                                DataState.equalsTo(my_position,1),
-                                                Controller.ifThenElse( // case I'm ahead
-                                                        DataState.equalsTo(other_lane,1),
-                                                        Controller.doAction( // case other vehicle on the LEFT lane ==> moving to RIGHT lane is safe
-                                                                (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_move,LANE_RIGHT), new DataStateUpdate(my_timer, TIMER)),
+                                        Controller.ifThenElse( // case distance <= RSS gap ==> two subcases: CV ahead or behind of UV
+                                                DataState.equalsTo(my_position,AHEAD),
+                                                Controller.ifThenElse( // case CV ahead of UV ==> two subcases: UV on LEFT or RIGHT lane
+                                                        DataState.equalsTo(other_lane,LEFT),
+                                                        Controller.doAction( // case UV on the LEFT lane ==> moving to RIGHT lane is safe
+                                                                (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_move,GO_RIGHT), new DataStateUpdate(my_timer, TIMER)),
                                                                 registry.reference("Moving_right")
                                                         ),
-                                                        Controller.doAction( // case other vehicle on the RIGHT lane ==> pushing is safe
+                                                        Controller.doAction( // case UV on the RIGHT lane ==> pushing is safe
                                                                 (rg, ds) -> List.of(new DataStateUpdate(intention, FASTER), new DataStateUpdate(my_timer, TIMER)),
                                                                 registry.reference("Idling")
                                                         )
                                                 ),
-                                                Controller.ifThenElse( // case I'm behind
-                                                        DataState.equalsTo(other_lane,1),
-                                                        Controller.ifThenElse( // case other vehicle on the LEFT lane
+                                                Controller.ifThenElse( // case CV behind of AV ==> two subcases: UV on LEFT or RIGHT lane
+                                                        DataState.equalsTo(other_lane,LEFT),
+                                                        Controller.ifThenElse( // case UV on the LEFT lane ==> two cases: distance = or < RSS gap
                                                                 (rg, ds) -> ds.get(dist) == ds.get(safety_gap),
-                                                                Controller.doAction( // case distance == safety gap ==> do nothing
+                                                                Controller.doAction( // case distance == RSS gap ==> do nothing
                                                                         (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_timer, TIMER)),
                                                                         registry.reference("Idling")
                                                                 ),
-                                                                Controller.doAction( // case distance < safety gap ==> slow down
+                                                                Controller.doAction( // case distance < RSS gap ==> slow down
                                                                         (rg, ds) -> List.of(new DataStateUpdate(intention, SLOWER), new DataStateUpdate(my_timer, TIMER)),
                                                                         registry.reference("Idling")
                                                                 )
                                                         ),
-                                                        Controller.doAction( // case other vehicle on the RIGHT lane ==> pushing is safe
+                                                        Controller.doAction( // case UV on the RIGHT lane ==> pushing is safe
                                                                 (rg, ds) -> List.of(new DataStateUpdate(intention, FASTER), new DataStateUpdate(my_timer, TIMER)),
                                                                 registry.reference("Idling")
                                                         )
                                                 )
                                         )
                                 ),
-                                Controller.ifThenElse( // case my_lane = RIGHT
-                                        (rg,ds) -> ds.get(dist) > ds.get(safety_gap) || ds.get(my_position) == 1,
-                                        Controller.doAction( // case distance > safety gap OR I'm ahead ==> pushing is safe
+                                Controller.ifThenElse( // case CV on RIGHT lane ==> 2 cases discriminated by (dist > RSS gap or CV AHEAD of UV)
+                                        (rg,ds) -> ds.get(dist) > ds.get(safety_gap) || ds.get(my_position) == AHEAD,
+                                        Controller.doAction( // case distance > RSS gap OR CV AHEAD of UV ==> pushing is safe
                                                 (rg, ds) -> List.of(new DataStateUpdate(intention, FASTER), new DataStateUpdate(my_timer, TIMER)),
                                                 registry.reference("Idling")
                                         ),
-                                        Controller.ifThenElse( // case distance <= safety gap AND I'm behind
+                                        Controller.ifThenElse( // case distance <= RSS gap AND CV BEHIND of UV ==> 2 cases: UV on LEFT or RIGHT lane
                                                 DataState.equalsTo(other_lane,0),
-                                                Controller.ifThenElse( // case other vehicle on the RIGHT lane
+                                                Controller.ifThenElse( // case UV on the RIGHT lane ==> 2 cases: distance >= 80% RSS gap
                                                         (rg,ds) -> ds.get(dist) > ds.get(safety_gap)*0.8,
-                                                        Controller.doAction( // case distance > 80% of safety gap ==> moving to LEFT is safe
-                                                                (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_move,LANE_LEFT), new DataStateUpdate(my_timer, TIMER)),
+                                                        Controller.doAction( // case distance > 80% of RSS gap ==> moving to LEFT is safe
+                                                                (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_move,GO_LEFT), new DataStateUpdate(my_timer, TIMER)),
                                                                 registry.reference("Moving_left")
                                                         ),
-                                                        Controller.doAction( // case distance <= 80% of safety gap ==> I have to slow down
+                                                        Controller.doAction( // case distance <= 80% of RSS gap ==> slow down
                                                                 (rg, ds) -> List.of(new DataStateUpdate(intention, SLOWER), new DataStateUpdate(my_timer, TIMER)),
                                                                 registry.reference("Idling")
                                                         )
                                                 ),
-                                                Controller.doAction( // case other vehicle on the LEFT lane ==> do nothing
+                                                Controller.doAction( // case UV on the LEFT lane ==> do nothing
                                                         (rg, ds) -> List.of(new DataStateUpdate(intention, IDLE), new DataStateUpdate(my_timer, TIMER)),
                                                         registry.reference("Idling")
                                                 )
@@ -571,21 +574,21 @@ public class AutonomousDriving {
         registry.set("Moving_right", // agent Moving_right manages the change from the LEFT to the RIGHT lane
                 Controller.ifThenElse(
                         DataState.greaterThan(my_timer,0),
-                        Controller.doTick(registry.reference("Moving_right")), // case timer not expired yet: no decision to take, lane crossing will go on
-                        Controller.ifThenElse( // case timer expired:
-                                (rg,ds) -> ds.get(my_position) == 1 || ds.get(dist) > ds.get(safety_gap),
-                                Controller.doAction( // case I'm ahead OR distance > safety gap ==> pushing is safe
-                                        (rg, ds) -> List.of(new DataStateUpdate(intention, FASTER), new DataStateUpdate(my_move,0), new DataStateUpdate(my_lane,0), new DataStateUpdate(my_timer, TIMER)),
+                        Controller.doTick(registry.reference("Moving_right")), // case timer not expired: no action, lane crossing will go on
+                        Controller.ifThenElse( // case timer expired ==> lane crossing terminated, 2 cases
+                                (rg,ds) -> ds.get(my_position) == AHEAD || ds.get(dist) > ds.get(safety_gap),
+                                Controller.doAction( // case CV AHEAD of UV OR distance > RSS gap ==> pushing is safe
+                                        (rg, ds) -> List.of(new DataStateUpdate(intention, FASTER), new DataStateUpdate(my_move,GO_STRAIGHT), new DataStateUpdate(my_lane,RIGHT), new DataStateUpdate(my_timer, TIMER)),
                                         registry.reference("Idling")
                                 ),
-                                Controller.ifThenElse( // case I'm behind AND distance <= safety gap
+                                Controller.ifThenElse( // case CV BEHIND of UV AND distance <= RSS gap
                                         (rg,ds) -> ds.get(dist) == ds.get(safety_gap),
-                                        Controller.doAction( // case distance = safety gap ==> do nothing
-                                                (rg,ds)-> List.of(new DataStateUpdate(intention,IDLE), new DataStateUpdate(my_move,0), new DataStateUpdate(my_lane,0), new DataStateUpdate(my_timer, TIMER)),
+                                        Controller.doAction( // case distance = RSS gap ==> do nothing
+                                                (rg,ds)-> List.of(new DataStateUpdate(intention,IDLE), new DataStateUpdate(my_move,GO_STRAIGHT), new DataStateUpdate(my_lane,RIGHT), new DataStateUpdate(my_timer, TIMER)),
                                                 registry.reference("Idling")
                                         ),
-                                        Controller.doAction(// if distance < safety gap ==> slow down
-                                                (rg,ds)-> List.of(new DataStateUpdate(intention,SLOWER), new DataStateUpdate(my_move,0), new DataStateUpdate(my_lane,0), new DataStateUpdate(my_timer, TIMER)),
+                                        Controller.doAction(// if distance < RSS gap ==> slow down
+                                                (rg,ds)-> List.of(new DataStateUpdate(intention,SLOWER), new DataStateUpdate(my_move,GO_STRAIGHT), new DataStateUpdate(my_lane,RIGHT), new DataStateUpdate(my_timer, TIMER)),
                                                 registry.reference("Idling")
                                         )
                                 )
@@ -596,15 +599,15 @@ public class AutonomousDriving {
         registry.set("Moving_left", // agent Moving_left manages the change from the RIGHT to the LEFT lane
                 Controller.ifThenElse(
                         DataState.greaterThan(my_timer, 0),
-                        Controller.doTick(registry.reference("Moving_left")), // case timer not expired yet: no decision to take, lane crossing will go on
-                        Controller.ifThenElse( // case timer expired
-                                DataState.equalsTo(other_lane, 0).and(DataState.equalsTo(my_position,-1)),
-                                Controller.doAction( // case other vehicle on the RIGHT lane: pushing is safe
-                                        (rg, ds) -> List.of(new DataStateUpdate(intention, FASTER), new DataStateUpdate(my_move,0), new DataStateUpdate(my_lane,1), new DataStateUpdate(my_timer, TIMER)),
+                        Controller.doTick(registry.reference("Moving_left")), // case timer not expired no action, lane crossing will go on
+                        Controller.ifThenElse( // case timer expired ==> lane cross terminated, 2 cases: UV on the LEFT or RIGHT lane
+                                DataState.equalsTo(other_lane, RIGHT).and(DataState.equalsTo(my_position,BEHIND)),
+                                Controller.doAction( // case UV on the RIGHT lane: pushing is safe
+                                        (rg, ds) -> List.of(new DataStateUpdate(intention, FASTER), new DataStateUpdate(my_move,GO_STRAIGHT), new DataStateUpdate(my_lane,LEFT), new DataStateUpdate(my_timer, TIMER)),
                                         registry.reference("Idling")
                                 ),
-                                Controller.doAction( // case other vehicle on the LEFT lane: slow down is safe
-                                        (rg, ds) -> List.of(new DataStateUpdate(intention, SLOWER), new DataStateUpdate(my_move,0), new DataStateUpdate(my_lane,1), new DataStateUpdate(my_timer, TIMER)),
+                                Controller.doAction( // case UV on the LEFT lane: slow down is safe
+                                        (rg, ds) -> List.of(new DataStateUpdate(intention, SLOWER), new DataStateUpdate(my_move,GO_STRAIGHT), new DataStateUpdate(my_lane,LEFT), new DataStateUpdate(my_timer, TIMER)),
                                         registry.reference("Idling")
                                 )
                         )
@@ -671,7 +674,7 @@ public class AutonomousDriving {
                 if ((state.get(dist) > state.get(safety_gap) || state.get(my_position)==-1)){
                     //  case distance > safety gap OR UC ahead ==> UC moves to RIGHT lane
                     other_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET;
-                    other_new_move = LANE_RIGHT;
+                    other_new_move = GO_RIGHT;
                 } else {  // XXXXXXXXXXXXXXX
                     if (state.get(dist)>state.get(safety_gap)){
                             // case distance > safety gap AND UC behind ==> everything is safe
@@ -684,8 +687,8 @@ public class AutonomousDriving {
                             if (token >= 0.20) {
                                   // UC moves to RIGHT lane with probability 40%, unless UC was moving to he LEFT
                                 other_new_acc = rg.nextDouble() * (2 * IDLE_OFFSET) - IDLE_OFFSET;
-                                if (state.get(other_move)!=LANE_LEFT){
-                                    other_new_move = LANE_RIGHT;
+                                if (state.get(other_move)!=GO_LEFT){
+                                    other_new_move = GO_RIGHT;
                                 } else {
                                     other_new_move = 0.0;
                                 }
@@ -715,8 +718,8 @@ public class AutonomousDriving {
                             other_new_move = 0.0;
                         } else { // UC moves to the LEFT lane, unless it was moving to the RIGHT, with probability 20%
                             other_new_acc = rg.nextDouble() * (2 * IDLE_OFFSET) - IDLE_OFFSET;
-                            if (state.get(other_move)!=LANE_RIGHT){
-                                other_new_move = LANE_LEFT;
+                            if (state.get(other_move)!=GO_RIGHT){
+                                other_new_move = GO_LEFT;
                             } else {
                                 other_new_move = 0.0;
                             }
@@ -726,7 +729,7 @@ public class AutonomousDriving {
                          // ==> UC moves to the LEFT lane
                     if (state.get(dist)>state.get(safety_gap)*0.8 && state.get(my_position)==1 && state.get(my_lane)==0) {
                         other_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET;
-                        other_new_move = LANE_LEFT;
+                        other_new_move = GO_LEFT;
                     } else { // otherwise, if UC is behind it brakes, whereas if it is ahead it pushes
                         other_new_move = 0.0;
                         if (state.get(my_position)==1) {
@@ -740,8 +743,8 @@ public class AutonomousDriving {
         } else { // case timer of UC not expired
             other_new_timer = state.get(other_timer)-1;
             other_new_acc = state.get(other_acc);
-            if ((state.get(other_y) >= 6 && state.get(other_move)==LANE_LEFT) ||
-                    (state.get(other_y) <= 2 && state.get(other_move)==LANE_RIGHT)) {
+            if ((state.get(other_y) >= 6 && state.get(other_move)==GO_LEFT) ||
+                    (state.get(other_y) <= 2 && state.get(other_move)==GO_RIGHT)) {
                 other_new_move = 0;
             } else {
                 other_new_move = state.get(other_move);
@@ -820,9 +823,9 @@ public class AutonomousDriving {
             double other_new_move;
             if (token > 0.4) {
                 if (state.get(other_lane) == 0){
-                    other_new_move = LANE_LEFT;
+                    other_new_move = GO_LEFT;
                 } else {
-                    other_new_move = LANE_RIGHT;
+                    other_new_move = GO_RIGHT;
                 }
                 double other_new_speed;
                 double other_new_acc = rg.nextDouble() * (2*IDLE_OFFSET) - IDLE_OFFSET;
