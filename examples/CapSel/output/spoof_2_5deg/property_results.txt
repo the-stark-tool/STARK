@@ -1,0 +1,6 @@
+condition=spoof_2_5deg
+SAF=false
+R2L=true
+KIR=true
+SO=true
+DD=false

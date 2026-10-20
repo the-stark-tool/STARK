@@ -1,0 +1,2 @@
+attack,attacker_bearing_degrees,success_probability,window_steps,source_curve,interpolation_method
+REMOVAL,17.500,0.590993,3,PLA-LiDAR_Figure_18a_Nai-Hide_proxy_vertical_0deg,PCHIP_Fritsch-Butland

@@ -1,0 +1,6 @@
+condition=removal_17_5deg
+SAF=false
+R2L=true
+KIR=true
+SO=false
+DD=false
