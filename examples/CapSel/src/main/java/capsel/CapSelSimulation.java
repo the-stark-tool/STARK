@@ -111,7 +111,7 @@ public final class CapSelSimulation {
     private static final double IDLE_OFFSET = 0.2;
 
     private static final double EGO_INITIAL_SPEED = 15.0;
-    private static final double LEAD_INITIAL_X = 70.0;
+    private static final double LEAD_INITIAL_X = 150.0;
     private static final double LEAD_SPEED = 10.0;
     static final double ONCOMING_SPEED = 18.0;
     static final int ONCOMING_COUNT = 4;
