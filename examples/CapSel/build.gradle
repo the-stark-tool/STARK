@@ -1,0 +1,15 @@
+plugins {
+    id 'stark.java-application-conventions'
+}
+
+dependencies {
+    implementation project(':lib')
+}
+
+application {
+    mainClass = 'capsel.Main'
+}
+
+tasks.named('run') {
+    workingDir rootProject.projectDir
+}
