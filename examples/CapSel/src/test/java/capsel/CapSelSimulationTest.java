@@ -1,6 +1,7 @@
 package capsel;
 
 import org.junit.jupiter.api.Test;
+import stark.DefaultRandomGenerator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -73,6 +74,25 @@ class CapSelSimulationTest {
         double requiredDistance = CapSelSimulation.requiredOvertakeDistance(15.0);
         assertTrue(requiredDistance < CapSelSimulation.SENSOR_RANGE);
         assertTrue(requiredDistance > 0.0);
+    }
+
+    @Test
+    void oncomingSpawnIntervalsStayWithinTheConfiguredSafeGap() {
+        double minimumGap = CapSelSimulation.MIN_ONCOMING_SPAWN_INTERVAL
+                * CapSelSimulation.ONCOMING_SPEED;
+        double maximumGap = CapSelSimulation.MAX_ONCOMING_SPAWN_INTERVAL
+                * CapSelSimulation.ONCOMING_SPEED;
+
+        assertTrue(minimumGap >= CapSelSimulation.ONCOMING_SAFE_FOLLOWING_DISTANCE);
+        assertTrue(maximumGap <= 2.0 * CapSelSimulation.ONCOMING_SAFE_FOLLOWING_DISTANCE);
+
+        DefaultRandomGenerator random = new DefaultRandomGenerator();
+        random.setSeed(10L);
+        for (int i = 0; i < 1000; i++) {
+            int interval = CapSelSimulation.sampleOncomingSpawnInterval(random);
+            assertTrue(interval >= CapSelSimulation.MIN_ONCOMING_SPAWN_INTERVAL);
+            assertTrue(interval <= CapSelSimulation.MAX_ONCOMING_SPAWN_INTERVAL);
+        }
     }
 
     @Test

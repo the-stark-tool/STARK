@@ -30,4 +30,7 @@ build
 # Ignore csv file
 *.csv
 
+# Generated CapSel simulation results
+/examples/CapSel/output/
+
 .idea

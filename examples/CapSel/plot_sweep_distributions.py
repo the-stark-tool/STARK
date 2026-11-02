@@ -90,6 +90,15 @@ def summarize_runs(path: Path) -> tuple[pd.DataFrame, float]:
 
 def read_scenario_start(path: Path) -> dict[str, float]:
     """Read the initial positions and speeds for one result folder."""
+    header = pd.read_csv(path, nrows=0).columns
+    oncoming_columns = sorted(
+        (
+            column
+            for column in header
+            if column.startswith("oncoming_") and column.endswith("_x")
+        ),
+        key=lambda column: int(column.split("_")[1]),
+    )
     columns = [
         "ego_x",
         "ego_y",
@@ -97,11 +106,10 @@ def read_scenario_start(path: Path) -> dict[str, float]:
         "lead_x",
         "lead_y",
         "lead_speed",
-        "oncoming_1_x",
-        "oncoming_2_x",
-        "oncoming_3_x",
-        "oncoming_4_x",
+        *oncoming_columns,
     ]
+    if "oncoming_spawn_timer" in header:
+        columns.append("oncoming_spawn_timer")
     first_row = pd.read_csv(path, usecols=columns, nrows=1).iloc[0]
     return {f"initial_{column}": float(first_row[column]) for column in columns}
 

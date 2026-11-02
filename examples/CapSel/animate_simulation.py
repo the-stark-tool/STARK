@@ -7,6 +7,7 @@ Usage:
 """
 
 import csv
+import math
 import os
 import sys
 import time
@@ -18,6 +19,8 @@ ROAD_WIDTH = 100
 TOTAL_DURATION = 15.0
 LEFT_LANE_FRAME_LINE = 5
 OBJECT_SPOOFED = 3
+SENSOR_RANGE = 450.0
+LEFT_LANE_Y = 6.0
 
 CLEAR_SCREEN = "\033[2J"
 CURSOR_HOME = "\033[H"
@@ -104,6 +107,35 @@ def spoofed_vehicle_world_x(row: dict) -> float | None:
     return None
 
 
+def oncoming_vehicle_numbers(row: dict) -> list[int]:
+    """Return all numbered oncoming-vehicle columns in one simulation row."""
+    numbers = []
+    for key in row:
+        if not key.startswith("oncoming_") or not key.endswith("_x"):
+            continue
+        number_text = key[len("oncoming_") : -len("_x")]
+        if number_text.isdigit():
+            numbers.append(int(number_text))
+    return sorted(numbers)
+
+
+def removed_vehicle_number(row: dict) -> int | None:
+    """Return the physical oncoming vehicle hidden by a removal attack."""
+    if row["attack"] != "REMOVAL" or row["attack_success"] <= 0.5:
+        return None
+
+    candidates = []
+    for number in oncoming_vehicle_numbers(row):
+        vehicle_x = row[f"oncoming_{number}_x"]
+        if vehicle_x < row["ego_x"]:
+            continue
+        distance = math.hypot(vehicle_x - row["ego_x"], LEFT_LANE_Y - row["ego_y"])
+        if distance <= SENSOR_RANGE:
+            candidates.append((distance, number))
+
+    return min(candidates)[1] if candidates else None
+
+
 def render_frame(
     row: dict,
     total_steps: int,
@@ -136,8 +168,15 @@ def render_frame(
         else:
             lane[column] = "X"
 
-    for number in range(1, 5):
-        put_car(left_lane, row[f"oncoming_{number}_x"], "<")
+    removed_number = removed_vehicle_number(row)
+    for number in oncoming_vehicle_numbers(row):
+        marker = "R" if number == removed_number else "<"
+        put_car(
+            left_lane,
+            row[f"oncoming_{number}_x"],
+            marker,
+            replace_existing=marker == "R",
+        )
 
     spoofed_world_x = spoofed_vehicle_world_x(row)
     if spoofed_world_x is not None:
@@ -158,7 +197,11 @@ def render_frame(
     divider = "".join("-" if index % 4 < 2 else " " for index in range(ROAD_WIDTH))
     edge = "=" * ROAD_WIDTH
     left_lane_plain = "".join(left_lane)
-    left_lane_colored = left_lane_plain.replace("S", f"{YELLOW}S{RESET}")
+    left_lane_colored = (
+        left_lane_plain
+        .replace("S", f"{YELLOW}S{RESET}")
+        .replace("R", f"{YELLOW}R{RESET}")
+    )
 
     crashed = row["crash"] > 0.5
     completed = row["overtake_complete"] > 0.5
@@ -213,7 +256,7 @@ def render_frame(
         "+" + "=" * (ROAD_WIDTH + 2) + "+",
         _padded_line(
             f"Fixed world view: {view_left:.0f} to {view_right:.0f}   "
-            "E=ego  L=lead  <=real oncoming  S=spoofed LiDAR vehicle"
+            "E=ego  L=lead  <=real oncoming  S=spoofed  R=removed from LiDAR"
         ),
         "| " + edge + " |",
         "| " + left_lane_colored + " |",

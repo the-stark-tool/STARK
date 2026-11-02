@@ -90,10 +90,16 @@ def render_image(row: dict, total_steps: int, view_left: float, view_right: floa
             font=font,
         )
         if index == LEFT_LANE_FRAME_LINE:
-            marker_index = line.find("S")
-            if marker_index >= 0:
-                marker_x = line_x + font.getlength(line[:marker_index])
-                draw.text((marker_x, line_y), "S", fill=SPOOF_COLOR, font=font)
+            for marker in ("S", "R"):
+                marker_index = line.find(marker)
+                if marker_index >= 0:
+                    marker_x = line_x + font.getlength(line[:marker_index])
+                    draw.text(
+                        (marker_x, line_y),
+                        marker,
+                        fill=SPOOF_COLOR,
+                        font=font,
+                    )
     return image
 
 

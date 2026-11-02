@@ -111,11 +111,9 @@ public final class CapSelSimulation {
     private static final double IDLE_OFFSET = 0.2;
 
     private static final double EGO_INITIAL_SPEED = 15.0;
-    private static final double LEAD_INITIAL_X = 150.0;
+    private static final double LEAD_INITIAL_X = 500.0;
     private static final double LEAD_SPEED = 10.0;
     static final double ONCOMING_SPEED = 18.0;
-    static final int ONCOMING_COUNT = 4;
-    private static final double[] ONCOMING_INITIAL_X = { 280.0, 1180.0, 2080.0, 2980.0 };
 
     // Controller limits
     private static final double OVERTAKE_TRIGGER_DISTANCE = 90.0;
@@ -124,6 +122,22 @@ public final class CapSelSimulation {
     private static final int ESTIMATED_OVERTAKE_STEPS = 8;
     private static final double OVERTAKE_MARGIN = 40.0;
     private static final double BORDERLINE_MARGIN = 1.0;
+
+    // Oncoming traffic is generated from a randomized time headway. The baseline
+    // includes both the RSS following distance and the controller's overtaking
+    // clearance, so the denser stream still contains usable passing windows.
+    static final double ONCOMING_SAFE_FOLLOWING_DISTANCE = Math.max(
+            calculateRssSafetyDistance(ONCOMING_SPEED, ONCOMING_SPEED),
+            requiredOvertakeDistance(DESIRED_SPEED));
+    static final int MIN_ONCOMING_SPAWN_INTERVAL = (int) Math.ceil(
+            ONCOMING_SAFE_FOLLOWING_DISTANCE / ONCOMING_SPEED);
+    static final int MAX_ONCOMING_SPAWN_INTERVAL = (int) Math.floor(
+            2.0 * ONCOMING_SAFE_FOLLOWING_DISTANCE / ONCOMING_SPEED);
+    private static final double MIN_ONCOMING_GAP =
+            MIN_ONCOMING_SPAWN_INTERVAL * ONCOMING_SPEED;
+    static final int ONCOMING_COUNT = (int) Math.ceil(
+            (ROAD_END - ROAD_START) / MIN_ONCOMING_GAP) + 2;
+    private static final double INACTIVE_ONCOMING_X = -1_000_000.0;
 
     // LiDAR values
     static final double OBJECT_NONE = 0.0;
@@ -182,33 +196,39 @@ public final class CapSelSimulation {
     private static final int leadY = 10;
     private static final int leadSpeed = 11;
 
-    private static final int oncomingX0 = 12;
-    private static final int oncomingX1 = 13;
-    private static final int oncomingX2 = 14;
-    private static final int oncomingX3 = 15;
-    private static final int[] oncomingX = { oncomingX0, oncomingX1, oncomingX2, oncomingX3 };
+    private static final int ONCOMING_X_START = 12;
+    private static final int[] oncomingX = buildOncomingIndexes();
+    private static final int oncomingSpawnTimer = ONCOMING_X_START + ONCOMING_COUNT;
 
-    private static final int lidarLeftType = 16;
-    private static final int lidarLeftDistance = 17;
-    private static final int lidarCentreType = 18;
-    private static final int lidarCentreDistance = 19;
-    private static final int lidarRightType = 20;
-    private static final int lidarRightDistance = 21;
+    private static final int lidarLeftType = oncomingSpawnTimer + 1;
+    private static final int lidarLeftDistance = lidarLeftType + 1;
+    private static final int lidarCentreType = lidarLeftDistance + 1;
+    private static final int lidarCentreDistance = lidarCentreType + 1;
+    private static final int lidarRightType = lidarCentreDistance + 1;
+    private static final int lidarRightDistance = lidarRightType + 1;
 
-    private static final int safetyGap = 22;
-    private static final int oncomingTtc = 23;
-    private static final int crash = 24;
-    private static final int crashObject = 25;
-    private static final int attackSuccess = 26;
-    private static final int attackWindowRemaining = 27;
-    private static final int attackerBearing = 28;
-    private static final int attackSuccessProbability = 29;
-    private static final int controllerMode = 30;
-    private static final int overtakeComplete = 31;
-    private static final int abortCount = 32;
-    private static final int NUMBER_OF_VARIABLES = 33;
+    private static final int safetyGap = lidarRightDistance + 1;
+    private static final int oncomingTtc = safetyGap + 1;
+    private static final int crash = oncomingTtc + 1;
+    private static final int crashObject = crash + 1;
+    private static final int attackSuccess = crashObject + 1;
+    private static final int attackWindowRemaining = attackSuccess + 1;
+    private static final int attackerBearing = attackWindowRemaining + 1;
+    private static final int attackSuccessProbability = attackerBearing + 1;
+    private static final int controllerMode = attackSuccessProbability + 1;
+    private static final int overtakeComplete = controllerMode + 1;
+    private static final int abortCount = overtakeComplete + 1;
+    private static final int NUMBER_OF_VARIABLES = abortCount + 1;
 
     private final RunRequest request;
+
+    private static int[] buildOncomingIndexes() {
+        int[] indexes = new int[ONCOMING_COUNT];
+        for (int i = 0; i < indexes.length; i++) {
+            indexes[i] = ONCOMING_X_START + i;
+        }
+        return indexes;
+    }
 
     public CapSelSimulation(RunRequest request) {
         this.request = request;
@@ -234,7 +254,7 @@ public final class CapSelSimulation {
         DefaultRandomGenerator random = new DefaultRandomGenerator();
         random.setSeed(RANDOM_SEED);
 
-        DataState initialState = getInitialState();
+        DataState initialState = getInitialState(random);
         ControlledSystem system = new ControlledSystem(
                 getController(),
                 (rg, state) -> state.apply(getEnvironmentUpdates(rg, state)),
@@ -253,6 +273,12 @@ public final class CapSelSimulation {
                 request.attackType, bearing);
         System.out.printf(Locale.US, "Success probability: %.3f%n",
                 successProbability(request.attackType, bearing));
+        System.out.printf(Locale.US,
+                "Oncoming spawn interval: %d-%d steps (%.1f-%.1f distance units)%n",
+                MIN_ONCOMING_SPAWN_INTERVAL,
+                MAX_ONCOMING_SPAWN_INTERVAL,
+                MIN_ONCOMING_SPAWN_INTERVAL * ONCOMING_SPEED,
+                MAX_ONCOMING_SPAWN_INTERVAL * ONCOMING_SPEED);
 
         writeAttackSummary(outputDirectory, bearing);
         writeSimulationToCsv(random, labels, expressions, attackFactory.get(), system,
@@ -276,9 +302,10 @@ public final class CapSelSimulation {
         }
     }
 
-    private DataState getInitialState() {
+    private DataState getInitialState(RandomGenerator random) {
         DataState state = new DataState(NUMBER_OF_VARIABLES);
         List<DataStateUpdate> values = new LinkedList<>();
+        double[] initialOncomingX = buildInitialOncomingPositions(random);
 
         values.add(new DataStateUpdate(egoX, 0.0));
         values.add(new DataStateUpdate(egoY, RIGHT_LANE_Y));
@@ -295,8 +322,10 @@ public final class CapSelSimulation {
         values.add(new DataStateUpdate(leadSpeed, LEAD_SPEED));
 
         for (int i = 0; i < ONCOMING_COUNT; i++) {
-            values.add(new DataStateUpdate(oncomingX[i], ONCOMING_INITIAL_X[i]));
+            values.add(new DataStateUpdate(oncomingX[i], initialOncomingX[i]));
         }
+        values.add(new DataStateUpdate(oncomingSpawnTimer,
+                sampleOncomingSpawnInterval(random)));
 
         values.add(new DataStateUpdate(lidarLeftType, OBJECT_NONE));
         values.add(new DataStateUpdate(lidarLeftDistance, SENSOR_RANGE));
@@ -322,7 +351,28 @@ public final class CapSelSimulation {
                 initialized.get(egoX),
                 initialized.get(egoY),
                 initialized.get(leadX),
-                ONCOMING_INITIAL_X));
+                initialOncomingX));
+    }
+
+    private static double[] buildInitialOncomingPositions(RandomGenerator random) {
+        double[] positions = new double[ONCOMING_COUNT];
+        for (int i = 0; i < positions.length; i++) {
+            positions[i] = INACTIVE_ONCOMING_X;
+        }
+
+        double position = ROAD_END;
+        for (int i = 0; i < positions.length && position >= ROAD_START; i++) {
+            positions[i] = position;
+            position -= ONCOMING_SPEED * sampleOncomingSpawnInterval(random);
+        }
+        return positions;
+    }
+
+    static int sampleOncomingSpawnInterval(RandomGenerator random) {
+        int intervalCount = MAX_ONCOMING_SPAWN_INTERVAL
+                - MIN_ONCOMING_SPAWN_INTERVAL + 1;
+        return MIN_ONCOMING_SPAWN_INTERVAL
+                + (int) Math.floor(random.nextDouble() * intervalCount);
     }
 
     /**
@@ -451,10 +501,34 @@ public final class CapSelSimulation {
 
         double newLeadX = state.get(leadX) + state.get(leadSpeed);
         double[] newOncomingX = new double[ONCOMING_COUNT];
+        int availableSlot = -1;
         for (int i = 0; i < ONCOMING_COUNT; i++) {
-            newOncomingX[i] = state.get(oncomingX[i]) - ONCOMING_SPEED;
+            double currentOncomingX = state.get(oncomingX[i]);
+            if (currentOncomingX == INACTIVE_ONCOMING_X) {
+                newOncomingX[i] = INACTIVE_ONCOMING_X;
+                if (availableSlot < 0) {
+                    availableSlot = i;
+                }
+                continue;
+            }
+
+            newOncomingX[i] = currentOncomingX - ONCOMING_SPEED;
             if (newOncomingX[i] < ROAD_START - 50.0) {
-                newOncomingX[i] += ROAD_END;
+                newOncomingX[i] = INACTIVE_ONCOMING_X;
+                if (availableSlot < 0) {
+                    availableSlot = i;
+                }
+            }
+        }
+
+        double newSpawnTimer = state.get(oncomingSpawnTimer) - 1.0;
+        if (newSpawnTimer <= 0.0) {
+            if (availableSlot >= 0) {
+                newOncomingX[availableSlot] = ROAD_END;
+                newSpawnTimer = sampleOncomingSpawnInterval(random);
+            } else {
+                // The pool is deliberately oversized, but retry next step if it is full.
+                newSpawnTimer = 1.0;
             }
         }
 
@@ -497,6 +571,7 @@ public final class CapSelSimulation {
         for (int i = 0; i < ONCOMING_COUNT; i++) {
             updates.add(new DataStateUpdate(oncomingX[i], newOncomingX[i]));
         }
+        updates.add(new DataStateUpdate(oncomingSpawnTimer, newSpawnTimer));
         updates.add(new DataStateUpdate(safetyGap, newSafetyGap));
         updates.add(new DataStateUpdate(oncomingTtc, newTtc));
         updates.add(new DataStateUpdate(crash, newCrash));
@@ -938,6 +1013,7 @@ public final class CapSelSimulation {
         for (int i = 0; i < ONCOMING_COUNT; i++) {
             labels.add("oncoming_" + (i + 1) + "_x");
         }
+        labels.add("oncoming_spawn_timer");
         labels.add("lidar_left_type");
         labels.add("lidar_left_distance");
         labels.add("lidar_centre_type");
@@ -967,6 +1043,7 @@ public final class CapSelSimulation {
         for (int index : oncomingX) {
             expressions.add(state -> state.get(index));
         }
+        expressions.add(state -> state.get(oncomingSpawnTimer));
         expressions.add(state -> state.get(lidarLeftType));
         expressions.add(state -> state.get(lidarLeftDistance));
         expressions.add(state -> state.get(lidarCentreType));
