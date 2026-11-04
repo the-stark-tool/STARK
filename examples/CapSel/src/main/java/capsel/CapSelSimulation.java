@@ -105,6 +105,7 @@ public final class CapSelSimulation {
     private static final double DESIRED_SPEED = 18.0;
     private static final double MAX_ACCELERATION = 5.0;
     private static final double FAST_OFFSET = 2.0;
+    private static final double MIN_PASS_ACCELERATION = MAX_ACCELERATION - FAST_OFFSET;
     private static final double MAX_BRAKE = 5.0;
     private static final double MIN_BRAKE = 3.0;
     private static final double SLOW_OFFSET = 2.0;
@@ -254,11 +255,7 @@ public final class CapSelSimulation {
         DefaultRandomGenerator random = new DefaultRandomGenerator();
         random.setSeed(RANDOM_SEED);
 
-        DataState initialState = getInitialState(random);
-        ControlledSystem system = new ControlledSystem(
-                getController(),
-                (rg, state) -> state.apply(getEnvironmentUpdates(rg, state)),
-                initialState);
+        ControlledSystem system = createSystem(random);
 
         EvolutionSequence nominalSequence = new EvolutionSequence(random, rg -> system, evolutionSize);
         Supplier<Perturbation> attackFactory = () -> getAttack(bearing);
@@ -300,6 +297,14 @@ public final class CapSelSimulation {
             throw new IllegalArgumentException(
                     "The attacker bearing must be in the range 0 to 20 degrees.");
         }
+    }
+
+    ControlledSystem createSystem(RandomGenerator random) {
+        DataState initialState = getInitialState(random);
+        return new ControlledSystem(
+                getController(),
+                (rg, state) -> state.apply(getEnvironmentUpdates(rg, state)),
+                initialState);
     }
 
     private DataState getInitialState(RandomGenerator random) {
@@ -390,20 +395,19 @@ public final class CapSelSimulation {
     private static List<DataStateUpdate> getControllerUpdates(DataState state) {
         List<DataStateUpdate> updates = new LinkedList<>();
 
-        if (mustAbortOvertake(state)) {
-            // Keep the forward speed while the ego car moves out of the oncoming lane.
-            updates.add(new DataStateUpdate(intention, IDLE));
-            updates.add(new DataStateUpdate(egoMove, LANE_RIGHT));
-            updates.add(new DataStateUpdate(egoTimer, LANE_CHANGE_STEPS));
-            if (state.get(controllerMode) != MODE_ABORT) {
-                updates.add(new DataStateUpdate(abortCount, state.get(abortCount) + 1.0));
-            }
-            updates.add(new DataStateUpdate(controllerMode, MODE_ABORT));
+        // Match the two-lane controller: an action runs for its complete timer
+        // interval before the controller selects another action.
+        if (state.get(egoTimer) > 0.0) {
             return updates;
         }
 
-        if (state.get(egoTimer) > 0.0) {
-            return updates;
+        if (state.get(controllerMode) == MODE_ABORT
+                && state.get(egoLane) < 0.5) {
+            return getCompletedAbortUpdates(state);
+        }
+
+        if (mustAbortOvertake(state)) {
+            return getAbortUpdates(state);
         }
 
         if (state.get(egoLane) < 0.5) {
@@ -411,7 +415,10 @@ public final class CapSelSimulation {
                     && state.get(lidarCentreDistance) <= OVERTAKE_TRIGGER_DISTANCE;
 
             if (leadNeedsPass && isLeftLaneClear(state)) {
-                updates.add(new DataStateUpdate(intention, IDLE));
+                // Begin accelerating as soon as the pass starts. The clearance
+                // projection below uses the minimum acceleration produced by
+                // this intention, so the entry decision remains conservative.
+                updates.add(new DataStateUpdate(intention, FASTER));
                 updates.add(new DataStateUpdate(egoMove, LANE_LEFT));
                 updates.add(new DataStateUpdate(egoTimer, LANE_CHANGE_STEPS));
                 updates.add(new DataStateUpdate(controllerMode, MODE_MOVE_LEFT));
@@ -445,6 +452,70 @@ public final class CapSelSimulation {
         return updates;
     }
 
+    private static List<DataStateUpdate> getAbortUpdates(DataState state) {
+        List<DataStateUpdate> updates = new LinkedList<>();
+        double[] decision = twoLaneAbortDecision(
+                state.get(egoAheadOfLead) > 0.5,
+                distanceToLead(state),
+                state.get(safetyGap));
+
+        updates.add(new DataStateUpdate(intention, decision[0]));
+        updates.add(new DataStateUpdate(egoMove, decision[1]));
+        updates.add(new DataStateUpdate(egoTimer, LANE_CHANGE_STEPS));
+        updates.add(new DataStateUpdate(controllerMode, MODE_ABORT));
+        if (state.get(controllerMode) != MODE_ABORT) {
+            updates.add(new DataStateUpdate(abortCount, state.get(abortCount) + 1.0));
+        }
+        return updates;
+    }
+
+    /**
+     * The two-lane controller enters a timed longitudinal action after a right
+     * lane change instead of immediately selecting another lane change.
+     */
+    private static List<DataStateUpdate> getCompletedAbortUpdates(DataState state) {
+        List<DataStateUpdate> updates = new LinkedList<>();
+        double leadDistance = distanceToLead(state);
+        double nextIntention;
+        if (state.get(egoAheadOfLead) > 0.5
+                || leadDistance > state.get(safetyGap)) {
+            nextIntention = FASTER;
+        } else if (leadDistance == state.get(safetyGap)) {
+            nextIntention = IDLE;
+        } else {
+            nextIntention = SLOWER;
+        }
+        updates.add(new DataStateUpdate(intention, nextIntention));
+        updates.add(new DataStateUpdate(egoMove, 0.0));
+        updates.add(new DataStateUpdate(egoTimer, LANE_CHANGE_STEPS));
+        updates.add(new DataStateUpdate(
+                controllerMode,
+                state.get(egoAheadOfLead) > 0.5 ? MODE_CRUISE : MODE_FOLLOW));
+        return updates;
+    }
+
+    /**
+     * Literal CapSel mapping of the two-lane controller's left-lane branch
+     * when the other vehicle occupies that lane. Index 0 is the longitudinal
+     * intention and index 1 is the lateral movement.
+     */
+    static double[] twoLaneAbortDecision(boolean egoAhead,
+            double leadDistance, double safetyDistance) {
+        if (leadDistance > safetyDistance || egoAhead) {
+            return new double[] { IDLE, LANE_RIGHT };
+        }
+        if (leadDistance == safetyDistance) {
+            return new double[] { IDLE, 0.0 };
+        }
+        return new double[] { SLOWER, 0.0 };
+    }
+
+    private static double distanceToLead(DataState state) {
+        return Math.hypot(
+                state.get(leadX) - state.get(egoX),
+                RIGHT_LANE_Y - state.get(egoY));
+    }
+
     private static boolean mustAbortOvertake(DataState state) {
         if (state.get(egoY) <= RIGHT_LANE_Y + 0.1) {
             return false;
@@ -461,31 +532,76 @@ public final class CapSelSimulation {
     }
 
     private static boolean isLeftLaneClear(DataState state) {
-        if (state.get(lidarLeftType) == OBJECT_NONE) {
-            return true;
-        }
-        return state.get(lidarLeftDistance) >= requiredOvertakeDistance(state.get(egoSpeed));
+        double requiredDistance = requiredOvertakeDistance(
+                state.get(egoSpeed),
+                state.get(leadSpeed),
+                state.get(lidarCentreDistance));
+        return state.get(lidarLeftType) == OBJECT_NONE
+                || state.get(lidarLeftDistance) >= requiredDistance;
     }
 
     static double requiredOvertakeDistance(double currentEgoSpeed) {
-        return (currentEgoSpeed + ONCOMING_SPEED) * ESTIMATED_OVERTAKE_STEPS + OVERTAKE_MARGIN;
+        return requiredOvertakeDistance(
+                currentEgoSpeed,
+                LEAD_SPEED,
+                OVERTAKE_TRIGGER_DISTANCE);
+    }
+
+    /**
+     * Projects the complete pass using the ego car's guaranteed pass
+     * acceleration, the lead car's speed, and the oncoming closing speed.
+     * The projection ends only after the ego has gained enough longitudinal
+     * distance to clear the lead car and has completed its return lane change.
+     */
+    static double requiredOvertakeDistance(double currentEgoSpeed,
+            double currentLeadSpeed, double currentLeadDistance) {
+        double projectedEgoSpeed = clamp(currentEgoSpeed, 0.0, MAX_SPEED);
+        double relativeDistanceRemaining = Math.max(0.0, currentLeadDistance)
+                + RETURN_CLEARANCE;
+        double oncomingClosingDistance = 0.0;
+        int projectedSteps = 0;
+
+        while (relativeDistanceRemaining > 0.0 && projectedSteps < HORIZON) {
+            double nextEgoSpeed = Math.min(
+                    MAX_SPEED,
+                    projectedEgoSpeed + MIN_PASS_ACCELERATION);
+            double egoTravel = 0.5 * (projectedEgoSpeed + nextEgoSpeed);
+
+            relativeDistanceRemaining -= egoTravel - currentLeadSpeed;
+            oncomingClosingDistance += egoTravel + ONCOMING_SPEED;
+            projectedEgoSpeed = nextEgoSpeed;
+            projectedSteps++;
+        }
+
+        if (relativeDistanceRemaining > 0.0) {
+            return Double.POSITIVE_INFINITY;
+        }
+
+        // The ego remains exposed to oncoming traffic while moving back right.
+        oncomingClosingDistance += LANE_CHANGE_STEPS
+                * (projectedEgoSpeed + ONCOMING_SPEED);
+        return oncomingClosingDistance + OVERTAKE_MARGIN;
     }
 
     private static List<DataStateUpdate> getEnvironmentUpdates(RandomGenerator random, DataState state) {
         List<DataStateUpdate> updates = new LinkedList<>();
 
-        double newAcceleration;
+        double requestedAcceleration;
         if (state.get(intention) == FASTER) {
-            newAcceleration = MAX_ACCELERATION - random.nextDouble() * FAST_OFFSET;
+            requestedAcceleration = MAX_ACCELERATION - random.nextDouble() * FAST_OFFSET;
         } else if (state.get(intention) == SLOWER) {
-            newAcceleration = -Math.min(MAX_BRAKE,
+            requestedAcceleration = -Math.min(MAX_BRAKE,
                     Math.max(MIN_BRAKE, MAX_BRAKE - random.nextDouble() * SLOW_OFFSET));
         } else {
-            newAcceleration = random.nextDouble() * (2.0 * IDLE_OFFSET) - IDLE_OFFSET;
+            requestedAcceleration = random.nextDouble() * (2.0 * IDLE_OFFSET) - IDLE_OFFSET;
         }
 
-        double newEgoSpeed = clamp(state.get(egoSpeed) + newAcceleration, 0.0, MAX_SPEED);
-        double egoTravel = Math.max(0.0, state.get(egoSpeed) + newAcceleration / 2.0);
+        double newEgoSpeed = clamp(
+                state.get(egoSpeed) + requestedAcceleration,
+                0.0,
+                MAX_SPEED);
+        double newAcceleration = newEgoSpeed - state.get(egoSpeed);
+        double egoTravel = 0.5 * (state.get(egoSpeed) + newEgoSpeed);
         double newEgoX = state.get(egoX) + egoTravel;
         double newEgoY = clamp(
                 state.get(egoY) + (LANE_WIDTH / LANE_CHANGE_STEPS) * state.get(egoMove),
@@ -1002,7 +1118,7 @@ public final class CapSelSimulation {
         System.out.println("Crashes: " + crashCount + "/" + perturbationSize);
     }
 
-    private static ArrayList<String> getOutputLabels() {
+    static ArrayList<String> getOutputLabels() {
         ArrayList<String> labels = new ArrayList<>();
         labels.add("ego_x");
         labels.add("ego_y");
@@ -1032,7 +1148,7 @@ public final class CapSelSimulation {
         return labels;
     }
 
-    private static ArrayList<DataStateExpression> getOutputExpressions() {
+    static ArrayList<DataStateExpression> getOutputExpressions() {
         ArrayList<DataStateExpression> expressions = new ArrayList<>();
         expressions.add(state -> state.get(egoX));
         expressions.add(state -> state.get(egoY));

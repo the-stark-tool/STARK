@@ -72,8 +72,48 @@ class CapSelSimulationTest {
     @Test
     void spoofedCarIsInsideTheUnsafeOvertakeLimit() {
         double requiredDistance = CapSelSimulation.requiredOvertakeDistance(15.0);
-        assertTrue(requiredDistance < CapSelSimulation.SENSOR_RANGE);
-        assertTrue(requiredDistance > 0.0);
+        double spoofedDistance = Math.min(
+                CapSelSimulation.SENSOR_RANGE - 1.0,
+                requiredDistance - 1.0);
+
+        assertTrue(spoofedDistance < requiredDistance);
+        assertTrue(spoofedDistance < CapSelSimulation.SENSOR_RANGE);
+    }
+
+    @Test
+    void overtakeProjectionUsesLeadSpeedAndProjectedEgoAcceleration() {
+        double requiredAt15 = CapSelSimulation.requiredOvertakeDistance(15.0, 10.0, 90.0);
+        double requiredAt18 = CapSelSimulation.requiredOvertakeDistance(18.0, 10.0, 90.0);
+        double fasterLead = CapSelSimulation.requiredOvertakeDistance(18.0, 12.0, 90.0);
+        double closerLead = CapSelSimulation.requiredOvertakeDistance(18.0, 10.0, 70.0);
+
+        assertTrue(requiredAt18 > 450.0 && requiredAt18 < 500.0);
+        assertTrue(requiredAt18 < requiredAt15);
+        assertTrue(fasterLead > requiredAt18);
+        assertTrue(closerLead < requiredAt18);
+    }
+
+    @Test
+    void overtakeProjectionRejectsALeadCarThatCannotBePassed() {
+        double requiredDistance = CapSelSimulation.requiredOvertakeDistance(18.0, 25.0, 90.0);
+        assertEquals(Double.POSITIVE_INFINITY, requiredDistance);
+    }
+
+    @Test
+    void abortMatchesTheTwoLaneLeftLaneBranch() {
+        assertAbortDecision(false, 200.0, 100.0, 0.0, -1.0);
+        assertAbortDecision(true, 20.0, 100.0, 0.0, -1.0);
+        assertAbortDecision(false, 100.0, 100.0, 0.0, 0.0);
+        assertAbortDecision(false, 20.0, 100.0, -1.0, 0.0);
+    }
+
+    private static void assertAbortDecision(boolean egoAhead,
+            double leadDistance, double safetyDistance,
+            double expectedIntention, double expectedMove) {
+        double[] decision = CapSelSimulation.twoLaneAbortDecision(
+                egoAhead, leadDistance, safetyDistance);
+        assertEquals(expectedIntention, decision[0], TOLERANCE);
+        assertEquals(expectedMove, decision[1], TOLERANCE);
     }
 
     @Test
