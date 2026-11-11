@@ -4,10 +4,13 @@ Usage:
     python plot_sweep_distributions.py [output_root] [plot_directory]
 
 Defaults:
-    output_root    = output
-    plot_directory = output/sweep_plots
+    output_root    = output/sweeps (when present), otherwise output
+    plot_directory = <output_root>/sweep_plots
+
+All selected conditions must share the same saved nominal runs.
 """
 
+from filecmp import cmp
 from pathlib import Path
 import sys
 
@@ -57,6 +60,7 @@ def first_event_step(frame: pd.DataFrame, column: str) -> pd.Series:
 
 def summarize_runs(path: Path) -> tuple[pd.DataFrame, float]:
     """Read one run file and return one row for each run."""
+    available_columns = pd.read_csv(path, nrows=0).columns
     columns = [
         "run",
         "step",
@@ -68,6 +72,8 @@ def summarize_runs(path: Path) -> tuple[pd.DataFrame, float]:
         "overtake_complete",
         "abort_count",
     ]
+    if "attack_attempted" in available_columns:
+        columns.append("attack_attempted")
     frame = pd.read_csv(path, usecols=columns)
     grouped = frame.groupby("run")
     runs = grouped.agg(
@@ -84,7 +90,13 @@ def summarize_runs(path: Path) -> tuple[pd.DataFrame, float]:
     left_lane = frame[frame["ego_y"] >= 5.0]
     runs["minimum_left_lane_ttc"] = left_lane.groupby("run")["oncoming_ttc"].min()
 
-    observed_attack_rate = float(frame["attack_success"].mean())
+    if "attack_attempted" in frame:
+        attempts = frame[frame["attack_attempted"] > 0.5]
+        observed_attack_rate = (
+            float(attempts["attack_success"].mean()) if not attempts.empty else 0.0
+        )
+    else:
+        observed_attack_rate = float(frame["attack_success"].mean())
     return runs.reset_index(), observed_attack_rate
 
 
@@ -114,22 +126,82 @@ def read_scenario_start(path: Path) -> dict[str, float]:
     return {f"initial_{column}": float(first_row[column]) for column in columns}
 
 
-def load_sweep(output_root: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Read all spoof and removal result folders."""
-    condition_rows = []
-    run_frames = []
+def find_sweep_summaries(output_root: Path) -> list[Path]:
+    """Select the newest complete sweep for each attack below the root."""
+    batches: dict[str, dict[Path, list[tuple[Path, float]]]] = {
+        attack: {} for attack in ATTACK_STYLES
+    }
 
-    for result_directory in sorted(output_root.iterdir()):
-        if not result_directory.is_dir():
-            continue
-        summary_path = result_directory / "attack_summary.csv"
+    for summary_path in sorted(output_root.rglob("attack_summary.csv")):
+        result_directory = summary_path.parent
         attacked_path = result_directory / "runs_attacked.csv"
         nominal_path = result_directory / "runs_nominal.csv"
-        if not summary_path.exists():
-            continue
         if not attacked_path.exists() or not nominal_path.exists():
             print(f"Skip incomplete result folder: {result_directory}")
             continue
+
+        summary = pd.read_csv(summary_path).iloc[0]
+        attack = str(summary["attack"]).lower()
+        if attack not in ATTACK_STYLES:
+            continue
+        angle = float(summary["attacker_bearing_degrees"])
+        batch_directory = result_directory.parent
+        batches[attack].setdefault(batch_directory, []).append((summary_path, angle))
+
+    selected = []
+    expected_angles = set(ANGLE_TICKS)
+    for attack in ATTACK_STYLES:
+        attack_batches = batches[attack]
+        if not attack_batches:
+            continue
+
+        complete_batches = {
+            directory: summaries
+            for directory, summaries in attack_batches.items()
+            if {angle for _, angle in summaries} == expected_angles
+        }
+        candidates = complete_batches or attack_batches
+        chosen_directory, chosen_summaries = max(
+            candidates.items(),
+            key=lambda item: max(path.stat().st_mtime for path, _ in item[1]),
+        )
+        if len(attack_batches) > 1:
+            completeness = "complete " if complete_batches else ""
+            print(f"Using newest {completeness}{attack} sweep: {chosen_directory}")
+        selected.extend(path for path, _ in chosen_summaries)
+
+    return sorted(selected)
+
+
+def require_shared_nominal_runs(summary_paths: list[Path]) -> None:
+    """Reject comparisons whose conditions use different nominal trajectories."""
+    if not summary_paths:
+        return
+
+    reference = summary_paths[0].with_name("runs_nominal.csv")
+    for summary_path in summary_paths[1:]:
+        candidate = summary_path.with_name("runs_nominal.csv")
+        if not cmp(reference, candidate, shallow=False):
+            raise ValueError(
+                "Selected conditions have different saved nominal runs:\n"
+                f"  {reference.resolve()}\n"
+                f"  {candidate.resolve()}\n"
+                "Use sweeps generated with the same explicit --seed, controller version, "
+                "and run settings, or plot each sweep separately."
+            )
+
+
+def load_sweep(output_root: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Read all spoof and removal result folders below the supplied root."""
+    condition_rows = []
+    run_frames = []
+
+    summary_paths = find_sweep_summaries(output_root)
+    require_shared_nominal_runs(summary_paths)
+    for summary_path in summary_paths:
+        result_directory = summary_path.parent
+        attacked_path = result_directory / "runs_attacked.csv"
+        nominal_path = result_directory / "runs_nominal.csv"
 
         attack_summary = pd.read_csv(summary_path).iloc[0]
         attack = str(attack_summary["attack"]).lower()
@@ -162,6 +234,18 @@ def load_sweep(output_root: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
         raise ValueError(f"No complete sweep folders were found in {output_root}")
 
     conditions = pd.DataFrame(condition_rows).sort_values(["attack", "angle_degrees"])
+    duplicates = conditions.duplicated(["attack", "angle_degrees"], keep=False)
+    if duplicates.any():
+        repeated = (
+            conditions.loc[duplicates, ["attack", "angle_degrees"]]
+            .drop_duplicates()
+            .apply(lambda row: f"{row['attack']} {row['angle_degrees']:g} degrees", axis=1)
+        )
+        raise ValueError(
+            "Multiple results were found for the same attack and angle: "
+            + ", ".join(repeated)
+            + "."
+        )
     runs = pd.concat(run_frames, ignore_index=True)
     return conditions, runs
 
@@ -387,7 +471,11 @@ def write_summary(conditions: pd.DataFrame, runs: pd.DataFrame, path: Path) -> N
 def main() -> None:
     """Load the sweep and write all angle-level plots."""
     script_directory = Path(__file__).resolve().parent
-    output_root = Path(sys.argv[1]) if len(sys.argv) > 1 else script_directory / "output"
+    default_sweep_root = script_directory / "output" / "sweeps"
+    default_output_root = (
+        default_sweep_root if default_sweep_root.exists() else script_directory / "output"
+    )
+    output_root = Path(sys.argv[1]) if len(sys.argv) > 1 else default_output_root
     plot_directory = (
         Path(sys.argv[2]) if len(sys.argv) > 2 else output_root / "sweep_plots"
     )
@@ -396,9 +484,13 @@ def main() -> None:
         print(f"Error: folder not found: {output_root}")
         sys.exit(1)
 
+    try:
+        conditions, runs = load_sweep(output_root)
+    except ValueError as error:
+        sys.exit(f"Error: {error}")
+
     plot_directory.mkdir(parents=True, exist_ok=True)
     configure_style()
-    conditions, runs = load_sweep(output_root)
     report_scenario_mismatches(conditions)
     print(
         f"Loaded {len(conditions)} attack-angle conditions and "

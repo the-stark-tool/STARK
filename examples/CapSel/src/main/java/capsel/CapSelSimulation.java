@@ -29,7 +29,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
@@ -62,30 +64,123 @@ public final class CapSelSimulation {
         private final double attackerBearing;
         private final boolean sweep;
         private final boolean quick;
+        private final long baseSeed;
+        private final boolean explicitSeed;
+        private final boolean randomSeed;
+        private final Double spoofDistance;
 
-        private RunRequest(AttackType attackType, double attackerBearing, boolean sweep, boolean quick) {
+        private RunRequest(AttackType attackType, double attackerBearing, boolean sweep,
+                boolean quick, long baseSeed, boolean explicitSeed, boolean randomSeed,
+                Double spoofDistance) {
             this.attackType = attackType;
             this.attackerBearing = attackerBearing;
             this.sweep = sweep;
             this.quick = quick;
+            this.baseSeed = baseSeed;
+            this.explicitSeed = explicitSeed;
+            this.randomSeed = randomSeed;
+            this.spoofDistance = spoofDistance;
         }
 
         public static RunRequest parse(String[] args) {
             AttackType attackType = args.length == 0 ? AttackType.NONE : AttackType.parse(args[0]);
             boolean sweep = false;
             boolean quick = false;
+            boolean explicitSeed = false;
+            boolean randomSeed = false;
+            long baseSeed = DEFAULT_BASE_SEED;
             double bearing = 0.0;
+            Double spoofDistance = null;
 
             for (int i = 1; i < args.length; i++) {
                 if ("sweep".equalsIgnoreCase(args[i])) {
                     sweep = true;
                 } else if ("--quick".equalsIgnoreCase(args[i])) {
                     quick = true;
+                } else if ("--random-seed".equalsIgnoreCase(args[i])) {
+                    if (explicitSeed) {
+                        throw new IllegalArgumentException(
+                                "--random-seed cannot be combined with --seed.");
+                    }
+                    randomSeed = true;
+                } else if ("--seed".equalsIgnoreCase(args[i])) {
+                    if (randomSeed) {
+                        throw new IllegalArgumentException(
+                                "--seed cannot be combined with --random-seed.");
+                    }
+                    if (++i >= args.length) {
+                        throw new IllegalArgumentException("--seed requires a whole-number value.");
+                    }
+                    baseSeed = parseSeed(args[i]);
+                    explicitSeed = true;
+                } else if (args[i].startsWith("--seed=")) {
+                    if (randomSeed) {
+                        throw new IllegalArgumentException(
+                                "--seed cannot be combined with --random-seed.");
+                    }
+                    baseSeed = parseSeed(args[i].substring("--seed=".length()));
+                    explicitSeed = true;
+                } else if ("--spoof-distance".equalsIgnoreCase(args[i])) {
+                    if (++i >= args.length || args[i].startsWith("--")) {
+                        throw new IllegalArgumentException("--spoof-distance requires a value.");
+                    }
+                    spoofDistance = parseSpoofDistance(args[i]);
+                } else if (args[i].startsWith("--spoof-distance=")) {
+                    spoofDistance = parseSpoofDistance(args[i].substring("--spoof-distance=".length()));
+                } else if (args[i].startsWith("--")) {
+                    throw new IllegalArgumentException("Unknown option: " + args[i]);
                 } else {
                     bearing = Double.parseDouble(args[i]);
                 }
             }
-            return new RunRequest(attackType, bearing, sweep, quick);
+            if (spoofDistance != null && attackType != AttackType.SPOOF) {
+                throw new IllegalArgumentException("--spoof-distance is only available for spoof runs.");
+            }
+            return new RunRequest(attackType, bearing, sweep, quick,
+                    baseSeed, explicitSeed, randomSeed, spoofDistance);
+        }
+
+        private static double parseSpoofDistance(String value) {
+            double distance = Double.parseDouble(value);
+            if (!Double.isFinite(distance) || distance <= 0.0 || distance > EFFECTIVE_PERCEPTION_RANGE) {
+                throw new IllegalArgumentException(
+                        "--spoof-distance must be greater than zero and at most "
+                                + EFFECTIVE_PERCEPTION_RANGE + " simulation distance units.");
+            }
+            return distance;
+        }
+
+        private static long parseSeed(String value) {
+            try {
+                return Long.parseLong(value);
+            } catch (NumberFormatException exception) {
+                throw new IllegalArgumentException(
+                        "Seed must be a signed 64-bit whole number: " + value,
+                        exception);
+            }
+        }
+
+        long configuredBaseSeed() {
+            return baseSeed;
+        }
+
+        boolean randomSeedRequested() {
+            return randomSeed;
+        }
+
+        boolean usesSeedSpecificOutput() {
+            return explicitSeed || randomSeed;
+        }
+
+        boolean isSweep() {
+            return sweep && attackType != AttackType.NONE;
+        }
+
+        String seedMode() {
+            if (randomSeed) {
+                return "random";
+            }
+            return explicitSeed ? "explicit" : "default";
         }
     }
 
@@ -117,7 +212,6 @@ public final class CapSelSimulation {
     static final double ONCOMING_SPEED = 18.0;
 
     // Controller limits
-    private static final double OVERTAKE_TRIGGER_DISTANCE = 90.0;
     private static final double RETURN_CLEARANCE = 18.0;
     private static final double ABORT_DISTANCE = 220.0;
     private static final int ESTIMATED_OVERTAKE_STEPS = 8;
@@ -140,32 +234,61 @@ public final class CapSelSimulation {
             (ROAD_END - ROAD_START) / MIN_ONCOMING_GAP) + 2;
     private static final double INACTIVE_ONCOMING_X = -1_000_000.0;
 
-    // LiDAR values
+    // Perception values. The effective range deliberately approximates the
+    // old two-car model's unbounded access to the other vehicle's distance.
+    // It is a finite idealized planning horizon, not a claim that a production
+    // automotive LiDAR reliably detects every vehicle at this distance.
     static final double OBJECT_NONE = 0.0;
     static final double OBJECT_LEAD = 1.0;
     static final double OBJECT_ONCOMING = 2.0;
     static final double OBJECT_SPOOFED = 3.0;
-    static final double SENSOR_RANGE = 450.0;
+    static final double EFFECTIVE_PERCEPTION_RANGE = 800.0;
+    private static final String PERCEPTION_MODEL = "idealized_finite_lookahead";
     private static final double LATERAL_SECTOR_LIMIT = 1.0;
 
     // Attack values
     private static final int ATTACK_WINDOW_STEPS = 3;
-    private static final double[] MEASURED_ATTACKER_BEARINGS = {
-        0.0, 5.0, 10.0, 15.0, 20.0
-    };
     private static final double[] SWEEP_ATTACKER_BEARINGS = {
         0.0, 2.5, 5.0, 7.5, 10.0, 12.5, 15.0, 17.5, 20.0
     };
-    // These rates are from Figure 18 of the PLA-LiDAR paper.
-    // The model uses the results for a vertical angle of 0 degrees.
-    // The source tests used a pedestrian. This model uses the rates as a proxy for vehicles.
+    // Even indexes are the Figure 18 source points (vertical angle 0 degrees).
+    // Odd indexes are the precomputed PCHIP midpoints. The source used a pedestrian.
     private static final double[] SPOOF_SUCCESS_RATES = {
-        0.95, 0.95, 0.50, 0.05, 0.0
+        0.95, 0.95, 0.95, 0.78125, 0.50, 0.23, 0.05, 0.01375, 0.0
     };
     private static final double[] REMOVAL_SUCCESS_RATES = {
-        1.0, 1.0, 1.0, 0.85, 0.15
+        1.0, 1.0, 1.0, 1.0, 1.0, 0.9558823529411765, 0.85, 0.5909926470588235, 0.15
     };
-    private static final long RANDOM_SEED = 10L;
+    static final long DEFAULT_BASE_SEED = 10L;
+    private static final long SIMULATION_ENVIRONMENT_SEED_OFFSET = 100L;
+    private static final long SIMULATION_ATTACK_SEED_OFFSET = 101L;
+    private static final long RUNS_ENVIRONMENT_SEED_OFFSET = 200L;
+    private static final long RUNS_ATTACK_SEED_OFFSET = 201L;
+    private static final long TRAJECTORY_ENVIRONMENT_SEED_OFFSET = 300L;
+    private static final long TRAJECTORY_ATTACK_SEED_OFFSET = 301L;
+    private static final long PROPERTY_SEED_OFFSET = 400L;
+
+    private static final class SeedSet {
+        private final long base;
+        private final long simulationEnvironment;
+        private final long simulationAttack;
+        private final long runsEnvironment;
+        private final long runsAttack;
+        private final long trajectoryEnvironment;
+        private final long trajectoryAttack;
+        private final long property;
+
+        private SeedSet(long base) {
+            this.base = base;
+            simulationEnvironment = base + SIMULATION_ENVIRONMENT_SEED_OFFSET;
+            simulationAttack = base + SIMULATION_ATTACK_SEED_OFFSET;
+            runsEnvironment = base + RUNS_ENVIRONMENT_SEED_OFFSET;
+            runsAttack = base + RUNS_ATTACK_SEED_OFFSET;
+            trajectoryEnvironment = base + TRAJECTORY_ENVIRONMENT_SEED_OFFSET;
+            trajectoryAttack = base + TRAJECTORY_ATTACK_SEED_OFFSET;
+            property = base + PROPERTY_SEED_OFFSET;
+        }
+    }
 
     // Controller actions
     private static final double FASTER = 1.0;
@@ -213,7 +336,10 @@ public final class CapSelSimulation {
     private static final int crash = oncomingTtc + 1;
     private static final int crashObject = crash + 1;
     private static final int attackSuccess = crashObject + 1;
-    private static final int attackWindowRemaining = attackSuccess + 1;
+    private static final int attackAttempted = attackSuccess + 1;
+    private static final int removalEncounterActive = attackAttempted + 1;
+    private static final int removalTargetDistance = removalEncounterActive + 1;
+    private static final int attackWindowRemaining = removalTargetDistance + 1;
     private static final int attackerBearing = attackWindowRemaining + 1;
     private static final int attackSuccessProbability = attackerBearing + 1;
     private static final int controllerMode = attackSuccessProbability + 1;
@@ -236,31 +362,57 @@ public final class CapSelSimulation {
     }
 
     public void run() throws IOException {
-        if (request.sweep && request.attackType != AttackType.NONE) {
+        long baseSeed = request.randomSeedRequested()
+                ? new SecureRandom().nextLong()
+                : request.configuredBaseSeed();
+        SeedSet seeds = new SeedSet(baseSeed);
+        Path outputRoot = outputRoot(seeds.base);
+        Files.createDirectories(outputRoot);
+
+        System.out.printf(Locale.US, "%nCapSel base seed: %d (%s)%n",
+                seeds.base, request.seedMode());
+        System.out.printf(Locale.US, "Reproduce with: --seed %d%n", seeds.base);
+        System.out.printf("Output root: %s%n", outputRoot.toAbsolutePath().normalize());
+
+        if (request.isSweep()) {
             for (double bearing : SWEEP_ATTACKER_BEARINGS) {
-                runOneConfiguration(bearing);
+                runOneConfiguration(bearing, seeds, outputRoot);
             }
         } else {
-            runOneConfiguration(request.attackerBearing);
+            runOneConfiguration(request.attackerBearing, seeds, outputRoot);
         }
     }
 
-    private void runOneConfiguration(double bearing) throws IOException {
+    private Path outputRoot(long baseSeed) {
+        Path output = Paths.get("examples", "CapSel", "output");
+        if (request.isSweep()) {
+            output = output.resolve("sweeps");
+        } else if (!request.usesSeedSpecificOutput() && request.spoofDistance == null) {
+            return output;
+        }
+        String attack = request.attackType.name().toLowerCase(Locale.ROOT);
+        String batch = attack + "_seed_" + Long.toUnsignedString(baseSeed);
+        if (request.spoofDistance != null) {
+            batch += "_distance_" + request.spoofDistance;
+        }
+        return output.resolve(batch);
+    }
+
+    private void runOneConfiguration(double bearing, SeedSet seeds, Path outputRoot)
+            throws IOException {
         validateBearing(bearing);
 
         int evolutionSize = request.quick ? 3 : 100;
         int perturbationSize = request.quick ? 3 : 100;
         int trajectorySize = request.quick ? 8 : 10000;
 
-        DefaultRandomGenerator random = new DefaultRandomGenerator();
-        random.setSeed(RANDOM_SEED);
-
-        ControlledSystem system = createSystem(random);
-
-        EvolutionSequence nominalSequence = new EvolutionSequence(random, rg -> system, evolutionSize);
+        ControlledSystem system = createSystem(seededRandom(seeds.base));
+        DefaultRandomGenerator propertyRandom = seededRandom(seeds.property);
+        EvolutionSequence nominalSequence = new EvolutionSequence(
+                propertyRandom, rg -> system, evolutionSize);
         Supplier<Perturbation> attackFactory = () -> getAttack(bearing);
         String condition = conditionLabel(request.attackType, bearing);
-        Path outputDirectory = Paths.get("examples", "CapSel", "output", condition);
+        Path outputDirectory = outputRoot.resolve(condition);
         Files.createDirectories(outputDirectory);
 
         ArrayList<String> labels = getOutputLabels();
@@ -277,19 +429,47 @@ public final class CapSelSimulation {
                 MIN_ONCOMING_SPAWN_INTERVAL * ONCOMING_SPEED,
                 MAX_ONCOMING_SPAWN_INTERVAL * ONCOMING_SPEED);
 
-        writeAttackSummary(outputDirectory, bearing);
-        writeSimulationToCsv(random, labels, expressions, attackFactory.get(), system,
+        writeAttackSummary(outputDirectory, bearing, seeds);
+        writeSimulationToCsv(
+                seededRandom(seeds.simulationEnvironment),
+                labels,
+                expressions,
+                getAttack(bearing, seededRandom(seeds.simulationAttack)),
+                system,
                 outputDirectory.resolve("simulation_data.csv"));
-        writeRunsToCsv(random, labels, expressions, Perturbation.NONE, system,
+        int nominalCrashCount = writeRunsToCsv(
+                seededRandom(seeds.runsEnvironment),
+                labels,
+                expressions,
+                Perturbation.NONE,
+                system,
                 perturbationSize, "nominal", outputDirectory.resolve("runs_nominal.csv"));
-        writeRunsToCsv(random, labels, expressions, attackFactory.get(), system,
+        int attackedCrashCount = writeRunsToCsv(
+                seededRandom(seeds.runsEnvironment),
+                labels,
+                expressions,
+                getAttack(bearing, seededRandom(seeds.runsAttack)),
+                system,
                 perturbationSize, condition, outputDirectory.resolve("runs_attacked.csv"));
-        writeAverageTrajectories(random, Perturbation.NONE, system,
+        writeAverageTrajectories(
+                seededRandom(seeds.trajectoryEnvironment),
+                Perturbation.NONE,
+                system,
                 trajectorySize, "nominal_", outputDirectory);
-        writeAverageTrajectories(random, attackFactory.get(), system,
+        writeAverageTrajectories(
+                seededRandom(seeds.trajectoryEnvironment),
+                getAttack(bearing, seededRandom(seeds.trajectoryAttack)),
+                system,
                 trajectorySize, "attacked_", outputDirectory);
-        evaluateProperties(random, system, nominalSequence, attackFactory,
-                perturbationSize, condition, outputDirectory);
+        evaluateProperties(propertyRandom, system, nominalSequence, attackFactory,
+                perturbationSize, condition, nominalCrashCount, attackedCrashCount,
+                outputDirectory);
+    }
+
+    private static DefaultRandomGenerator seededRandom(long seed) {
+        DefaultRandomGenerator random = new DefaultRandomGenerator();
+        random.setSeed(seed);
+        return random;
     }
 
     private static void validateBearing(double bearing) {
@@ -333,17 +513,21 @@ public final class CapSelSimulation {
                 sampleOncomingSpawnInterval(random)));
 
         values.add(new DataStateUpdate(lidarLeftType, OBJECT_NONE));
-        values.add(new DataStateUpdate(lidarLeftDistance, SENSOR_RANGE));
+        values.add(new DataStateUpdate(lidarLeftDistance, EFFECTIVE_PERCEPTION_RANGE));
         values.add(new DataStateUpdate(lidarCentreType, OBJECT_NONE));
-        values.add(new DataStateUpdate(lidarCentreDistance, SENSOR_RANGE));
+        values.add(new DataStateUpdate(lidarCentreDistance, EFFECTIVE_PERCEPTION_RANGE));
         values.add(new DataStateUpdate(lidarRightType, OBJECT_NONE));
-        values.add(new DataStateUpdate(lidarRightDistance, SENSOR_RANGE));
+        values.add(new DataStateUpdate(lidarRightDistance, EFFECTIVE_PERCEPTION_RANGE));
         values.add(new DataStateUpdate(safetyGap,
                 calculateRssSafetyDistance(EGO_INITIAL_SPEED, LEAD_SPEED)));
-        values.add(new DataStateUpdate(oncomingTtc, SENSOR_RANGE / (EGO_INITIAL_SPEED + ONCOMING_SPEED)));
+        values.add(new DataStateUpdate(oncomingTtc,
+                EFFECTIVE_PERCEPTION_RANGE / (EGO_INITIAL_SPEED + ONCOMING_SPEED)));
         values.add(new DataStateUpdate(crash, 0.0));
         values.add(new DataStateUpdate(crashObject, OBJECT_NONE));
         values.add(new DataStateUpdate(attackSuccess, 0.0));
+        values.add(new DataStateUpdate(attackAttempted, 0.0));
+        values.add(new DataStateUpdate(removalEncounterActive, 0.0));
+        values.add(new DataStateUpdate(removalTargetDistance, EFFECTIVE_PERCEPTION_RANGE));
         values.add(new DataStateUpdate(attackWindowRemaining, 0.0));
         values.add(new DataStateUpdate(attackerBearing, 0.0));
         values.add(new DataStateUpdate(attackSuccessProbability, 0.0));
@@ -411,8 +595,10 @@ public final class CapSelSimulation {
         }
 
         if (state.get(egoLane) < 0.5) {
-            boolean leadNeedsPass = state.get(lidarCentreType) == OBJECT_LEAD
-                    && state.get(lidarCentreDistance) <= OVERTAKE_TRIGGER_DISTANCE;
+            boolean leadNeedsPass = shouldConsiderOvertake(
+                    state.get(lidarCentreType),
+                    state.get(lidarCentreDistance),
+                    state.get(safetyGap));
 
             if (leadNeedsPass && isLeftLaneClear(state)) {
                 // Begin accelerating as soon as the pass starts. The clearance
@@ -450,6 +636,11 @@ public final class CapSelSimulation {
             }
         }
         return updates;
+    }
+
+    static boolean shouldConsiderOvertake(double centreType,
+            double leadDistance, double rssGap) {
+        return centreType == OBJECT_LEAD && leadDistance <= rssGap;
     }
 
     private static List<DataStateUpdate> getAbortUpdates(DataState state) {
@@ -536,15 +727,17 @@ public final class CapSelSimulation {
                 state.get(egoSpeed),
                 state.get(leadSpeed),
                 state.get(lidarCentreDistance));
-        return state.get(lidarLeftType) == OBJECT_NONE
-                || state.get(lidarLeftDistance) >= requiredDistance;
+        // OBJECT_NONE means only that no vehicle is visible within the sensor
+        // range. Treat that range as the available clearance instead of as an
+        // unlimited gap, so an unseen vehicle cannot invalidate the pass.
+        return state.get(lidarLeftDistance) >= requiredDistance;
     }
 
     static double requiredOvertakeDistance(double currentEgoSpeed) {
         return requiredOvertakeDistance(
                 currentEgoSpeed,
                 LEAD_SPEED,
-                OVERTAKE_TRIGGER_DISTANCE);
+                calculateRssSafetyDistance(currentEgoSpeed, LEAD_SPEED));
     }
 
     /**
@@ -580,7 +773,10 @@ public final class CapSelSimulation {
         // The ego remains exposed to oncoming traffic while moving back right.
         oncomingClosingDistance += LANE_CHANGE_STEPS
                 * (projectedEgoSpeed + ONCOMING_SPEED);
-        return oncomingClosingDistance + OVERTAKE_MARGIN;
+        // A nominal pass must finish before the oncoming vehicle reaches the
+        // abort boundary. The extra margin absorbs projection and timing
+        // variation without weakening the copied two-lane abort behaviour.
+        return oncomingClosingDistance + ABORT_DISTANCE + OVERTAKE_MARGIN;
     }
 
     private static List<DataStateUpdate> getEnvironmentUpdates(RandomGenerator random, DataState state) {
@@ -704,7 +900,7 @@ public final class CapSelSimulation {
 
     private static double calculateNearestOncomingTtc(double currentEgoX,
             double currentEgoSpeed, double[] currentOncomingX) {
-        double nearestDistance = SENSOR_RANGE;
+        double nearestDistance = EFFECTIVE_PERCEPTION_RANGE;
         for (double carX : currentOncomingX) {
             double forwardDistance = carX - currentEgoX;
             if (forwardDistance > 0.0) {
@@ -721,7 +917,11 @@ public final class CapSelSimulation {
     private static List<DataStateUpdate> computeCleanLidarUpdates(double currentEgoX,
             double currentEgoY, double currentLeadX, double[] currentOncomingX) {
         double[] types = { OBJECT_NONE, OBJECT_NONE, OBJECT_NONE };
-        double[] distances = { SENSOR_RANGE, SENSOR_RANGE, SENSOR_RANGE };
+        double[] distances = {
+            EFFECTIVE_PERCEPTION_RANGE,
+            EFFECTIVE_PERCEPTION_RANGE,
+            EFFECTIVE_PERCEPTION_RANGE
+        };
 
         boolean leadIsInFront = currentLeadX >= currentEgoX;
         boolean leadIsInSideSector = Math.abs(currentEgoY - RIGHT_LANE_Y) > LATERAL_SECTOR_LIMIT;
@@ -750,7 +950,7 @@ public final class CapSelSimulation {
             return;
         }
         double distance = Math.hypot(objectX - currentEgoX, objectY - currentEgoY);
-        if (distance > SENSOR_RANGE) {
+        if (distance > EFFECTIVE_PERCEPTION_RANGE) {
             return;
         }
         int sector = classifySector(currentEgoY, objectY);
@@ -771,30 +971,67 @@ public final class CapSelSimulation {
         return 1;
     }
 
-    private Perturbation getAttack(double bearing) {
+    Perturbation getAttack(double bearing) {
+        return getAttack(bearing, null);
+    }
+
+    Perturbation getAttack(double bearing, RandomGenerator attackRandom) {
         if (request.attackType == AttackType.NONE) {
             return Perturbation.NONE;
         }
+        double probability = successProbability(request.attackType, bearing);
         return new IterativePerturbation(
                 HORIZON,
-                new AtomicPerturbation(0, (random, state) -> applyLidarAttack(random, state, bearing)));
+                new AtomicPerturbation(0, (random, state) -> applyLidarAttack(
+                        attackRandom == null ? random : attackRandom,
+                        state,
+                        bearing,
+                        probability)));
     }
 
-    private DataState applyLidarAttack(RandomGenerator random, DataState state, double bearing) {
+    private DataState applyLidarAttack(RandomGenerator random, DataState state, double bearing,
+            double probability) {
         List<DataStateUpdate> updates = new LinkedList<>();
         double windowRemaining = state.get(attackWindowRemaining);
-        double probability = successProbability(request.attackType, bearing);
+        double encounterActive = state.get(removalEncounterActive);
+        double previousTargetDistance = state.get(removalTargetDistance);
+        double attempted = 0.0;
         double successful;
 
-        if (windowRemaining <= 0.0) {
-            successful = random.nextDouble() < probability ? 1.0 : 0.0;
-            windowRemaining = ATTACK_WINDOW_STEPS - 1.0;
+        if (request.attackType == AttackType.REMOVAL) {
+            double targetDistance = nearestVisibleOncomingDistance(state);
+            boolean oncomingVisible = targetDistance < EFFECTIVE_PERCEPTION_RANGE;
+            windowRemaining = 0.0;
+            if (!oncomingVisible) {
+                successful = 0.0;
+                encounterActive = 0.0;
+                previousTargetDistance = EFFECTIVE_PERCEPTION_RANGE;
+            } else if (encounterActive < 0.5
+                    || targetDistance > previousTargetDistance + BORDERLINE_MARGIN) {
+                successful = random.nextDouble() < probability ? 1.0 : 0.0;
+                attempted = 1.0;
+                encounterActive = 1.0;
+            } else {
+                successful = state.get(attackSuccess);
+            }
+            previousTargetDistance = targetDistance;
         } else {
-            successful = state.get(attackSuccess);
-            windowRemaining -= 1.0;
+            encounterActive = 0.0;
+            previousTargetDistance = EFFECTIVE_PERCEPTION_RANGE;
+            if (windowRemaining <= 0.0) {
+                successful = random.nextDouble() < probability ? 1.0 : 0.0;
+                attempted = 1.0;
+                windowRemaining = ATTACK_WINDOW_STEPS - 1.0;
+            } else {
+                successful = state.get(attackSuccess);
+                windowRemaining -= 1.0;
+            }
         }
 
         updates.add(new DataStateUpdate(attackSuccess, successful));
+        updates.add(new DataStateUpdate(attackAttempted, attempted));
+        updates.add(new DataStateUpdate(removalEncounterActive, encounterActive));
+        updates.add(new DataStateUpdate(removalTargetDistance, previousTargetDistance));
         updates.add(new DataStateUpdate(attackWindowRemaining, windowRemaining));
         updates.add(new DataStateUpdate(attackerBearing, bearing));
         updates.add(new DataStateUpdate(attackSuccessProbability, probability));
@@ -807,10 +1044,29 @@ public final class CapSelSimulation {
         return state.apply(updates);
     }
 
-    private static void addSpoofedVehicle(DataState state, List<DataStateUpdate> updates) {
-        double fakeDistance = Math.min(
-                SENSOR_RANGE - 1.0,
-                requiredOvertakeDistance(state.get(egoSpeed)) - BORDERLINE_MARGIN);
+    private static double nearestVisibleOncomingDistance(DataState state) {
+        double nearestDistance = EFFECTIVE_PERCEPTION_RANGE;
+        if (state.get(lidarLeftType) == OBJECT_ONCOMING) {
+            nearestDistance = Math.min(nearestDistance, state.get(lidarLeftDistance));
+        }
+        if (state.get(lidarCentreType) == OBJECT_ONCOMING) {
+            nearestDistance = Math.min(nearestDistance, state.get(lidarCentreDistance));
+        }
+        if (state.get(lidarRightType) == OBJECT_ONCOMING) {
+            nearestDistance = Math.min(nearestDistance, state.get(lidarRightDistance));
+        }
+        return nearestDistance;
+    }
+
+    private void addSpoofedVehicle(DataState state, List<DataStateUpdate> updates) {
+        double fakeDistance = request.spoofDistance != null
+                ? request.spoofDistance
+                : Math.min(
+                        EFFECTIVE_PERCEPTION_RANGE - 1.0,
+                        requiredOvertakeDistance(
+                                state.get(egoSpeed),
+                                state.get(leadSpeed),
+                                distanceToLead(state)) - BORDERLINE_MARGIN);
 
         // The false car stays in the left road lane.
         // Its ego-relative sector changes when the ego car moves left.
@@ -837,22 +1093,33 @@ public final class CapSelSimulation {
             int typeIndex, int distanceIndex) {
         if (state.get(typeIndex) == OBJECT_ONCOMING) {
             updates.add(new DataStateUpdate(typeIndex, OBJECT_NONE));
-            updates.add(new DataStateUpdate(distanceIndex, SENSOR_RANGE));
+            updates.add(new DataStateUpdate(distanceIndex, EFFECTIVE_PERCEPTION_RANGE));
         }
     }
 
     static double spoofSuccessProbabilityForBearing(double bearing) {
-        return shapePreservingInterpolate(
-                bearing,
-                MEASURED_ATTACKER_BEARINGS,
-                SPOOF_SUCCESS_RATES);
+        return probabilityForBearing(bearing, SPOOF_SUCCESS_RATES);
     }
 
     static double removalSuccessProbabilityForBearing(double bearing) {
-        return shapePreservingInterpolate(
-                bearing,
-                MEASURED_ATTACKER_BEARINGS,
-                REMOVAL_SUCCESS_RATES);
+        return probabilityForBearing(bearing, REMOVAL_SUCCESS_RATES);
+    }
+
+    private static double probabilityForBearing(double bearing, double[] rates) {
+        int index = Arrays.binarySearch(SWEEP_ATTACKER_BEARINGS, bearing);
+        if (index >= 0) {
+            return rates[index];
+        }
+
+        // For custom bearings, interpolate using the original measured points.
+        int measuredCount = (SWEEP_ATTACKER_BEARINGS.length + 1) / 2;
+        double[] measuredBearings = new double[measuredCount];
+        double[] measuredRates = new double[measuredCount];
+        for (int i = 0; i < measuredCount; i++) {
+            measuredBearings[i] = SWEEP_ATTACKER_BEARINGS[2 * i];
+            measuredRates[i] = rates[2 * i];
+        }
+        return shapePreservingInterpolate(bearing, measuredBearings, measuredRates);
     }
 
     private static double successProbability(AttackType type, double bearing) {
@@ -939,7 +1206,7 @@ public final class CapSelSimulation {
         return derivative;
     }
 
-    private static double calculateRssSafetyDistance(double rearSpeed, double frontSpeed) {
+    static double calculateRssSafetyDistance(double rearSpeed, double frontSpeed) {
         double responseTime = LANE_CHANGE_STEPS;
         double rearAfterResponse = rearSpeed + MAX_ACCELERATION * responseTime;
         double rearStop = rearSpeed * responseTime
@@ -996,6 +1263,8 @@ public final class CapSelSimulation {
             Supplier<Perturbation> attackFactory,
             int perturbationSize,
             String condition,
+            int nominalCrashCount,
+            int attackedCrashCount,
             Path outputDirectory) throws IOException {
 
         EvolutionSequence attackedSequence = nominalSequence.apply(attackFactory.get(), 0, perturbationSize);
@@ -1102,20 +1371,11 @@ public final class CapSelSimulation {
         }
         writeMatrixCsv(threeValueData, outputDirectory.resolve("three_value_crash.csv"));
 
-        ArrayList<DataStateExpression> crashProbe = new ArrayList<>();
-        crashProbe.add(state -> state.get(crash));
-        int crashCount = 0;
-        for (int run = 0; run < perturbationSize; run++) {
-            double[][] data = SystemState.sample(
-                    random, crashProbe, attackFactory.get(), system, HORIZON, 1);
-            if (data[HORIZON - 1][0] > 0.5) {
-                crashCount++;
-            }
-        }
         try (FileWriter writer = new FileWriter(outputDirectory.resolve("crash_count.txt").toFile())) {
-            writer.write(crashCount + "/" + perturbationSize + System.lineSeparator());
+            writer.write(attackedCrashCount + "/" + perturbationSize + System.lineSeparator());
         }
-        System.out.println("Crashes: " + crashCount + "/" + perturbationSize);
+        System.out.println("Nominal crashes: " + nominalCrashCount + "/" + perturbationSize);
+        System.out.println("Attacked crashes: " + attackedCrashCount + "/" + perturbationSize);
     }
 
     static ArrayList<String> getOutputLabels() {
@@ -1140,6 +1400,8 @@ public final class CapSelSimulation {
         labels.add("oncoming_ttc");
         labels.add("crash");
         labels.add("attack_success");
+        labels.add("attack_attempted");
+        labels.add("removal_encounter_active");
         labels.add("attacker_bearing_degrees");
         labels.add("attack_success_probability");
         labels.add("controller_mode");
@@ -1170,6 +1432,8 @@ public final class CapSelSimulation {
         expressions.add(state -> state.get(oncomingTtc));
         expressions.add(state -> state.get(crash));
         expressions.add(state -> state.get(attackSuccess));
+        expressions.add(state -> state.get(attackAttempted));
+        expressions.add(state -> state.get(removalEncounterActive));
         expressions.add(state -> state.get(attackerBearing));
         expressions.add(state -> state.get(attackSuccessProbability));
         expressions.add(state -> state.get(controllerMode));
@@ -1203,7 +1467,7 @@ public final class CapSelSimulation {
         }
     }
 
-    private static void writeRunsToCsv(RandomGenerator random,
+    private static int writeRunsToCsv(RandomGenerator random,
             ArrayList<String> labels,
             ArrayList<DataStateExpression> expressions,
             Perturbation perturbation,
@@ -1211,6 +1475,8 @@ public final class CapSelSimulation {
             int runCount,
             String condition,
             Path path) throws IOException {
+        int crashColumn = labels.indexOf("crash");
+        int crashCount = 0;
         try (FileWriter writer = new FileWriter(path.toFile())) {
             writer.write("run,step");
             for (String label : labels) {
@@ -1221,6 +1487,9 @@ public final class CapSelSimulation {
             for (int run = 0; run < runCount; run++) {
                 double[][] data = SystemState.sample(
                         random, expressions, perturbation, system, HORIZON, 1);
+                if (data[HORIZON - 1][crashColumn] > 0.5) {
+                    crashCount++;
+                }
                 for (int step = 0; step < data.length; step++) {
                     writer.write(run + "," + step);
                     for (double value : data[step]) {
@@ -1230,6 +1499,7 @@ public final class CapSelSimulation {
                 }
             }
         }
+        return crashCount;
     }
 
     private static void writeAverageTrajectories(RandomGenerator random,
@@ -1277,15 +1547,37 @@ public final class CapSelSimulation {
         }
     }
 
-    private void writeAttackSummary(Path outputDirectory, double bearing) throws IOException {
+    private void writeAttackSummary(Path outputDirectory, double bearing, SeedSet seeds)
+            throws IOException {
         try (FileWriter writer = new FileWriter(outputDirectory.resolve("attack_summary.csv").toFile())) {
-            writer.write("attack,attacker_bearing_degrees,success_probability,window_steps,source_curve,interpolation_method\n");
-            writer.write(String.format(Locale.US, "%s,%.3f,%.6f,%d,%s,PCHIP_Fritsch-Butland%n",
+            writer.write("attack,attacker_bearing_degrees,success_probability,window_steps,"
+                    + "source_curve,interpolation_method,effective_perception_range_m,"
+                    + "perception_model,seed_mode,base_seed,simulation_environment_seed,"
+                    + "simulation_attack_seed,runs_environment_seed,runs_attack_seed,"
+                    + "trajectory_environment_seed,trajectory_attack_seed,property_seed,spoof_distance\n");
+            writer.write(String.format(Locale.US,
+                    "%s,%.3f,%.6f,%d,%s,%s,%.1f,%s,%s,"
+                            + "%d,%d,%d,%d,%d,%d,%d,%d,%s%n",
                     request.attackType,
                     bearing,
                     successProbability(request.attackType, bearing),
                     ATTACK_WINDOW_STEPS,
-                    sourceCurve(request.attackType)));
+                    sourceCurve(request.attackType),
+                    request.attackType == AttackType.NONE ? "none"
+                            : Arrays.binarySearch(SWEEP_ATTACKER_BEARINGS, bearing) >= 0
+                                    ? "table_lookup" : "PCHIP_Fritsch-Butland",
+                    EFFECTIVE_PERCEPTION_RANGE,
+                    PERCEPTION_MODEL,
+                    request.seedMode(),
+                    seeds.base,
+                    seeds.simulationEnvironment,
+                    seeds.simulationAttack,
+                    seeds.runsEnvironment,
+                    seeds.runsAttack,
+                    seeds.trajectoryEnvironment,
+                    seeds.trajectoryAttack,
+                    seeds.property,
+                    request.spoofDistance == null ? "" : request.spoofDistance.toString()));
         }
     }
 

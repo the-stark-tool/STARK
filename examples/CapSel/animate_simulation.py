@@ -3,11 +3,14 @@
 The road view is fixed. It does not follow the ego car.
 
 Usage:
-    python animate_simulation.py [simulation_data.csv]
+    python animate_simulation.py [csv_path] [--run ID | --first-crash]
 """
 
+import argparse
 import csv
+from itertools import groupby
 import math
+from operator import itemgetter
 import os
 import sys
 import time
@@ -59,14 +62,52 @@ def enable_ansi_on_windows() -> None:
         pass
 
 
-def load_data(path: str) -> list[dict]:
-    """Read one simulation CSV file."""
+def add_replay_arguments(parser: argparse.ArgumentParser) -> None:
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument("--run", type=int, help="Select a saved run by its zero-based ID.")
+    selection.add_argument("--first-crash", action="store_true", help="Replay the first run with a crash.")
+
+
+def select_batch_run(reader: csv.DictReader, run: int | None, first_crash: bool) -> list[dict]:
+    """Select one trajectory from a batch ordered by run and step."""
+    if run is None and not first_crash:
+        raise ValueError("For a batch CSV, choose --run ID or --first-crash.")
+
+    for run_id, frames in groupby(reader, key=itemgetter("run")):
+        if first_crash:
+            rows = list(frames)
+            if any(float(row["crash"]) > 0.5 for row in rows):
+                return rows
+        elif int(run_id) == run:
+            return list(frames)
+
+    if first_crash:
+        raise ValueError("No crashed run was found in the batch.")
+    raise ValueError(f"Run {run} was not found in the batch.")
+
+
+def load_data(path: str, *, run: int | None = None, first_crash: bool = False) -> list[dict]:
+    """Read the preview or one saved trajectory from a batch CSV."""
+    if run is not None and (run < 0 or first_crash):
+        raise ValueError("Choose a nonnegative run ID or --first-crash.")
+
     rows = []
     with open(path, newline="", encoding="utf-8") as source:
-        for raw in csv.DictReader(source):
-            row = {}
-            for key, value in raw.items():
-                row[key] = value if key == "attack" else float(value)
+        reader = csv.DictReader(source)
+        if "run" in (reader.fieldnames or ()):
+            raw_rows = select_batch_run(reader, run, first_crash)
+        elif run is not None or first_crash:
+            raise ValueError("--run and --first-crash require a batch CSV with a run column.")
+        else:
+            raw_rows = reader
+
+        for raw in raw_rows:
+            row = {key: float(value) for key, value in raw.items()
+                   if key not in ("attack", "condition", "run")}
+            if "run" in raw:
+                row["run"] = int(raw["run"])
+            attack = raw.get("attack", raw.get("condition", "none")).split("_", 1)[0].upper()
+            row["attack"] = "NONE" if attack == "NOMINAL" else attack
             rows.append(row)
 
     if not rows:
@@ -309,12 +350,17 @@ def animate(rows: list[dict]) -> None:
 
 
 if __name__ == "__main__":
-    csv_path = sys.argv[1] if len(sys.argv) > 1 else "simulation_data.csv"
-    if not os.path.exists(csv_path):
-        print(f"Error: file not found: {csv_path}")
-        sys.exit(1)
-    simulation_rows = load_data(csv_path)
-    print(f"Loaded {len(simulation_rows)} steps from {csv_path}")
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("csv_path", nargs="?", default="simulation_data.csv")
+    add_replay_arguments(parser)
+    args = parser.parse_args()
+    try:
+        simulation_rows = load_data(args.csv_path, run=args.run, first_crash=args.first_crash)
+    except (OSError, ValueError) as error:
+        parser.error(str(error))
+    run_id = simulation_rows[0].get("run")
+    run_label = f" for run {run_id}" if run_id is not None else ""
+    print(f"Loaded {len(simulation_rows)} steps{run_label} from {args.csv_path}")
     time.sleep(0.5)
     animate(simulation_rows)
 

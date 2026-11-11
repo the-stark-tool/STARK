@@ -3,12 +3,12 @@
 The video uses the same fixed road view as the terminal animation.
 
 Usage:
-    python render_mp4.py [simulation_data.csv] [simulation.mp4]
+    python render_mp4.py [csv_path] [output_path] [--run ID | --first-crash]
 """
 
+import argparse
 import os
 import re
-import sys
 
 import imageio.v2 as imageio
 import numpy as np
@@ -17,6 +17,7 @@ from PIL import Image, ImageDraw, ImageFont
 from animate_simulation import (
     LEFT_LANE_FRAME_LINE,
     TOTAL_DURATION,
+    add_replay_arguments,
     compute_viewport,
     load_data,
     render_frame,
@@ -103,9 +104,11 @@ def render_image(row: dict, total_steps: int, view_left: float, view_right: floa
     return image
 
 
-def build_mp4(csv_path: str, output_path: str) -> None:
+def build_mp4(
+    csv_path: str, output_path: str, *, run: int | None = None, first_crash: bool = False
+) -> None:
     """Write all simulation frames to an MP4 file."""
-    rows = load_data(csv_path)
+    rows = load_data(csv_path, run=run, first_crash=first_crash)
     total_steps = len(rows)
     view_left, view_right = compute_viewport(rows)
     frames_per_second = total_steps / TOTAL_DURATION
@@ -142,10 +145,13 @@ def build_mp4(csv_path: str, output_path: str) -> None:
 
 
 if __name__ == "__main__":
-    source_path = sys.argv[1] if len(sys.argv) > 1 else "simulation_data.csv"
-    target_path = sys.argv[2] if len(sys.argv) > 2 else "simulation.mp4"
-    if not os.path.exists(source_path):
-        print(f"Error: file not found: {source_path}")
-        sys.exit(1)
-    build_mp4(source_path, target_path)
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("csv_path", nargs="?", default="simulation_data.csv")
+    parser.add_argument("output_path", nargs="?", default="simulation.mp4")
+    add_replay_arguments(parser)
+    args = parser.parse_args()
+    try:
+        build_mp4(args.csv_path, args.output_path, run=args.run, first_crash=args.first_crash)
+    except (OSError, ValueError) as error:
+        parser.error(str(error))
 

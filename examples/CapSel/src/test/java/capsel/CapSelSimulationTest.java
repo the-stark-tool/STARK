@@ -1,9 +1,15 @@
 package capsel;
 
 import org.junit.jupiter.api.Test;
+import stark.ControlledSystem;
 import stark.DefaultRandomGenerator;
+import stark.SystemState;
+import stark.perturbation.Perturbation;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CapSelSimulationTest {
@@ -38,7 +44,7 @@ class CapSelSimulationTest {
     }
 
     @Test
-    void bearingBetweenMeasurementsUsesShapePreservingInterpolation() {
+    void estimatedSweepBearingsMapToPrecomputedRates() {
         assertEquals(0.95,
                 CapSelSimulation.spoofSuccessProbabilityForBearing(2.5),
                 TOLERANCE);
@@ -50,6 +56,12 @@ class CapSelSimulationTest {
                 TOLERANCE);
         assertEquals(0.01375,
                 CapSelSimulation.spoofSuccessProbabilityForBearing(17.5),
+                TOLERANCE);
+        assertEquals(0.9558823529411765,
+                CapSelSimulation.removalSuccessProbabilityForBearing(12.5),
+                TOLERANCE);
+        assertEquals(0.5909926470588235,
+                CapSelSimulation.removalSuccessProbabilityForBearing(17.5),
                 TOLERANCE);
     }
 
@@ -73,29 +85,84 @@ class CapSelSimulationTest {
     void spoofedCarIsInsideTheUnsafeOvertakeLimit() {
         double requiredDistance = CapSelSimulation.requiredOvertakeDistance(15.0);
         double spoofedDistance = Math.min(
-                CapSelSimulation.SENSOR_RANGE - 1.0,
+                CapSelSimulation.EFFECTIVE_PERCEPTION_RANGE - 1.0,
                 requiredDistance - 1.0);
 
         assertTrue(spoofedDistance < requiredDistance);
-        assertTrue(spoofedDistance < CapSelSimulation.SENSOR_RANGE);
+        assertTrue(spoofedDistance < CapSelSimulation.EFFECTIVE_PERCEPTION_RANGE);
+    }
+
+    @Test
+    void configuredSpoofDistanceAppearsInTheSimulatedLidarReading() {
+        CapSelSimulation simulation = new CapSelSimulation(CapSelSimulation.RunRequest.parse(
+                new String[] { "spoof", "0", "--spoof-distance", "123.5" }));
+        ControlledSystem system = simulation.createSystem(seededRandom(10L));
+        double[][] data = SystemState.sample(
+                seededRandom(210L), CapSelSimulation.getOutputExpressions(),
+                simulation.getAttack(0.0, seededRandom(211L)), system, CapSelSimulation.HORIZON, 1);
+        var labels = CapSelSimulation.getOutputLabels();
+        boolean detected = false;
+        for (String sector : new String[] { "left", "centre" }) {
+            int type = labels.indexOf("lidar_" + sector + "_type");
+            int distance = labels.indexOf("lidar_" + sector + "_distance");
+            for (double[] frame : data) {
+                if (frame[type] == CapSelSimulation.OBJECT_SPOOFED) {
+                    assertEquals(123.5, frame[distance], TOLERANCE);
+                    detected = true;
+                }
+            }
+        }
+        assertTrue(detected);
+    }
+
+    @Test
+    void spoofDistanceRequiresSpoofModeAndAnInRangeNumber() {
+        for (String value : new String[] { "0", "-1", "801", "NaN", "Infinity" }) {
+            assertThrows(IllegalArgumentException.class, () -> CapSelSimulation.RunRequest.parse(
+                    new String[] { "spoof", "--spoof-distance=" + value }));
+        }
+        assertThrows(IllegalArgumentException.class, () -> CapSelSimulation.RunRequest.parse(
+                new String[] { "removal", "--spoof-distance", "100" }));
+        assertThrows(IllegalArgumentException.class, () -> CapSelSimulation.RunRequest.parse(
+                new String[] { "spoof", "--spoof-distance" }));
+    }
+
+    @Test
+    void overtakeTriggerUsesTheLiveRssGap() {
+        assertFalse(CapSelSimulation.shouldConsiderOvertake(
+                CapSelSimulation.OBJECT_LEAD, 101.0, 100.0));
+        assertTrue(CapSelSimulation.shouldConsiderOvertake(
+                CapSelSimulation.OBJECT_LEAD, 100.0, 100.0));
+        assertTrue(CapSelSimulation.shouldConsiderOvertake(
+                CapSelSimulation.OBJECT_LEAD, 99.0, 100.0));
+        assertFalse(CapSelSimulation.shouldConsiderOvertake(
+                CapSelSimulation.OBJECT_NONE, 50.0, 100.0));
     }
 
     @Test
     void overtakeProjectionUsesLeadSpeedAndProjectedEgoAcceleration() {
-        double requiredAt15 = CapSelSimulation.requiredOvertakeDistance(15.0, 10.0, 90.0);
-        double requiredAt18 = CapSelSimulation.requiredOvertakeDistance(18.0, 10.0, 90.0);
-        double fasterLead = CapSelSimulation.requiredOvertakeDistance(18.0, 12.0, 90.0);
-        double closerLead = CapSelSimulation.requiredOvertakeDistance(18.0, 10.0, 70.0);
+        double rssAt15 = CapSelSimulation.calculateRssSafetyDistance(15.0, 10.0);
+        double rssAt18 = CapSelSimulation.calculateRssSafetyDistance(18.0, 10.0);
+        double fasterLeadRss = CapSelSimulation.calculateRssSafetyDistance(18.0, 12.0);
+        double requiredAt15 = CapSelSimulation.requiredOvertakeDistance(15.0, 10.0, rssAt15);
+        double requiredAt18 = CapSelSimulation.requiredOvertakeDistance(18.0, 10.0, rssAt18);
+        double fasterLead = CapSelSimulation.requiredOvertakeDistance(
+                18.0, 12.0, fasterLeadRss);
+        double closerLead = CapSelSimulation.requiredOvertakeDistance(
+                18.0, 10.0, rssAt18 - 20.0);
 
-        assertTrue(requiredAt18 > 450.0 && requiredAt18 < 500.0);
-        assertTrue(requiredAt18 < requiredAt15);
+        assertEquals(requiredAt18,
+                CapSelSimulation.requiredOvertakeDistance(18.0), TOLERANCE);
+        assertTrue(requiredAt18 > requiredAt15);
         assertTrue(fasterLead > requiredAt18);
         assertTrue(closerLead < requiredAt18);
     }
 
     @Test
     void overtakeProjectionRejectsALeadCarThatCannotBePassed() {
-        double requiredDistance = CapSelSimulation.requiredOvertakeDistance(18.0, 25.0, 90.0);
+        double rssGap = CapSelSimulation.calculateRssSafetyDistance(18.0, 25.0);
+        double requiredDistance = CapSelSimulation.requiredOvertakeDistance(
+                18.0, 25.0, rssGap);
         assertEquals(Double.POSITIVE_INFINITY, requiredDistance);
     }
 
@@ -136,6 +203,96 @@ class CapSelSimulationTest {
     }
 
     @Test
+    void removalIsSampledOncePerOncomingEncounter() {
+        CapSelSimulation simulation = new CapSelSimulation(
+                CapSelSimulation.RunRequest.parse(new String[] { "removal", "0" }));
+        ControlledSystem system = simulation.createSystem(seededRandom(10L));
+        CountingRandomGenerator attackRandom = new CountingRandomGenerator();
+        attackRandom.setSeed(211L);
+
+        SystemState.sample(
+                seededRandom(210L),
+                CapSelSimulation.getOutputExpressions(),
+                simulation.getAttack(0.0, attackRandom),
+                system,
+                CapSelSimulation.HORIZON,
+                1);
+
+        assertTrue(attackRandom.nextDoubleCalls > 1);
+        assertTrue(attackRandom.nextDoubleCalls < 20);
+    }
+
+    @Test
+    void removalRunIsReproducibleWithSeparatedRandomStreams() {
+        double[][] first = sampleRemovalRun(15.0);
+        double[][] second = sampleRemovalRun(15.0);
+
+        assertEquals(first.length, second.length);
+        for (int step = 0; step < first.length; step++) {
+            assertArrayEquals(first[step], second[step], TOLERANCE);
+        }
+    }
+
+    @Test
+    void nominalRunsCompleteWithoutCrashOrAbort() {
+        CapSelSimulation simulation = new CapSelSimulation(
+                CapSelSimulation.RunRequest.parse(new String[] { "none" }));
+        ControlledSystem system = simulation.createSystem(seededRandom(10L));
+        DefaultRandomGenerator environmentRandom = seededRandom(210L);
+        int crashColumn = CapSelSimulation.getOutputLabels().indexOf("crash");
+        int completeColumn = CapSelSimulation.getOutputLabels().indexOf("overtake_complete");
+        int abortColumn = CapSelSimulation.getOutputLabels().indexOf("abort_count");
+
+        for (int run = 0; run < 100; run++) {
+            double[][] data = SystemState.sample(
+                    environmentRandom,
+                    CapSelSimulation.getOutputExpressions(),
+                    Perturbation.NONE,
+                    system,
+                    CapSelSimulation.HORIZON,
+                    1);
+            double[] finalState = data[CapSelSimulation.HORIZON - 1];
+
+            assertEquals(0.0, finalState[crashColumn], TOLERANCE,
+                    "nominal crash in run " + run);
+            assertEquals(0.0, finalState[abortColumn], TOLERANCE,
+                    "nominal abort in run " + run);
+            assertEquals(1.0, finalState[completeColumn], TOLERANCE,
+                    "nominal overtake did not complete in run " + run);
+        }
+    }
+
+    private static double[][] sampleRemovalRun(double bearing) {
+        CapSelSimulation simulation = new CapSelSimulation(
+                CapSelSimulation.RunRequest.parse(
+                        new String[] { "removal", Double.toString(bearing) }));
+        ControlledSystem system = simulation.createSystem(seededRandom(10L));
+        return SystemState.sample(
+                seededRandom(210L),
+                CapSelSimulation.getOutputExpressions(),
+                simulation.getAttack(bearing, seededRandom(211L)),
+                system,
+                CapSelSimulation.HORIZON,
+                1);
+    }
+
+    private static DefaultRandomGenerator seededRandom(long seed) {
+        DefaultRandomGenerator random = new DefaultRandomGenerator();
+        random.setSeed(seed);
+        return random;
+    }
+
+    private static final class CountingRandomGenerator extends DefaultRandomGenerator {
+        private int nextDoubleCalls;
+
+        @Override
+        public double nextDouble() {
+            nextDoubleCalls++;
+            return super.nextDouble();
+        }
+    }
+
+    @Test
     void attackModeNamesAreAccepted() {
         assertEquals(CapSelSimulation.AttackType.NONE,
                 CapSelSimulation.AttackType.parse("none"));
@@ -143,5 +300,44 @@ class CapSelSimulationTest {
                 CapSelSimulation.AttackType.parse("spoof"));
         assertEquals(CapSelSimulation.AttackType.REMOVAL,
                 CapSelSimulation.AttackType.parse("removal"));
+    }
+
+    @Test
+    void defaultSeedPreservesTheExistingReproducibleRun() {
+        CapSelSimulation.RunRequest request = CapSelSimulation.RunRequest.parse(
+                new String[] { "removal", "sweep" });
+
+        assertEquals(CapSelSimulation.DEFAULT_BASE_SEED, request.configuredBaseSeed());
+        assertFalse(request.randomSeedRequested());
+        assertFalse(request.usesSeedSpecificOutput());
+        assertEquals("default", request.seedMode());
+    }
+
+    @Test
+    void explicitAndRandomSeedOptionsAreParsed() {
+        CapSelSimulation.RunRequest explicit = CapSelSimulation.RunRequest.parse(
+                new String[] { "removal", "sweep", "--seed", "824739221" });
+        CapSelSimulation.RunRequest equalsForm = CapSelSimulation.RunRequest.parse(
+                new String[] { "spoof", "sweep", "--seed=-42" });
+        CapSelSimulation.RunRequest random = CapSelSimulation.RunRequest.parse(
+                new String[] { "removal", "sweep", "--random-seed" });
+
+        assertEquals(824739221L, explicit.configuredBaseSeed());
+        assertTrue(explicit.usesSeedSpecificOutput());
+        assertEquals("explicit", explicit.seedMode());
+        assertEquals(-42L, equalsForm.configuredBaseSeed());
+        assertTrue(random.randomSeedRequested());
+        assertTrue(random.usesSeedSpecificOutput());
+        assertEquals("random", random.seedMode());
+    }
+
+    @Test
+    void conflictingOrMissingSeedOptionsAreRejected() {
+        assertThrows(IllegalArgumentException.class,
+                () -> CapSelSimulation.RunRequest.parse(
+                        new String[] { "removal", "sweep", "--random-seed", "--seed", "1" }));
+        assertThrows(IllegalArgumentException.class,
+                () -> CapSelSimulation.RunRequest.parse(
+                        new String[] { "removal", "sweep", "--seed" }));
     }
 }
