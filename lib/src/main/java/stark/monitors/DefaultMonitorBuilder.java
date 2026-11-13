@@ -31,8 +31,8 @@ import java.util.OptionalDouble;
 
 public class DefaultMonitorBuilder implements MonitorBuildingVisitor<DefaultUDisTLMonitor> {
 
-    int sampleSize;
-    boolean parallel;
+    final int sampleSize;
+    final boolean parallel;
 
 
     public DefaultMonitorBuilder(int sampleSize, boolean parallel) {
@@ -57,11 +57,11 @@ public class DefaultMonitorBuilder implements MonitorBuildingVisitor<DefaultUDis
      */
     @Override
     public DefaultUDisTLMonitor build(UDisTLFormula formula, int semanticsEvaluationTimestep) {
-        return formula.build(this, semanticsEvaluationTimestep);
+        return formula.buildMonitor(this, semanticsEvaluationTimestep);
     }
 
     public DefaultUDisTLMonitor build(UDisTLFormula formula) {
-        return formula.build(this, 0);
+        return formula.buildMonitor(this, 0);
     }
 
     @Override

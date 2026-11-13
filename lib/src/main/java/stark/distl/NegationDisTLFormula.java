@@ -45,7 +45,7 @@ public final class NegationDisTLFormula implements DisTLFormula {
     }
 
     @Override
-    public <T> T build(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
+    public <T> T buildMonitor(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
         return visitor.buildNegation(this, semanticsEvaluationTimestep);
     }
 

@@ -20,10 +20,12 @@
  * limitations under the License.
  */
 
-package stark;
+package stark.monitors;
 
+import stark.*;
 import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
+import stark.distance.StandardGroundDistance;
 import stark.distl.DisTLFormula;
 import stark.distl.DoubleSemanticsVisitor;
 import stark.distl.TargetDisTLFormula;
@@ -31,8 +33,6 @@ import stark.ds.DataState;
 import stark.ds.DataStateFunction;
 import stark.ds.DataStateUpdate;
 import stark.udistl.UDisTLFormula;
-import stark.monitors.DefaultMonitorBuilder;
-import stark.monitors.DefaultUDisTLMonitor;
 import org.apache.commons.math3.random.RandomGenerator;
 import org.junit.jupiter.api.Test;
 
@@ -47,7 +47,7 @@ class TargetMonitorTest {
 
     final int x = 0;
     int seed = 0;
-    final int SAMPLE_SIZE = 10000;
+    final int SAMPLE_SIZE = 1000;
 
     final SampleSet<PerceivedSystemState> emptySampleSet = new SampleSet<>();
 
@@ -192,6 +192,49 @@ class TargetMonitorTest {
         assertEquals(semanticsEval, monitorEval.getAsDouble());
     }
 
+    // The following was used to get some quick results of Wasserstein distance between two distributions.
+    // It is not a test.
+    @Test
+    void WassersteinDistanceTest(){
+        EvolutionSequence sequence = normal1();
+
+        DataStateFunction mu = (rg, ds) ->
+//                ds.apply(List.of(new DataStateUpdate(x, (rg.nextGaussian()*10)+60))); // 1. nu60
+//        ds.apply(List.of(new DataStateUpdate(x, (rg.nextGaussian()*3)+80))); // 2. nu_red
+//        ds.apply(List.of(new DataStateUpdate(x, (rg.nextGaussian()*7)-70))); // 3.
+        ds.apply(List.of(new DataStateUpdate(x, (rg.nextDouble()*400)-200))); //4. uniform
+        DisTLFormula phi = new TargetDisTLFormula(mu, ds -> Math.abs(ds.get(x)-60)/260, 0);
+        int semanticsEvalTimestep = 2;
+
+        DoubleSemanticsVisitor semanticsEvaluator = new DoubleSemanticsVisitor();
+        semanticsEvaluator.setRandomGeneratorSeed(seed);
+        double semanticsEval = semanticsEvaluator.eval(phi)
+                .eval(2000, semanticsEvalTimestep, sequence);
+        System.out.println(semanticsEval);
+    }
+
+    EvolutionSequence normal1(){
+        final int ES_SAMPLE_SIZE = 10;
+        final int NUMBER_OF_VARIABLES = 2;
+
+        ControllerRegistry registry = new ControllerRegistry();
+        registry.set("Ctrl",
+                Controller.doTick(registry.get("Ctrl"))
+        );
+        Controller controller = registry.reference("Ctrl");
+
+        DataStateFunction environment = (rg, ds) -> ds.apply(List.of(
+                new DataStateUpdate(t, ds.get(t) + 1),
+//                              new DataStateUpdate(x, (rg.nextGaussian()*10)+60))); // 1.nu60
+//                                new DataStateUpdate(x, (rg.nextGaussian()*3)+80))); // 2. nu_red
+        new DataStateUpdate(x, (rg.nextGaussian()*7)-70))); // 3.
+//                new DataStateUpdate(x, (rg.nextDouble()*400)-200))); // 4.uniform
+        Function<RandomGenerator, SystemState> system = rg ->
+                new ControlledSystem(controller, environment, new DataState(NUMBER_OF_VARIABLES, i -> 1.0));
+        DefaultRandomGenerator rng = new DefaultRandomGenerator();
+        rng.setSeed(seed);
+        return new EvolutionSequence(rng, system, ES_SAMPLE_SIZE);
+    }
 
 }
 

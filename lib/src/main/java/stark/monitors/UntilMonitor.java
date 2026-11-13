@@ -33,13 +33,13 @@ import java.util.OptionalInt;
 import java.util.stream.Stream;
 
 public class UntilMonitor extends DefaultUDisTLMonitor {
-    UntilDisTLFormula formula;
+    final UntilDisTLFormula formula;
     private int distSeqSizeCounter;
     private OptionalDouble prevResult;
     private int computationsCounter;
     private final DefaultMonitorBuilder builder;
-    protected ArrayList<DefaultUDisTLMonitor> submonitors2;
-    protected ArrayList<DefaultUDisTLMonitor> submonitors1;
+    protected final ArrayList<DefaultUDisTLMonitor> submonitors2;
+    protected final ArrayList<DefaultUDisTLMonitor> submonitors1;
 
 
      public UntilMonitor(UntilDisTLFormula formula, int semanticEvaluationTimestep, int sampleSize, boolean parallel) {

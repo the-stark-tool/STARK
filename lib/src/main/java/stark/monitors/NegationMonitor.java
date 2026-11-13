@@ -30,7 +30,7 @@ import java.util.OptionalDouble;
 
 public class NegationMonitor extends DefaultUDisTLMonitor {
 
-    DefaultUDisTLMonitor submonitor;
+    final DefaultUDisTLMonitor submonitor;
 
     public NegationMonitor(NegationDisTLFormula formula, int formulaEvalTimestep, int sampleSize, boolean parallel) {
         super(formulaEvalTimestep, sampleSize, parallel);

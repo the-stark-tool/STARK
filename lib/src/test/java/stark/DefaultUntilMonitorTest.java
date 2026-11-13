@@ -23,7 +23,6 @@
 
 package stark;
 
-import stark.*;
 import stark.controller.Controller;
 import stark.controller.ControllerRegistry;
 import stark.distl.*;
@@ -46,7 +45,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class DefaultUnboundedUntilMonitorTest {
+class DefaultUntilMonitorTest {
 
     static int seed = 0;
     static final int SAMPLE_SIZE = 10;
@@ -96,7 +95,7 @@ class DefaultUnboundedUntilMonitorTest {
     }
 
 
-    // evolution sequence composed of distributions s.t. x uniformly distributed in [0,1]
+    // evolution sequence composed of distributions X_t = (t, D) where D uniformly distributed in [0,1]
     static EvolutionSequence getTestES3(){
         DataStateFunction environment = (rg, ds) -> ds.apply(List.of(
                 new DataStateUpdate(t, ds.get(t) + 1),

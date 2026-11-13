@@ -22,14 +22,13 @@
 
 package stark.monitors;
 
+import stark.EvolutionSequence;
 import stark.PerceivedSystemState;
 import stark.SampleSet;
+import stark.distl.DoubleSemanticsVisitor;
 import stark.distl.TargetDisTLFormula;
-import stark.ds.DataStateExpression;
-import stark.ds.DataStateFunction;
-import stark.penalty.Penalty;
 
-import java.util.Optional;
+import java.util.Iterator;
 import java.util.OptionalDouble;
 
 public class TargetMonitor extends DefaultUDisTLMonitor {
@@ -38,13 +37,21 @@ public class TargetMonitor extends DefaultUDisTLMonitor {
     private int distributionSequenceSizeCounter;
     private double result;
     private boolean alreadyComputed = false;
+    private final DoubleSemanticsVisitor semanticsEvaluator;
 
     public TargetMonitor(TargetDisTLFormula formula, int semanticEvaluationTimestep, int sampleSize, boolean parallel) {
         super(semanticEvaluationTimestep, sampleSize, parallel);
         this.formula = formula;
         distributionSequenceSizeCounter = 0;
+        semanticsEvaluator = new DoubleSemanticsVisitor(parallel);
     }
 
+
+    @Override
+    public void setRandomGeneratorSeed(int seed){
+        super.setRandomGeneratorSeed(seed);
+        semanticsEvaluator.setRandomGeneratorSeed(seed);
+    }
 
     @Override
     public OptionalDouble evalNext(SampleSet<PerceivedSystemState> sample) {
@@ -64,20 +71,12 @@ public class TargetMonitor extends DefaultUDisTLMonitor {
     }
 
     private double computeAsSemantics(SampleSet<PerceivedSystemState> sample) {
-        DataStateFunction mu = formula.getDistribution();
-        Optional<DataStateExpression> rho = formula.getRho();
-        Penalty P = formula.getP();
-        double q = formula.getThreshold();
+        Iterator<PerceivedSystemState> states = sample.stream().iterator();
+        EvolutionSequence sequence = new EvolutionSequence(
+                rg, ignored -> states.next(), sample.size());
 
-        SampleSet<PerceivedSystemState> muSample;
-        if (formula.getSampledDistribution().size() == 0) {
-            muSample = sample.replica(sampleSize).applyDistribution(rg, mu, parallel);
-        } else {
-            // Turn system states into perceived system states
-            muSample = new SampleSet<>(
-                    formula.getSampledDistribution().stream().map((st) -> new PerceivedSystemState(st.getDataState())).toList());
-        }
-        return rho.map(dataStateExpression -> q - sample.distanceGeq(dataStateExpression, muSample)
-        ).orElseGet(() -> q - sample.distanceGeq(P, muSample, semanticsEvaluationStep));
+        return semanticsEvaluator
+                .evalTarget(formula)
+                .eval(sampleSize, 0, sequence);
     }
 }

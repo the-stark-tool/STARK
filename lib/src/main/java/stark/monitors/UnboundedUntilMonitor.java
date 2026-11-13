@@ -40,7 +40,7 @@ public class UnboundedUntilMonitor extends UntilMonitor {
     private static final int VERY_BIG_NUMBER_THAT_WONT_OVERFLOW = (Integer.MAX_VALUE-1)/2;
 
     public UnboundedUntilMonitor(UnboundedUntiluDisTLFormula formula, int semanticEvaluationTimestep, int sampleSize, boolean parallel) {
-        super(new UntilDisTLFormula(formula.getLeftFormula(), 0, VERY_BIG_NUMBER_THAT_WONT_OVERFLOW,
+        super(new UntilDisTLFormula(formula.getLeftFormula(), formula.getfrom(), VERY_BIG_NUMBER_THAT_WONT_OVERFLOW,
                 formula.getRightFormula()), semanticEvaluationTimestep, sampleSize, parallel);
     }
 }

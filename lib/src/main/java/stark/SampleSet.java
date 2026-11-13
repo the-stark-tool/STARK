@@ -25,8 +25,6 @@ package stark;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateFunction;
 import org.apache.commons.math3.random.RandomGenerator;
-import stark.penalty.*;
-import stark.penalty.Penalty;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -115,82 +113,58 @@ public class SampleSet<T extends SystemState> {
      * between this sample set and <code>other</code>.
      */
     public synchronized double distance(DataStateExpression f, DoubleBinaryOperator distance, SampleSet<T> other) {
-        if (other.size() % this.size() != 0) {
+        if (other.size() % this.size() != 0 && this.size() % other.size() != 0) {
             throw new IllegalArgumentException("Incompatible size of data sets!");
         }
-        double[] thisData = this.evalPenaltyFunction(f);
-        double[] otherData = other.evalPenaltyFunction(f);
-        return computeDistance(distance, thisData, otherData);
-    }
+        double[] leftData = this.evalPenaltyFunction(f);
+        double[] rightData = other.evalPenaltyFunction(f);
+        if (leftData.length > rightData.length){
+            // Many leftData samples compared to one rightData sample
+            return computeDistanceManyToOne(distance, leftData, rightData);
+        }else {
+            // one leftData sample compared to many rightData samples
+            return computeDistanceOneToMany(distance, leftData, rightData);
+        }
 
-    /**
-     * In case the ground distance is not given,
-     * the Euclidean distance on reals is considered.
-     *
-     * @param f penalty function on data states.
-     * @param other sample set to compare.
-     * @return the Wasserstein lifting of the Euclidean distance,
-     * computed on the values obtained by applying <code>f</code> to the data states in the samples,
-     * between this sample set and <code>other</code>.
-     */
-    public synchronized double distance(DataStateExpression f, SampleSet<T> other) {
-        return distance(f, (v1, v2) -> Math.abs(v2-v1), other);
     }
 
     /**
      * Utility method to evaluate the Wasserstein distance between two sampled distributions on reals,
-     * based on a given ground distance.
+     * based on a given ground distance; assuming that the amount of samples in leftData
+     * are a multiple of the amount of samples in rightData. This means that multiple leftData samples have to matched against
+     * one rightData sample
      *
      * @param distance ground distance on reals
-     * @param thisData an array of real values
-     * @param otherData an array of real values
+     * @param leftData an array of real values
+     * @param rightData an array of real values
      * @return the Wasserstein lifting of <code>distance</code>
-     * between the sampled distributions <code>thisData</code> and <code>otherData</code>.
+     * between the sampled distributions <code>leftData</code> and <code>rightData</code>.
      */
-    private double computeDistance(DoubleBinaryOperator distance, double[] thisData, double[] otherData) {
-        int k = otherData.length / thisData.length;
-        return IntStream.range(0, thisData.length).parallel()
-                .mapToDouble(i -> IntStream.range(0, k).mapToDouble(j -> distance.applyAsDouble(thisData[i],otherData[i * k + j])).sum())
-                .sum() / otherData.length;
+    private double computeDistanceOneToMany(DoubleBinaryOperator distance, double[] leftData, double[] rightData) {
+        int k = rightData.length / leftData.length;
+        return IntStream.range(0, leftData.length).parallel()
+                .mapToDouble(i -> IntStream.range(0, k).mapToDouble(j -> distance.applyAsDouble(leftData[i],rightData[i * k + j])).sum())
+                .sum() / rightData.length;
     }
 
+
     /**
-     * In case the ground distance is not specified,
-     * the Euclidean distance on reals is used.
+     * Utility method to evaluate the Wasserstein distance between two sampled distributions on reals,
+     * based on a given ground distance; assuming that the amount of samples in rightData
+     * are a multiple of the amount of samples in leftData. This means that multiple rightData samples have to matched against
+     * one leftData sample
      *
-     * @param thisData an array of real values
-     * @param otherData an array of real values
-     * @return the Wasserstein lifting of Euclidean distance on reals
-     * between the sampled distributions <code>thisData</code> and <code>otherData</code>.
+     * @param distance ground distance on reals
+     * @param leftData an array of real values
+     * @param rightData an array of real values
+     * @return the Wasserstein lifting of <code>distance</code>
+     * between the sampled distributions <code>leftData</code> and <code>rightData</code>.
      */
-    private double computeDistance(double[] thisData, double[] otherData) {
-        return computeDistance((v1, v2) -> Math.abs(v2-v1), thisData, otherData);
-    }
-
-    /**
-     * Returns the asymmetric distance between <code>other</code> and this sample set computed according to
-     * the function <code>f</code>.
-     * The cardinality of <code>other</code> must be a multiple of that of this sample set.
-     * @param f penalty function used to compute the distance.
-     * @param other sample set to compare.
-     * @return the distance between <code>other</code> and this sample set computed according to
-     * the function <code>f</code>.
-     */
-    public synchronized double distanceLeq(DataStateExpression f, SampleSet<T> other) {
-        return distance(f, (v1,v2) -> Math.max(0.0, v2-v1), other);
-    }
-
-    public synchronized double distanceLeq(Penalty rho, SampleSet<T> other, int step) {
-        if (other.size() % this.size() != 0) {
-            throw new IllegalArgumentException("Incompatible size of data sets!");
-        }
-        DataStateExpression f = rho.effectUpTo(step).get(step);
-        double[] thisData = this.evalPenaltyFunction(f);
-        double[] otherData = other.evalPenaltyFunction(f);
-        int k = otherData.length / thisData.length;
-        return IntStream.range(0, thisData.length).parallel()
-                .mapToDouble(i -> IntStream.range(0, k).mapToDouble(j -> Math.max(0,otherData[i * k + j] - thisData[i])).sum())
-                .sum() / otherData.length;
+    private double computeDistanceManyToOne(DoubleBinaryOperator distance, double[] leftData, double[] rightData) {
+        int k = leftData.length / rightData.length;
+        return IntStream.range(0, rightData.length).parallel()
+                .mapToDouble(i -> IntStream.range(0, k).mapToDouble(j -> distance.applyAsDouble(leftData[i * k + j],rightData[i])).sum())
+                .sum() / leftData.length;
     }
 
     /**
@@ -202,33 +176,7 @@ public class SampleSet<T extends SystemState> {
      * @return the asymmetric Wasserstein distance between the sampled distributions <code>thisData</code> and <code>otherData</code>.
      */
     private double computeDistanceLeq(double[] thisData, double[] otherData) {
-        return computeDistance((v1, v2) -> Math.max(0.0,v2-v1), thisData, otherData);
-    }
-
-    /**
-     * Returns the asymmetric distance between this sample set and <code>other</code> computed according to
-     * the function <code>f</code>.
-     * The cardinality of <code>other</code> must be a multiple of that of this sample set.
-     * @param f penalty function used to compute the distance.
-     * @param other sample set to compare.
-     * @return the distance between this sample set and <code>other</code> computed according to
-     * the function <code>f</code>.
-     */
-    public synchronized double distanceGeq(DataStateExpression f, SampleSet<T> other) {
-        return distance(f, (v1,v2) -> Math.max(0, v1-v2), other);
-    }
-
-    public synchronized double distanceGeq(Penalty rho, SampleSet<T> other, int step) {
-        if (other.size() % this.size() != 0) {
-            throw new IllegalArgumentException("Incompatible size of data sets!");
-        }
-        DataStateExpression f = rho.effectUpTo(step).get(step);
-        double[] thisData = this.evalPenaltyFunction(f);
-        double[] otherData = other.evalPenaltyFunction(f);
-        int k = otherData.length / thisData.length;
-        return IntStream.range(0, thisData.length).parallel()
-                .mapToDouble(i -> IntStream.range(0, k).mapToDouble(j -> Math.max(0, thisData[i] - otherData[i * k + j])).sum())
-                .sum() / otherData.length;
+        return computeDistanceManyToOne((v1, v2) -> Math.max(0.0,v2-v1), thisData, otherData);
     }
 
     /**
@@ -240,7 +188,7 @@ public class SampleSet<T extends SystemState> {
      * @return the asymmetric Wasserstein distance between the sampled distributions <code>otherData</code> and <code>thisData</code>.
      */
     private double computeDistanceGeq(double[] thisData, double[] otherData) {
-        return computeDistance((v1, v2) -> Math.max(0.0,v1-v2), thisData, otherData);
+        return computeDistanceManyToOne((v1, v2) -> Math.max(0.0,v1-v2), thisData, otherData);
     }
 
     /**
@@ -278,29 +226,6 @@ public class SampleSet<T extends SystemState> {
         return CI;
     }
 
-    /**
-     * In case the random generator is not passed as parameter,
-     * the default one is used.
-     */
-    public synchronized double[] bootstrapDistance(DataStateExpression f, ToDoubleBiFunction<double[], double[]> distanceFunction, SampleSet<T> other, int m, double z) {
-        return bootstrapDistance(new DefaultRandomGenerator(), f, distanceFunction, other, m, z);
-    }
-
-    /**
-     * In case the method to compute the distance is not passed as parameter,
-     * method <code>computeDistance</code> is used as default.
-     */
-    public synchronized double[] bootstrapDistance(RandomGenerator rg, DataStateExpression f, SampleSet<T> other, int m, double z) {
-        return bootstrapDistance(rg, f, this::computeDistance, other, m , z);
-    }
-
-    /**
-     * In case neither the random generator nor the distance method are passed as parameters,
-     * the default ones are used.
-     */
-    public synchronized double[] bootstrapDistance(DataStateExpression f, SampleSet<T> other, int m, double z) {
-        return bootstrapDistance(new DefaultRandomGenerator(), f, this::computeDistance, other, m, z);
-    }
 
     /**
      * Returns the confidence interval of the evaluation of the asymmetric distance between
@@ -340,14 +265,6 @@ public class SampleSet<T extends SystemState> {
      */
     public synchronized double[] bootstrapDistanceGeq(RandomGenerator rg, DataStateExpression f, SampleSet<T> other, int m, double z) {
         return bootstrapDistance(rg, f, this::computeDistanceGeq, other, m , z);
-    }
-
-    /**
-     * In case the random generator is not passed as parameter,
-     * the default one is used.
-     */
-    public synchronized double[] bootstrapDistanceGeq(DataStateExpression f, SampleSet<T> other, int m, double z) {
-        return bootstrapDistance(new DefaultRandomGenerator(), f, this::computeDistanceGeq, other, m, z);
     }
 
     /**

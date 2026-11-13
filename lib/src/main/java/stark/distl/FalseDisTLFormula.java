@@ -34,7 +34,7 @@ public final class FalseDisTLFormula implements DisTLFormula {
     }
 
     @Override
-    public <T> T build(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
+    public <T> T buildMonitor(MonitorBuildingVisitor<T> visitor, int semanticsEvaluationTimestep) {
         return visitor.buildFalse(this, semanticsEvaluationTimestep);
     }
 

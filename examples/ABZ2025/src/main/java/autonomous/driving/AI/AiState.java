@@ -42,7 +42,7 @@ public class AiState {
 
     private int originalValuesCount = -1; // includes non car values
 
-    protected static final int DATASTATE_INDEX_FOR_HISTORY_INDEX = 0;
+    public static final int DATASTATE_INDEX_FOR_HISTORY_INDEX = 0;
     protected static final int DATASTATE_INDEX_FOR_CRASHES = 1;
 
     private static final int NUMBER_OF_NON_CAR_VALUES = 2;
