@@ -23,21 +23,13 @@
 package ms;
 
 import stark.controller.*;
-import stark.distance.*;
-import stark.distl.*;
-import stark.ds.*;
 import stark.*;
 import stark.controller.Controller;
 import stark.controller.NilController;
-import stark.distl.*;
 import stark.ds.DataState;
 import stark.ds.DataStateExpression;
 import stark.ds.DataStateUpdate;
 import stark.perturbation.Perturbation;
-import stark.robtl.*;
-import stark.monitors.DefaultMonitorBuilder;
-import stark.monitors.DefaultUDisTLMonitor;
-import stark.PerceivedSystemState;
 import org.apache.commons.math3.random.RandomGenerator;
 
 import java.io.FileWriter;
@@ -65,14 +57,11 @@ public class Main {
     public static final int alphaR = 16; // Treg proliferation rate
     public static final int timer = 17;
     public static final int uncertainty = 18;
-    public static final int flag = 19;
-    public static final int flag2 = 20;
-    public static final int Rgen = 21;
-    public static final int wait_month = 22;
-    public static final int wait_week = 23;
+    public static final int reset = 19;
+    public static final int recheck = 20;
 
 
-    private static final int NUMBER_OF_VARIABLES = 24;
+    private static final int NUMBER_OF_VARIABLES = 21;
 
 
     public static final double eta = 0.01; // initial value for v_eta
@@ -83,13 +72,15 @@ public class Main {
     public static final double k2 = 0.25;
     public static final double k3 = 0.1;
      */
+    private static final double Einit = 1000.0; // initial value for Teff
+    private static final double Rinit = 200.0; // initial value for Treg
     public static final double alphaE = 2.0; // initial value for v_alphaE
     public static final double alphaRH = 1.0; // healthy value for v_alphaR
     public static final double alphaRS = 0.24; // unhealthy value for v_alphaR
     public static final double gammaE = 0.2; // initial value for v_gammaE
     public static final double gammaR = 0.2; // initial value for v_gammaR
-    public static final double kE = 1000.0; // Hill dynamic Teff coefficient
-    public static final double kR = 200.0; // Hill dynamic Treg coefficient
+    public static final double kE = Einit; // Hill dynamic Teff coefficient
+    public static final double kR = Rinit; // Hill dynamic Treg coefficient
     /* public static final double km1 = k1*Math.pow(kR,2) - gammaE;
     public static final double km2 = k2*kE - alphaR;
     public static final double km3 = k3*Math.pow(kR,2) - alphaE;
@@ -98,13 +89,11 @@ public class Main {
     public static final double d2 = 0.02; // initial value for v_d2
     public static final double r = 0.1; // initial value for v_r
     private static final double a = 22800.0; // initial value for Ea
-    private static final double Einit = 1000.0; // initial value for Teff
-    private static final double Rinit = 200.0; // initial value for Treg
     private static final double h = 5.0; // hill coefficient
     private static final double delta_t = Math.pow(10,-4); //
     private static final double jumps = 1;
     private static final double ctrl_step = 0;
-    private static final double ctrl_gran = 8;
+    private static final double ctrl_gran = 0;
 
     public static void main(String[] args) throws IOException {
         try {
@@ -112,22 +101,23 @@ public class Main {
             /*
             Two systems are created, one is healthy (alphaR = alphaRH = 1.0), the other is unhealthy (alphaR = alphaRH = 0.25)
              */
-            DataState stateH = getInitialState(jumps, 0.0, 0.0, delta_t, ctrl_step, ctrl_gran, alphaRH, 1.0);
-            DataState stateS = getInitialState(jumps, 0.0, 0.0, delta_t, ctrl_step, ctrl_gran, alphaRS, 1.0);
+            DataState stateH = getInitialState(jumps, 0.0, 0.0, delta_t, ctrl_step, ctrl_gran, alphaRH, 0.0);
+            DataState stateS = getInitialState(jumps, 0.0, 0.0, delta_t, ctrl_step, ctrl_gran, alphaRS, 0.0);
             RandomGenerator rand = new DefaultRandomGenerator();
-            DecoupledTimedSystem systemH = new DecoupledTimedSystem(new NilController(), (rg, ds) -> ds.apply(odeEnv(rg, ds,0)), stateH, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemH = new DecoupledTimedSystem(new NilController(), (rg, ds) -> ds.apply(odeEnv(rg, ds)), stateH, ds -> selectTime(rand,ds));
 
-            DecoupledTimedSystem systemS7 = new DecoupledTimedSystem(getController(7), (rg, ds) -> ds.apply(odeEnv(rg, ds,0)), stateS, ds -> selectTime(rand,ds));
-            DecoupledTimedSystem systemS8 = new DecoupledTimedSystem(getController(8), (rg, ds) -> ds.apply(odeEnv(rg, ds,0)), stateS, ds -> selectTime(rand,ds));
-            DecoupledTimedSystem systemS9 = new DecoupledTimedSystem(getController(9), (rg, ds) -> ds.apply(odeEnv(rg, ds,0)), stateS, ds -> selectTime(rand,ds));
-            DecoupledTimedSystem systemS10 = new DecoupledTimedSystem(getController(10), (rg, ds) -> ds.apply(odeEnv(rg, ds,0)), stateS, ds -> selectTime(rand,ds));
-            DecoupledTimedSystem systemS11 = new DecoupledTimedSystem(getController(11), (rg, ds) -> ds.apply(odeEnv(rg, ds,0)), stateS, ds -> selectTime(rand,ds));
-            DecoupledTimedSystem systemS12 = new DecoupledTimedSystem(getController(12), (rg, ds) -> ds.apply(odeEnv(rg, ds,0)), stateS, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemS5 = new DecoupledTimedSystem(getController(5,10000), (rg, ds) -> ds.apply(odeEnv(rg, ds)), stateS, ds -> selectTime(rand,ds));
 
-            DecoupledTimedSystem systemSuc = new DecoupledTimedSystem(new NilController(), (rg, ds) -> ds.apply(odeEnv(rg, ds,0)), stateS, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemS7 = new DecoupledTimedSystem(getController(7,10000), (rg, ds) -> ds.apply(odeEnv(rg, ds)), stateS, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemS8 = new DecoupledTimedSystem(getController(8,1000), (rg, ds) -> ds.apply(odeEnv(rg, ds)), stateS, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemS9 = new DecoupledTimedSystem(getController(9,10000), (rg, ds) -> ds.apply(odeEnv(rg, ds)), stateS, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemS10 = new DecoupledTimedSystem(getController(10,10000), (rg, ds) -> ds.apply(odeEnv(rg, ds)), stateS, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemS11 = new DecoupledTimedSystem(getController(11,10000), (rg, ds) -> ds.apply(odeEnv(rg, ds)), stateS, ds -> selectTime(rand,ds));
+            DecoupledTimedSystem systemS12 = new DecoupledTimedSystem(getController(12,10000), (rg, ds) -> ds.apply(odeEnv(rg, ds)), stateS, ds -> selectTime(rand,ds));
 
-            int size = 10;
-            int size_sim = 100;
+            DecoupledTimedSystem systemSuc = new DecoupledTimedSystem(new NilController(), (rg, ds) -> ds.apply(odeEnv(rg, ds)), stateS, ds -> selectTime(rand,ds));
+
+            int size = 1;
             int steps = 2000;
 
 
@@ -154,7 +144,7 @@ public class Main {
 
 
 
-            //double[][] ratio_E_R_rev_dam_max_H = SystemState.sample_max(rand, Fworst, systemH1, steps, size_sim);
+            //double[][] ratio_E_R_rev_dam_max_H = SystemState.sample_max(rand, Fworst, systemH1, steps, size);
             //for (int i = 0; i < ratio_E_R_rev_dam_max_H.length; i++) {
             //    if (ratio_E_R_rev_dam_max_H[i][0] > maxRatioERH) {
             //        maxRatioERH = ratio_E_R_rev_dam_max_H[i][0];
@@ -165,7 +155,7 @@ public class Main {
             //}
             //Util.writeToCSV("./multipleSclerosisOdeRatioERHealthy.csv", ratio_E_R_rev_dam_max_H);
 
-            //double[][] ratio_E_R_rev_dam_max_S = SystemState.sample_max(rand, Fworst, systemS1, steps, size_sim);
+            //double[][] ratio_E_R_rev_dam_max_S = SystemState.sample_max(rand, Fworst, systemS1, steps, size);
             //for (int i = 0; i < ratio_E_R_rev_dam_max_S.length; i++) {
             //    if (ratio_E_R_rev_dam_max_S[i][0] > maxRatioERS) {
             //        maxRatioERS = ratio_E_R_rev_dam_max_S[i][0];
@@ -178,16 +168,16 @@ public class Main {
 
             //System.out.println(" ");
             //System.out.println(" ");
-            //System.out.println("Maximal Eff/Reg ratio exhibited by the healthy system in " + size_sim + " runs: " + maxRatioERH);
+            //System.out.println("Maximal Eff/Reg ratio exhibited by the healthy system in " + size + " runs: " + maxRatioERH);
             //System.out.println(" ");
             //System.out.println(" ");
-            //System.out.println("Maximal Eff/Reg ratio exhibited by the unhealthy system in " + size_sim + " runs: " + maxRatioERS);
+            //System.out.println("Maximal Eff/Reg ratio exhibited by the unhealthy system in " + size + " runs: " + maxRatioERS);
             //System.out.println(" ");
             //System.out.println(" ");
-            //System.out.println("Maximal rev. damage exhibited by the healthy system in " + size_sim + " runs: " + maxRevDamageH);
+            //System.out.println("Maximal rev. damage exhibited by the healthy system in " + size + " runs: " + maxRevDamageH);
             //System.out.println(" ");
             //System.out.println(" ");
-            //System.out.println("Maximal rev. damage exhibited by the unhealthy system in " + size_sim + " runs: " + maxRevDamageS);
+            //System.out.println("Maximal rev. damage exhibited by the unhealthy system in " + size + " runs: " + maxRevDamageS);
             //System.out.println(" ");
             //System.out.println(" ");
             //System.out.println(" ");
@@ -234,67 +224,95 @@ public class Main {
             //F.add(ds -> (ds.get(flag2)));
 
 
-            //double[][] data_avgH = SystemState.sample(rand, F, systemH5, steps, size);
+            double[][] data_avgH = SystemState.sample(rand, F, systemH, steps, size);
 
-            //System.out.println("Healthy systems: Average value for E, R, Er, Rr, l, L, E/R in " +size+ " runs "+ steps +" days ");
-            //for (int i = 0; i < data_avgH.length; i++) {
-            //    System.out.printf("%d>   ", i);
-            //    for (int j = 0; j < data_avgH[i].length - 1; j++) {
-            //        System.out.printf("%f   ", data_avgH[i][j]);
-            //    }
-            //    System.out.printf("%f\n", data_avgH[i][data_avgH[i].length - 1]);
-            //}
+            System.out.println("Healthy system: Average value for E, R, l, L, E/R in " +size+ " runs "+ steps +" days ");
+            for (int i = 0; i < data_avgH.length; i++) {
+                System.out.printf("%d>   ", i);
+                for (int j = 0; j < data_avgH[i].length - 1; j++) {
+                    System.out.printf("%f   ", data_avgH[i][j]);
+                }
+                System.out.printf("%f\n", data_avgH[i][data_avgH[i].length - 1]);
+            }
 
-            //double[][] data_avgS = SystemState.sample(rand, F, systemS5, steps, size);
+            double[][] data_avgSuc = SystemState.sample(rand, F, systemSuc, steps, size);
 
-            //System.out.println(" ");
-            //System.out.println(" ");
-            //System.out.println("Unhealthy systems: Average value for E, R, Er, Rr, l, L, E/R in " +size+ " runs "+ steps +" days ");
-            //System.out.println(" ");
+            System.out.println(" ");
+            System.out.println(" ");
+            System.out.println("Unhealthy system: Average value for E, R, l, L, E/R in " +size+ " runs "+ steps +" days ");
+            System.out.println(" ");
 
-            //for (int i = 0; i < data_avgS.length; i++) {
-            //    System.out.printf("%d>   ", i);
-            //    for (int j = 0; j < data_avgS[i].length - 1; j++) {
-            //        System.out.printf("%f   ", data_avgS[i][j]);
-            //    }
-            //    System.out.printf("%f\n", data_avgS[i][data_avgS[i].length - 1]);
-            //}
+            for (int i = 0; i < data_avgSuc.length; i++) {
+                System.out.printf("%d>   ", i);
+                for (int j = 0; j < data_avgSuc[i].length - 1; j++) {
+                    System.out.printf("%f   ", data_avgSuc[i][j]);
+                }
+                System.out.printf("%f\n", data_avgSuc[i][data_avgSuc[i].length - 1]);
+            }
+
+            double[][] data_avgS8 = SystemState.sample(rand, F, systemS8, steps, size);
+
+            System.out.println(" ");
+            System.out.println(" ");
+            System.out.println("Unhealthy controlled system: Average value for E, R, l, L, E/R in " +size+ " runs "+ steps +" days ");
+            System.out.println(" ");
+
+            for (int i = 0; i < data_avgS8.length; i++) {
+                System.out.printf("%d>   ", i);
+                for (int j = 0; j < data_avgS8[i].length - 1; j++) {
+                    System.out.printf("%f   ", data_avgS8[i][j]);
+                }
+                System.out.printf("%f\n", data_avgS8[i][data_avgS8[i].length - 1]);
+            }
+
 
             //Util.writeToCSV("./multipleSclerosisOdeHealthy.csv", data_avgH);
             //Util.writeToCSV("./multipleSclerosisOdeSick.csv", data_avgS);
 
-            //writeRunsToCSV(rand, LS, F, systemH, 2000, 100, "healthy", "./runs_ms_healthy.csv");
+            /*
+            System.out.println("Healthy system: simulation started");
+            writeRunsToCSV(rand, LS, F, systemH, steps, size, "healthy", "./runs_ms_healthy.csv");
+            System.out.println("Healthy system: simulation ended");
+
 
             System.out.println("Unhealthy controlled systems: simulation started");
 
+            System.out.println("Controller for ratio 5: simulation started");
+            writeRunsToCSV(rand, LS, F, systemS5, steps, size, "controlled", "./runs_ms_s5.csv");
+            System.out.println("Controller for ratio 5: simulation ended");
+
             System.out.println("Controller for ratio 7: simulation started");
-            writeRunsToCSV(rand, LS, F, systemS7, 2000, 10, "controlled", "./runs_ms_s7.csv");
+            writeRunsToCSV(rand, LS, F, systemS7, steps, size, "controlled", "./runs_ms_s7.csv");
             System.out.println("Controller for ratio 7: simulation ended");
 
             System.out.println("Controller for ratio 8: simulation started");
-            writeRunsToCSV(rand, LS, F, systemS8, 2000, 10, "controlled", "./runs_ms_s8.csv");
+            writeRunsToCSV(rand, LS, F, systemS8, steps, size, "controlled", "./runs_ms_s8.csv");
             System.out.println("Controller for ratio 8: simulation ended");
 
             System.out.println("Controller for ratio 9: simulation started");
-            writeRunsToCSV(rand, LS, F, systemS9, 2000, 10, "controlled", "./runs_ms_s9.csv");
+            writeRunsToCSV(rand, LS, F, systemS9, steps, size, "controlled", "./runs_ms_s9.csv");
             System.out.println("Controller for ratio 9: simulation ended");
 
             System.out.println("Controller for ratio 10: simulation started");
-            writeRunsToCSV(rand, LS, F, systemS10, 2000, 10, "controlled", "./runs_ms_s10.csv");
+            writeRunsToCSV(rand, LS, F, systemS10, steps, size, "controlled", "./runs_ms_s10.csv");
             System.out.println("Controller for ratio 10: simulation ended");
 
             System.out.println("Controller for ratio 11: simulation started");
-            writeRunsToCSV(rand, LS, F, systemS11, 2000, 10, "controlled", "./runs_ms_s11.csv");
+            writeRunsToCSV(rand, LS, F, systemS11, steps, size, "controlled", "./runs_ms_s11.csv");
             System.out.println("Controller for ratio 11: simulation ended");
 
             System.out.println("Controller for ratio 12: simulation started");
-            writeRunsToCSV(rand, LS, F, systemS12, 2000, 10, "controlled", "./runs_ms_s12.csv");
+            writeRunsToCSV(rand, LS, F, systemS12, steps, size, "controlled", "./runs_ms_s12.csv");
             System.out.println("Controller for ratio 12: simulation ended");
 
             System.out.println("Unhealthy controlled systems: simulation ended");
 
-            //writeRunsToCSV(rand, LS, F, systemSuc, 2000, 100, "uncontrolled", "./runs_ms_sickuc.csv");
+            System.out.println("Unhealthy uncontrolled system: simulation started");
+            writeRunsToCSV(rand, LS, F, systemSuc, steps, size, "uncontrolled", "./runs_ms_sickuc.csv");
+            System.out.println("Unhealthy uncontrolled system: simulation ended");
 
+
+             */
 
             /*
             An evolution sequence of the healthy system is generated in order to generate distributions of configurations that can be used as "targets"
@@ -466,30 +484,25 @@ public class Main {
             */
 
 
-
-
-
-
-
         } catch(RuntimeException e){
             e.printStackTrace();
         }
 
     }
 
-    public static Controller getController(double check_ratio) {
+    public static Controller getController(double check_ratio, double injected) {
         ControllerRegistry registry = new ControllerRegistry();
 
         registry.set("Ctrl",
                 Controller.ifThenElse(
                         (rg,ds)-> ds.get(ratioER)>check_ratio,
                         Controller.doAction(
-                                (rg,ds)->List.of(new DataStateUpdate(R,ds.get(R)+1000+(rg.nextDouble()*200-100)), new DataStateUpdate(flag,ds.get(flag)+1), new DataStateUpdate(flag2,ds.get(flag2)+1), new DataStateUpdate(wait_month,1)),
+                                (rg,ds)->List.of(new DataStateUpdate(R,ds.get(R)+rg.nextGaussian()*100+injected), new DataStateUpdate(reset,1)),
                                 registry.reference("Ctrl")
                         ),
                         //Controller.doTick(registry.reference("Ctrl"))
                         Controller.doAction(
-                                (rg,ds)->List.of(new DataStateUpdate(flag2,ds.get(flag2)+1), new DataStateUpdate(wait_week,1)),
+                                (rg,ds)->List.of(new DataStateUpdate(recheck,1)),
                                 registry.reference("Ctrl")
                         )
                 )
@@ -526,16 +539,13 @@ public class Main {
         values.put(timer, 0.0);
         values.put(alphaR,alphaR_value);
         values.put(uncertainty,uncertainty_value);
-        values.put(flag,0.0);
-        values.put(flag2,0.0);
-        values.put(Rgen,0.0);
-        values.put(wait_month,0.0);
-        values.put(wait_week,0.0);
+        values.put(reset,0.0);
+        values.put(recheck,0.0);
         return new DataState(NUMBER_OF_VARIABLES, i -> values.getOrDefault(i, Double.NaN), gran, Tstep, Ttot, Tshift, step_ctrl, gran_ctrl);
     }
 
 
-    public static List<DataStateUpdate> odeEnv(RandomGenerator rg, DataState state, int var) {
+    public static List<DataStateUpdate> odeEnv(RandomGenerator rg, DataState state) {
         List<DataStateUpdate> updates = new LinkedList<>();
 
         double old_Er = state.get(Er);
@@ -555,15 +565,24 @@ public class Main {
         double old_r = state.get(v_r);
         double old_alphaR = state.get(alphaR);
 
-
-
+        double var = state.get(uncertainty);
 
         double r1 = rg.nextDouble();
         double ie;
-        if (r1<100*delta_t/365.0) {ie=100.0/delta_t;} else{ie = 0;}
+        if (r1<100*delta_t/365.0) {
+            ie=100.0/delta_t;
+        }
+        else {
+            ie = 0;
+        }
         double ir;
         double r2 = rg.nextDouble();
-        if (r2<100*delta_t/365.0) {ir=100.0/delta_t;} else{ir = 0;}
+        if (r2<100*delta_t/365.0) {
+            ir=100.0/delta_t;
+        }
+        else {
+            ir = 0;
+        }
 
         double dEr = ie - old_Er*old_delta - old_Er*old_beta + old_E*old_eta;
         double new_Er = old_Er + dEr*delta_t;
@@ -634,12 +653,12 @@ public class Main {
     }
 
     public static double selectTime(RandomGenerator rg, DataState ds){
-        if (ds.get(wait_month)==1){
-            ds.setCtrlGranularity(30);
-            ds.set(wait_month,0.0);
-        } else if (ds.get(wait_week)==1) {
+        if (ds.get(reset)==1){
+            ds.setCtrlGranularity(15);
+            ds.set(reset,0.0);
+        } else if (ds.get(recheck)==1) {
             ds.setCtrlGranularity(7);
-            ds.set(wait_week,0.0);
+            ds.set(recheck,0.0);
         }
         return ds.getTimeDelta();
     }
